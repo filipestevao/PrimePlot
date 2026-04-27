@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "crates/core_math",
+    "crates/data_engine",
+    "crates/plot_bridge",
+]
+resolver = "2"
