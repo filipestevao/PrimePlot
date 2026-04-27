@@ -1,5 +1,5 @@
 [package]
-name = "plot_bridge"
+name = "rust_lib_frontend"
 version = "0.1.0"
 edition = "2021"
 

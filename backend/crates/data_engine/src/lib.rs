@@ -1,14 +1,29 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+#[derive(Clone, Debug)]
+pub enum NodeType {
+    Folder,
+    Dataset,
+    Plot,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Clone, Debug)]
+pub struct ProjectNode {
+    pub id: String,
+    pub name: String,
+    pub node_type: NodeType,
+    pub children: Vec<ProjectNode>,
+}
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+impl ProjectNode {
+    pub fn new(id: &str, name: &str, node_type: NodeType) -> Self {
+        Self {
+            id: id.to_string(),
+            name: name.to_string(),
+            node_type,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn add_child(&mut self, child: ProjectNode) {
+        self.children.push(child);
     }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import '../../core/theme.dart';
 import 'custom_title_bar.dart';
+import '../panels/project_explorer.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -16,12 +17,11 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
-    // Configure initial weights for Left (Explorer), Center (Canvas), Right (Properties)
     _controller = MultiSplitViewController(
       areas: [
-        Area(weight: 0.2, minimalWeight: 0.1),
-        Area(weight: 0.6, minimalWeight: 0.3),
-        Area(weight: 0.2, minimalWeight: 0.1),
+        Area(flex: 2, builder: (context, area) => const ProjectExplorer()),
+        Area(flex: 6, builder: (context, area) => _buildPanel('Central Canvas\n(High-Performance Rendering)')),
+        Area(flex: 2, builder: (context, area) => _buildPanel('Property Inspector')),
       ],
     );
   }
@@ -43,14 +43,6 @@ class _MainLayoutState extends State<MainLayout> {
               ),
               child: MultiSplitView(
                 controller: _controller,
-                children: [
-                  // Left Panel: Project Explorer & Layers
-                  _buildPanel('Project Explorer\n&\nLayer Stack'),
-                  // Center Panel: Plotting Canvas
-                  _buildPanel('Central Canvas\n(High-Performance Rendering)'),
-                  // Right Panel: Contextual Properties
-                  _buildPanel('Property Inspector'),
-                ],
               ),
             ),
           ),
