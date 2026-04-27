@@ -1,9 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:frontend/src/rust/frb_generated.dart';
-import 'package:frontend/src/rust/api/simple.dart';
+import 'core/theme.dart';
+import 'ui/layout/main_layout.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Rust backend
   await RustLib.init();
+  
+  // Initialize Window Manager for Frameless Desktop Window
+  await windowManager.ensureInitialized();
+
+  WindowOptions windowOptions = const WindowOptions(
+    size: Size(1280, 720),
+    center: true,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.hidden, // Frameless UI
+  );
+  
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
+
   runApp(const PrimePlotApp());
 }
 
@@ -14,12 +36,9 @@ class PrimePlotApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PrimePlot',
-      theme: ThemeData.dark(useMaterial3: true),
-      home: const Scaffold(
-        body: Center(
-          child: Text('PrimePlot Backend Connected!'),
-        ),
-      ),
+      debugShowCheckedModeBanner: false,
+      theme: PrimeTheme.darkTheme,
+      home: const MainLayout(),
     );
   }
 }
