@@ -1,0 +1,3 @@
+rust_input: crate::api
+rust_root: ../backend/crates/plot_bridge/
+dart_output: lib/src/rust
