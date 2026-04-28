@@ -3,6 +3,7 @@ import 'package:multi_split_view/multi_split_view.dart';
 import '../../core/theme.dart';
 import 'custom_title_bar.dart';
 import '../panels/project_explorer.dart';
+import '../canvas/plot_canvas.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -20,7 +21,7 @@ class _MainLayoutState extends State<MainLayout> {
     _controller = MultiSplitViewController(
       areas: [
         Area(flex: 2, builder: (context, area) => const ProjectExplorer()),
-        Area(flex: 6, builder: (context, area) => _buildPanel('Central Canvas\n(High-Performance Rendering)')),
+        Area(flex: 6, builder: (context, area) => const PlotCanvas()),
         Area(flex: 2, builder: (context, area) => _buildPanel('Property Inspector')),
       ],
     );
