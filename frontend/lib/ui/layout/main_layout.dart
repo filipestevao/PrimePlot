@@ -3,6 +3,7 @@ import 'package:multi_split_view/multi_split_view.dart';
 import '../../core/theme.dart';
 import 'custom_title_bar.dart';
 import '../panels/project_explorer.dart';
+import '../panels/property_inspector.dart';
 import '../canvas/plot_canvas.dart';
 
 class MainLayout extends StatefulWidget {
@@ -22,7 +23,7 @@ class _MainLayoutState extends State<MainLayout> {
       areas: [
         Area(flex: 2, builder: (context, area) => const ProjectExplorer()),
         Area(flex: 6, builder: (context, area) => const PlotCanvas()),
-        Area(flex: 2, builder: (context, area) => _buildPanel('Property Inspector')),
+        Area(flex: 2, builder: (context, area) => const PropertyInspector()),
       ],
     );
   }
@@ -52,16 +53,4 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  Widget _buildPanel(String title) {
-    return Container(
-      color: PrimeTheme.panelBackground,
-      child: Center(
-        child: Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: PrimeTheme.textSecondary),
-        ),
-      ),
-    );
-  }
 }
