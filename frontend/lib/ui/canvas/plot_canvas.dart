@@ -1,9 +1,23 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../src/rust/api/data.dart';
 
-class PlotCanvas extends StatelessWidget {
+class PlotCanvas extends StatefulWidget {
   const PlotCanvas({super.key});
+
+  @override
+  State<PlotCanvas> createState() => _PlotCanvasState();
+}
+
+class _PlotCanvasState extends State<PlotCanvas> {
+  List<Point2D> _rustData = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch 2000 data points synchronously from the Rust core_math engine
+    _rustData = getMockScientificData(numPoints: BigInt.from(2000));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +30,7 @@ class PlotCanvas extends StatelessWidget {
           Positioned.fill(
             child: ClipRect(
               child: CustomPaint(
-                painter: _ScientificPlotPainter(),
+                painter: _ScientificPlotPainter(_rustData),
               ),
             ),
           ),
@@ -31,12 +45,13 @@ class PlotCanvas extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: PrimeTheme.borderSide),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.memory, size: 14, color: Colors.greenAccent),
-                  SizedBox(width: 6),
-                  Text('Rust Engine Active', style: TextStyle(fontSize: 11, color: PrimeTheme.textSecondary)),
+                  const Icon(Icons.memory, size: 14, color: Colors.greenAccent),
+                  const SizedBox(width: 6),
+                  Text('Rust Engine Active: ${_rustData.length} pts', 
+                       style: const TextStyle(fontSize: 11, color: PrimeTheme.textSecondary)),
                 ],
               ),
             ),
@@ -48,6 +63,10 @@ class PlotCanvas extends StatelessWidget {
 }
 
 class _ScientificPlotPainter extends CustomPainter {
+  final List<Point2D> data;
+
+  _ScientificPlotPainter(this.data);
+
   @override
   void paint(Canvas canvas, Size size) {
     // 1. Draw Grid
@@ -76,43 +95,49 @@ class _ScientificPlotPainter extends CustomPainter {
     // X Axis
     canvas.drawLine(Offset(step, size.height - step), Offset(size.width, size.height - step), axisPaint);
 
-    // 3. Draw a premium dummy curve (e.g. simulated Lorentzian/Gaussian peak for XRD)
+    // 3. Draw the real data from Rust
+    if (data.isEmpty) return;
+
     final curvePaint = Paint()
       ..color = PrimeTheme.primaryAccent
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
     final glowPaint = Paint()
       ..color = PrimeTheme.primaryAccent.withOpacity(0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+      ..strokeWidth = 6.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
 
     final path = Path();
-    bool first = true;
     
     final xStart = step;
     final xEnd = size.width;
     final yBase = size.height - step;
 
-    for (double x = xStart; x <= xEnd; x += 2.0) {
-      // Simulate an X-ray diffraction peak
-      final normalizedX = (x - xStart) / (xEnd - xStart) * 100.0;
-      
-      // A mixture of two peaks
-      final peak1 = 80.0 * exp(-pow(normalizedX - 30.0, 2) / 10.0);
-      final peak2 = 40.0 * exp(-pow(normalizedX - 60.0, 2) / 20.0);
-      final noise = (Random().nextDouble() - 0.5) * 2.0;
-      
-      final y = yBase - (peak1 + peak2 + noise) * (size.height * 0.005);
+    // Find min and max X to normalize
+    final minX = data.first.x;
+    final maxX = data.last.x;
+    final rangeX = maxX - minX;
 
-      if (first) {
-        path.moveTo(x, y);
-        first = false;
+    // We assume max Y is roughly 100 for this mock data
+    const maxY = 100.0; 
+
+    for (int i = 0; i < data.length; i++) {
+      final point = data[i];
+      
+      // Normalize to screen coordinates
+      final screenX = xStart + ((point.x - minX) / rangeX) * (xEnd - xStart);
+      
+      // Flip Y axis (Flutter origin is top-left)
+      final screenY = yBase - (point.y / maxY) * (size.height * 0.8); // Scale to 80% of height
+
+      if (i == 0) {
+        path.moveTo(screenX, screenY);
       } else {
-        path.lineTo(x, y);
+        path.lineTo(screenX, screenY);
       }
     }
 
@@ -122,5 +147,7 @@ class _ScientificPlotPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false; // Static for now
+  bool shouldRepaint(covariant _ScientificPlotPainter oldDelegate) {
+    return oldDelegate.data != data;
+  }
 }
