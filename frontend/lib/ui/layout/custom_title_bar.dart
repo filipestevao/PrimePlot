@@ -8,34 +8,75 @@ class CustomTitleBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 32.0,
+      height: 52.0, // Taller to match the mockup
       color: PrimeTheme.titleBarBackground,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Drag area for the window
+          // Left: Menu & Brand
+          Padding(
+            padding: const EdgeInsets.only(left: 16.0),
+            child: Row(
+              children: [
+                Icon(Icons.menu, size: 20, color: PrimeTheme.textSecondary),
+                const SizedBox(width: 16),
+                const Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent), // Placeholder logo
+                const SizedBox(width: 8),
+                const Text(
+                  'PrimePlot',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: PrimeTheme.textPrimary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Left Flexible Drag Area
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
-              onPanStart: (details) {
-                windowManager.startDragging();
-              },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'PrimePlot',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: PrimeTheme.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
+              onPanStart: (details) => windowManager.startDragging(),
+              child: Container(),
             ),
           ),
-          // Window Controls
+
+          // Center: Search Bar
+          Container(
+            width: 300,
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            decoration: BoxDecoration(
+              color: PrimeTheme.searchBarBackground,
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(color: PrimeTheme.borderSide),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Type command or search... (Ctrl + F)',
+                    style: TextStyle(fontSize: 12, color: PrimeTheme.textSecondary.withOpacity(0.7)),
+                  ),
+                ),
+                Icon(Icons.search, size: 16, color: PrimeTheme.textSecondary),
+              ],
+            ),
+          ),
+
+          // Right Flexible Drag Area
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onPanStart: (details) => windowManager.startDragging(),
+              child: Container(),
+            ),
+          ),
+
+          // Right: Window Controls
           const WindowButtons(),
         ],
       ),
@@ -50,31 +91,32 @@ class WindowButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(
-          icon: const Icon(Icons.minimize, size: 16, color: PrimeTheme.textPrimary),
-          onPressed: () => windowManager.minimize(),
-          hoverColor: Colors.white12,
-          splashRadius: 16,
-        ),
-        IconButton(
-          icon: const Icon(Icons.crop_square, size: 16, color: PrimeTheme.textPrimary),
-          onPressed: () async {
-            if (await windowManager.isMaximized()) {
-              windowManager.unmaximize();
-            } else {
-              windowManager.maximize();
-            }
-          },
-          hoverColor: Colors.white12,
-          splashRadius: 16,
-        ),
-        IconButton(
-          icon: const Icon(Icons.close, size: 16, color: PrimeTheme.textPrimary),
-          onPressed: () => windowManager.close(),
-          hoverColor: Colors.red.withOpacity(0.8),
-          splashRadius: 16,
-        ),
+        _buildButton(Icons.remove, () => windowManager.minimize()),
+        _buildButton(Icons.crop_square, () async {
+          if (await windowManager.isMaximized()) {
+            windowManager.unmaximize();
+          } else {
+            windowManager.maximize();
+          }
+        }),
+        _buildButton(Icons.close, () => windowManager.close(), hoverColor: Colors.red.withOpacity(0.8)),
+        const SizedBox(width: 4),
       ],
+    );
+  }
+
+  Widget _buildButton(IconData icon, VoidCallback onPressed, {Color? hoverColor}) {
+    return SizedBox(
+      width: 46,
+      height: 60,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          hoverColor: hoverColor ?? Colors.white12,
+          child: Icon(icon, size: 16, color: PrimeTheme.textSecondary),
+        ),
+      ),
     );
   }
 }
