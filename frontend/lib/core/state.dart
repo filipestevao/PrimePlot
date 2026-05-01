@@ -10,7 +10,7 @@ class ProjectState {
   final ValueNotifier<DTODataTable?> activeTable = ValueNotifier(null);
   
   /// Controls whether the table cells are currently editable.
-  final ValueNotifier<bool> isTableEditable = ValueNotifier(false);
+  final ValueNotifier<bool> isTableEditable = ValueNotifier(true);
 
   void loadInitialData() {
     activeTable.value = getInitialTableData();
