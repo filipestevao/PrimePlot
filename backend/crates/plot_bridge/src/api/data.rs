@@ -82,20 +82,13 @@ pub fn get_mock_scientific_data(num_points: usize) -> Vec<Point2D> {
     core_data.into_iter().map(|p| p.into()).collect()
 }
 
-/// Fetches an initial table structure populated with the mock scientific dataset.
+/// Fetches an initial table structure populated with a simple 5-point dataset.
 #[frb(sync)]
 pub fn get_initial_table_data() -> DTODataTable {
-    let core_data = generate_scientific_dataset(2000);
+    let x_col = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+    let y_col = vec![15.0, 45.0, 30.0, 80.0, 25.0];
     
-    let mut x_col = Vec::with_capacity(2000);
-    let mut y_col = Vec::with_capacity(2000);
-    
-    for pt in core_data {
-        x_col.push(pt.x);
-        y_col.push(pt.y);
-    }
-    
-    let mut table = EngineDataTable::new("table_001", "Exp101.csv");
+    let mut table = EngineDataTable::new("table_001", "SimpleData.csv");
     table.add_column(DataColumn {
         name: "Position".to_string(),
         role: ColumnRole::X,

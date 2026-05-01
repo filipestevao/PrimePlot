@@ -1,153 +1,228 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../../core/theme.dart';
+import '../../core/state.dart';
 import '../../src/rust/api/data.dart';
 
-class PlotCanvas extends StatefulWidget {
+class PlotCanvas extends StatelessWidget {
   const PlotCanvas({super.key});
 
   @override
-  State<PlotCanvas> createState() => _PlotCanvasState();
-}
-
-class _PlotCanvasState extends State<PlotCanvas> {
-  List<Point2D> _rustData = [];
-
-  @override
-  void initState() {
-    super.initState();
-    // Fetch 2000 data points synchronously from the Rust core_math engine
-    _rustData = getMockScientificData(numPoints: BigInt.from(2000));
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Container(
-      color: PrimeTheme.backgroundDark, // Slightly darker than panels for contrast
-      padding: const EdgeInsets.all(16.0),
-      child: Stack(
-        children: [
-          // The actual drawing canvas
-          Positioned.fill(
-            child: ClipRect(
-              child: CustomPaint(
-                painter: _ScientificPlotPainter(_rustData),
-              ),
+    return ValueListenableBuilder<DTODataTable?>(
+      valueListenable: ProjectState.instance.activeTable,
+      builder: (context, tableData, child) {
+        if (tableData == null || tableData.columns.length < 2) {
+          return const Center(
+            child: Text(
+              'No data available to plot.',
+              style: TextStyle(color: PrimeTheme.textSecondary),
             ),
+          );
+        }
+
+        // Find X and Y columns
+        DTODataColumn? xCol;
+        DTODataColumn? yCol;
+
+        for (var col in tableData.columns) {
+          if (col.role == DTOColumnRole.x && xCol == null) xCol = col;
+          if (col.role == DTOColumnRole.y && yCol == null) yCol = col;
+        }
+
+        // Fallback to first two columns if roles not assigned
+        xCol ??= tableData.columns[0];
+        yCol ??= tableData.columns[1];
+
+        return ClipRRect(
+          child: CustomPaint(
+            painter: _ScientificPlotPainter(xCol.data, yCol.data),
+            child: Container(),
           ),
-          // Floating Toolbar / Status indicator
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: PrimeTheme.panelBackground.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: PrimeTheme.borderSide),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.memory, size: 14, color: Colors.greenAccent),
-                  const SizedBox(width: 6),
-                  Text('Rust Engine Active: ${_rustData.length} pts', 
-                       style: const TextStyle(fontSize: 11, color: PrimeTheme.textSecondary)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _ScientificPlotPainter extends CustomPainter {
-  final List<Point2D> data;
+  final List<double> xData;
+  final List<double> yData;
 
-  _ScientificPlotPainter(this.data);
+  _ScientificPlotPainter(this.xData, this.yData);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Draw Grid
-    final gridPaint = Paint()
-      ..color = PrimeTheme.borderSide.withOpacity(0.3)
-      ..strokeWidth = 1.0;
-    
-    const double step = 50.0;
-    
-    // Vertical grid lines
-    for (double x = 0; x <= size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-    // Horizontal grid lines
-    for (double y = 0; y <= size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    if (xData.isEmpty || yData.isEmpty) return;
+
+    final length = math.min(xData.length, yData.length);
+
+    // Find min and max
+    double minX = xData[0];
+    double maxX = xData[0];
+    double minY = yData[0];
+    double maxY = yData[0];
+
+    for (int i = 1; i < length; i++) {
+      if (xData[i] < minX) minX = xData[i];
+      if (xData[i] > maxX) maxX = xData[i];
+      if (yData[i] < minY) minY = yData[i];
+      if (yData[i] > maxY) maxY = yData[i];
     }
 
-    // 2. Draw Axes
-    final axisPaint = Paint()
+    // Add some padding to bounds (10%)
+    final xRange = maxX - minX;
+    final yRange = maxY - minY;
+    
+    // Handle edge case of flat lines
+    final padX = xRange == 0 ? 10.0 : xRange * 0.1;
+    final padY = yRange == 0 ? 10.0 : yRange * 0.1;
+
+    minX -= padX;
+    maxX += padX;
+    minY -= padY;
+    maxY += padY;
+
+    final paintAxis = Paint()
       ..color = PrimeTheme.textSecondary
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 1.5;
 
-    // Y Axis
-    canvas.drawLine(Offset(step, 0), Offset(step, size.height - step), axisPaint);
-    // X Axis
-    canvas.drawLine(Offset(step, size.height - step), Offset(size.width, size.height - step), axisPaint);
-
-    // 3. Draw the real data from Rust
-    if (data.isEmpty) return;
-
-    final curvePaint = Paint()
+    final paintLine = Paint()
       ..color = PrimeTheme.primaryAccent
+      ..strokeWidth = 2
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..isAntiAlias = true;
 
-    final glowPaint = Paint()
-      ..color = PrimeTheme.primaryAccent.withOpacity(0.3)
+    final paintPoint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+      
+    final paintPointBorder = Paint()
+      ..color = PrimeTheme.primaryAccent
+      ..strokeWidth = 2
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0);
+      ..isAntiAlias = true;
 
-    final path = Path();
+    // Define plotting area margins
+    const marginLeft = 60.0;
+    const marginBottom = 40.0;
+    const marginTop = 20.0;
+    const marginRight = 20.0;
+
+    final plotWidth = size.width - marginLeft - marginRight;
+    final plotHeight = size.height - marginTop - marginBottom;
+
+    // Draw Grid and Axis lines
+    canvas.drawLine(
+      Offset(marginLeft, marginTop),
+      Offset(marginLeft, size.height - marginBottom),
+      paintAxis,
+    ); // Y-axis
+    canvas.drawLine(
+      Offset(marginLeft, size.height - marginBottom),
+      Offset(size.width - marginRight, size.height - marginBottom),
+      paintAxis,
+    ); // X-axis
+
+    // Helper to map data to screen coordinates
+    Offset mapToScreen(double x, double y) {
+      final screenX = marginLeft + ((x - minX) / (maxX - minX)) * plotWidth;
+      // Invert Y because canvas Y is top-down
+      final screenY = marginTop + plotHeight - (((y - minY) / (maxY - minY)) * plotHeight);
+      return Offset(screenX, screenY);
+    }
+
+    // Draw simple grid lines and labels (5 ticks per axis)
+    const int ticks = 5;
+    const textStyle = TextStyle(color: PrimeTheme.textSecondary, fontSize: 10);
+
+    for (int i = 0; i <= ticks; i++) {
+      // X-axis ticks
+      final xVal = minX + (maxX - minX) * (i / ticks);
+      final screenX = marginLeft + plotWidth * (i / ticks);
+      canvas.drawLine(
+        Offset(screenX, size.height - marginBottom),
+        Offset(screenX, size.height - marginBottom + 5),
+        paintAxis,
+      );
+      
+      final xLabel = TextPainter(
+        text: TextSpan(text: xVal.toStringAsFixed(1), style: textStyle),
+        textDirection: TextDirection.ltr,
+      );
+      xLabel.layout();
+      xLabel.paint(canvas, Offset(screenX - xLabel.width / 2, size.height - marginBottom + 10));
+
+      // Y-axis ticks
+      final yVal = minY + (maxY - minY) * (i / ticks);
+      final screenY = marginTop + plotHeight - plotHeight * (i / ticks);
+      canvas.drawLine(
+        Offset(marginLeft - 5, screenY),
+        Offset(marginLeft, screenY),
+        paintAxis,
+      );
+      
+      final yLabel = TextPainter(
+        text: TextSpan(text: yVal.toStringAsFixed(1), style: textStyle),
+        textDirection: TextDirection.ltr,
+      );
+      yLabel.layout();
+      yLabel.paint(canvas, Offset(marginLeft - yLabel.width - 10, screenY - yLabel.height / 2));
+    }
+
+    // Draw axis titles
+    final xTitle = TextPainter(
+      text: const TextSpan(text: 'X', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+      textDirection: TextDirection.ltr,
+    );
+    xTitle.layout();
+    xTitle.paint(canvas, Offset(marginLeft + plotWidth / 2 - xTitle.width / 2, size.height - 20));
+
+    final yTitle = TextPainter(
+      text: const TextSpan(text: 'Y', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+      textDirection: TextDirection.ltr,
+    );
+    yTitle.layout();
     
-    final xStart = step;
-    final xEnd = size.width;
-    final yBase = size.height - step;
+    canvas.save();
+    canvas.translate(20, marginTop + plotHeight / 2 + yTitle.width / 2);
+    canvas.rotate(-math.pi / 2);
+    yTitle.paint(canvas, Offset.zero);
+    canvas.restore();
 
-    // Find min and max X to normalize
-    final minX = data.first.x;
-    final maxX = data.last.x;
-    final rangeX = maxX - minX;
+    // Plot Data
+    if (length > 0) {
+      final path = Path();
+      final firstPoint = mapToScreen(xData[0], yData[0]);
+      path.moveTo(firstPoint.dx, firstPoint.dy);
 
-    // We assume max Y is roughly 100 for this mock data
-    const maxY = 100.0; 
+      for (int i = 1; i < length; i++) {
+        final point = mapToScreen(xData[i], yData[i]);
+        path.lineTo(point.dx, point.dy);
+      }
 
-    for (int i = 0; i < data.length; i++) {
-      final point = data[i];
-      
-      // Normalize to screen coordinates
-      final screenX = xStart + ((point.x - minX) / rangeX) * (xEnd - xStart);
-      
-      // Flip Y axis (Flutter origin is top-left)
-      final screenY = yBase - (point.y / maxY) * (size.height * 0.8); // Scale to 80% of height
+      // Draw connecting lines
+      canvas.drawPath(path, paintLine);
 
-      if (i == 0) {
-        path.moveTo(screenX, screenY);
-      } else {
-        path.lineTo(screenX, screenY);
+      // Draw scatter points
+      for (int i = 0; i < length; i++) {
+        final point = mapToScreen(xData[i], yData[i]);
+        canvas.drawCircle(point, 4, paintPoint);
+        canvas.drawCircle(point, 4, paintPointBorder);
       }
     }
-
-    // Draw glow then sharp line
-    canvas.drawPath(path, glowPaint);
-    canvas.drawPath(path, curvePaint);
   }
 
   @override
   bool shouldRepaint(covariant _ScientificPlotPainter oldDelegate) {
-    return oldDelegate.data != data;
+    // Basic equality check is sufficient because we create new lists when editing
+    if (xData.length != oldDelegate.xData.length) return true;
+    for (int i = 0; i < xData.length; i++) {
+      if (xData[i] != oldDelegate.xData[i] || yData[i] != oldDelegate.yData[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 }

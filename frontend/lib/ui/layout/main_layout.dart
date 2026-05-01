@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import '../../core/theme.dart';
+import '../../core/state.dart';
 import '../components/panel_container.dart';
 import 'custom_title_bar.dart';
 import '../panels/project_explorer.dart';
@@ -24,6 +25,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
+    ProjectState.instance.loadInitialData();
     
     // Left Vertical Split
     _leftController = MultiSplitViewController(
@@ -44,10 +46,34 @@ class _MainLayoutState extends State<MainLayout> {
     // Center Horizontal Split
     _centerController = MultiSplitViewController(
       areas: [
-        Area(flex: 4, builder: (context, area) => const PanelContainer(
-          title: 'Data: Exp101.csv',
-          icon: Icons.table_chart,
-          child: DataTablePanel(),
+        Area(flex: 4, builder: (context, area) => ValueListenableBuilder<bool>(
+          valueListenable: ProjectState.instance.isTableEditable,
+          builder: (context, isEditable, child) {
+            return PanelContainer(
+              title: 'Data: SimpleData.csv',
+              icon: Icons.table_chart,
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    isEditable ? Icons.lock_open : Icons.lock,
+                    size: 14,
+                    color: isEditable ? PrimeTheme.primaryAccent : PrimeTheme.textSecondary,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: 16,
+                  onPressed: () {
+                    ProjectState.instance.toggleTableEditMode();
+                  },
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.more_horiz, size: 16, color: PrimeTheme.textSecondary),
+                const SizedBox(width: 8),
+                const Icon(Icons.close, size: 14, color: PrimeTheme.textSecondary),
+              ],
+              child: const DataTablePanel(),
+            );
+          }
         )),
         Area(flex: 6, builder: (context, area) => const PanelContainer(
           title: 'Plot: Analysis View',
