@@ -26,13 +26,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  DTOColumnRole dco_decode_dto_column_role(dynamic raw);
+
+  @protected
+  DTODataColumn dco_decode_dto_data_column(dynamic raw);
+
+  @protected
+  DTODataTable dco_decode_dto_data_table(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
 
   @protected
+  List<DTODataColumn> dco_decode_list_dto_data_column(dynamic raw);
+
+  @protected
   List<Point2D> dco_decode_list_point_2_d(dynamic raw);
+
+  @protected
+  Float64List dco_decode_list_prim_f_64_strict(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -62,13 +77,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  DTOColumnRole sse_decode_dto_column_role(SseDeserializer deserializer);
+
+  @protected
+  DTODataColumn sse_decode_dto_data_column(SseDeserializer deserializer);
+
+  @protected
+  DTODataTable sse_decode_dto_data_table(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
+  List<DTODataColumn> sse_decode_list_dto_data_column(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<Point2D> sse_decode_list_point_2_d(SseDeserializer deserializer);
+
+  @protected
+  Float64List sse_decode_list_prim_f_64_strict(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -101,13 +133,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_dto_column_role(DTOColumnRole self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_dto_data_column(DTODataColumn self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_dto_data_table(DTODataTable self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_dto_data_column(
+    List<DTODataColumn> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_point_2_d(List<Point2D> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_prim_f_64_strict(
+    Float64List self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_strict(

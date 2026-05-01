@@ -6,13 +6,68 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 
 /// Fetches a high-performance mock scientific dataset from the core math engine.
 List<Point2D> getMockScientificData({required BigInt numPoints}) => RustLib
     .instance
     .api
     .crateApiDataGetMockScientificData(numPoints: numPoints);
+
+/// Fetches an initial table structure populated with the mock scientific dataset.
+DTODataTable getInitialTableData() =>
+    RustLib.instance.api.crateApiDataGetInitialTableData();
+
+/// DTOs for Table Data
+enum DTOColumnRole { x, y, xError, yError, text }
+
+class DTODataColumn {
+  final String name;
+  final DTOColumnRole role;
+  final Float64List data;
+
+  const DTODataColumn({
+    required this.name,
+    required this.role,
+    required this.data,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ role.hashCode ^ data.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DTODataColumn &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          role == other.role &&
+          data == other.data;
+}
+
+class DTODataTable {
+  final String id;
+  final String name;
+  final List<DTODataColumn> columns;
+
+  const DTODataTable({
+    required this.id,
+    required this.name,
+    required this.columns,
+  });
+
+  @override
+  int get hashCode => id.hashCode ^ name.hashCode ^ columns.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DTODataTable &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          columns == other.columns;
+}
 
 /// A simple DTO for passing 2D points to Flutter.
 /// Using #[frb(dart_metadata=...)] if we needed specific Dart names, but simple structs map cleanly.

@@ -1,3 +1,5 @@
+pub mod table;
+
 #[derive(Clone, Debug)]
 pub enum NodeType {
     Folder,

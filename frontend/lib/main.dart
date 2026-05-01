@@ -22,6 +22,7 @@ Future<void> main() async {
   );
   
   windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.maximize();
     await windowManager.show();
     await windowManager.focus();
   });
