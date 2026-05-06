@@ -38,17 +38,10 @@ impl From<EngineProjectNode> for ProjectNode {
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_project_tree() -> ProjectNode {
-    let mut root = EngineProjectNode::new("root_1", "Main Project", EngineNodeType::Folder);
+    let mut root = EngineProjectNode::new("root_1", "Project", EngineNodeType::Folder);
     
-    let mut data_folder = EngineProjectNode::new("folder_1", "Data", EngineNodeType::Folder);
-    data_folder.add_child(EngineProjectNode::new("ds_1", "Sample XRD Data", EngineNodeType::Dataset));
-    data_folder.add_child(EngineProjectNode::new("ds_2", "Calibration Data", EngineNodeType::Dataset));
-
-    let mut plots_folder = EngineProjectNode::new("folder_2", "Plots", EngineNodeType::Folder);
-    plots_folder.add_child(EngineProjectNode::new("plot_1", "Intensity vs 2Theta", EngineNodeType::Plot));
-
-    root.add_child(data_folder);
-    root.add_child(plots_folder);
+    root.add_child(EngineProjectNode::new("table_1", "Table", EngineNodeType::Dataset));
+    root.add_child(EngineProjectNode::new("graph_1", "Graph", EngineNodeType::Plot));
 
     root.into()
 }

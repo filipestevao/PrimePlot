@@ -12,6 +12,14 @@ class ProjectState {
   /// Controls whether the table cells are currently editable.
   final ValueNotifier<bool> isTableEditable = ValueNotifier(true);
 
+  // Panel titles
+  final ValueNotifier<String> tableName = ValueNotifier('Table');
+  final ValueNotifier<String> graphName = ValueNotifier('Graph');
+  
+  // Panel visibility
+  final ValueNotifier<bool> isTableVisible = ValueNotifier(true);
+  final ValueNotifier<bool> isGraphVisible = ValueNotifier(true);
+
   void loadInitialData() {
     activeTable.value = getInitialTableData();
   }
