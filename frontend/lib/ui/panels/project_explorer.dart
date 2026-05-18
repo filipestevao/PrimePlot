@@ -11,37 +11,13 @@ class ProjectExplorer extends StatefulWidget {
 }
 
 class _ProjectExplorerState extends State<ProjectExplorer> {
-  ProjectNode? _rootNode;
-  bool _isLoading = true;
-
   String? _editingNodeId;
   final TextEditingController _editController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProjectTree();
-  }
 
   @override
   void dispose() {
     _editController.dispose();
     super.dispose();
-  }
-
-  void _loadProjectTree() {
-    try {
-      final node = getProjectTree();
-      setState(() {
-        _rootNode = node;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      debugPrint('Error loading project tree: $e');
-    }
   }
 
   void _startEditing(String id, String currentName) {
@@ -54,11 +30,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
   void _finishEditing(String id) {
     if (_editController.text.isNotEmpty) {
-      if (id == 'table_1') {
-        ProjectState.instance.tableName.value = _editController.text;
-      } else if (id == 'graph_1') {
-        ProjectState.instance.graphName.value = _editController.text;
-      }
+      ProjectState.instance.renameProjectNodeWrapper(id, _editController.text);
     }
     setState(() {
       _editingNodeId = null;
@@ -67,41 +39,30 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    return ValueListenableBuilder<ProjectNode?>(
+      valueListenable: ProjectState.instance.projectTree,
+      builder: (context, rootNode, child) {
+        if (rootNode == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    if (_rootNode == null) {
-      return const Center(child: Text('Failed to load project', style: TextStyle(color: PrimeTheme.textSecondary)));
-    }
-
-    return Container(
-      color: PrimeTheme.panelBackground,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            child: Text(
-              'PROJECT EXPLORER',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-                color: PrimeTheme.textSecondary,
+        return Container(
+          color: PrimeTheme.panelBackground,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _buildTreeNode(rootNode),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _buildTreeNode(_rootNode!),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      }
     );
   }
 
@@ -124,111 +85,135 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         break;
     }
 
-    if (node.children.isEmpty) {
-      // Leaf nodes (Dataset or Plot)
-      return ValueListenableBuilder<String>(
-        valueListenable: node.id == 'table_1' 
-            ? ProjectState.instance.tableName 
-            : (node.id == 'graph_1' ? ProjectState.instance.graphName : ValueNotifier(node.name)),
-        builder: (context, currentName, child) {
-          
-          final isEditing = _editingNodeId == node.id;
+    final isEditing = _editingNodeId == node.id;
+    final bool isRoot = node.id == 'root_1';
 
-          return ValueListenableBuilder<bool>(
-            valueListenable: node.id == 'table_1' 
-              ? ProjectState.instance.isTableVisible 
-              : ProjectState.instance.isGraphVisible,
-            builder: (context, isVisible, child) {
-              return Container(
-                padding: const EdgeInsets.only(left: 32.0, right: 8.0, top: 4.0, bottom: 4.0),
-                child: Row(
-                  children: [
-                    Icon(iconData, size: 16, color: iconColor),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: isEditing 
-                        ? SizedBox(
-                            height: 24,
-                            child: TextField(
-                              controller: _editController,
-                              autofocus: true,
-                              style: const TextStyle(fontSize: 13, color: PrimeTheme.primaryAccent),
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 4),
-                                border: OutlineInputBorder(),
-                              ),
-                              onSubmitted: (_) => _finishEditing(node.id),
-                            ),
-                          )
-                        : Text(
-                            currentName,
-                            style: TextStyle(
-                              fontSize: 13, 
-                              color: isVisible ? PrimeTheme.textPrimary : PrimeTheme.textSecondary,
-                              decoration: isVisible ? TextDecoration.none : TextDecoration.lineThrough,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                    ),
-                    if (!isEditing) ...[
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 14),
-                        color: PrimeTheme.textSecondary,
-                        splashRadius: 16,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => _startEditing(node.id, currentName),
-                      ),
-                      const SizedBox(width: 4),
-                      IconButton(
-                        icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off, size: 14),
-                        color: PrimeTheme.textSecondary,
-                        splashRadius: 16,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          if (node.id == 'table_1') {
-                            ProjectState.instance.isTableVisible.value = !isVisible;
-                          } else if (node.id == 'graph_1') {
-                            ProjectState.instance.isGraphVisible.value = !isVisible;
-                          }
-                        },
-                      ),
-                    ] else ...[
-                      IconButton(
-                        icon: const Icon(Icons.check, size: 14),
-                        color: Colors.greenAccent,
-                        splashRadius: 16,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => _finishEditing(node.id),
-                      ),
-                    ],
-                  ],
+    // The inner UI for the node's title
+    Widget titleWidget = Row(
+      children: [
+        Expanded(
+          child: isEditing 
+            ? SizedBox(
+                height: 24,
+                child: TextField(
+                  controller: _editController,
+                  autofocus: true,
+                  style: const TextStyle(fontSize: 13, color: PrimeTheme.primaryAccent),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => _finishEditing(node.id),
                 ),
-              );
-            }
+              )
+            : Text(
+                node.name,
+                style: const TextStyle(fontSize: 13, color: PrimeTheme.textPrimary),
+                overflow: TextOverflow.ellipsis,
+              ),
+        ),
+        if (!isEditing && !isRoot) ...[
+          IconButton(
+            icon: const Icon(Icons.edit, size: 14),
+            color: PrimeTheme.textSecondary,
+            splashRadius: 16,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => _startEditing(node.id, node.name),
+          ),
+        ] else if (isEditing) ...[
+          IconButton(
+            icon: const Icon(Icons.check, size: 14),
+            color: Colors.greenAccent,
+            splashRadius: 16,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => _finishEditing(node.id),
+          ),
+        ],
+      ],
+    );
+
+    // Draggable wraps the row so we can drag it
+    Widget draggableTitle = LongPressDraggable<String>(
+      data: node.id,
+      delay: const Duration(milliseconds: 300),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: PrimeTheme.backgroundDark.withOpacity(0.8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(iconData, size: 16, color: iconColor),
+              const SizedBox(width: 8),
+              Text(node.name, style: const TextStyle(fontSize: 13, color: PrimeTheme.textPrimary)),
+            ],
+          ),
+        ),
+      ),
+      child: titleWidget,
+    );
+
+    // DragTarget allows us to drop another node onto this node
+    Widget targetWidget = DragTarget<String>(
+      onWillAcceptWithDetails: (details) {
+        // Prevent dropping onto itself or root dropping
+        if (details.data == node.id || details.data == 'root_1') return false;
+        return true;
+      },
+      onAcceptWithDetails: (details) {
+        // If node is a folder, drop into it. Otherwise, drop into its parent? 
+        // We only have node_id here. For simplicity, drop into folder if it's a folder,
+        // otherwise we could drop into the same parent, but let's just make folder dropping work.
+        if (node.nodeType == NodeType.folder) {
+          ProjectState.instance.moveProjectNodeWrapper(details.data, node.id);
+        } else {
+          // It would be nice to get parent_id, but the backend handles it.
+          // For now, we drop onto a node, so we'll just put it in root if we can't figure it out,
+          // but we can just use moveProjectNodeWrapper and let the user drop strictly on folders.
+          // Let's assume dropping on a leaf does nothing or adds it to the leaf's parent.
+          // Wait, we don't have leaf's parent ID easily here unless we traverse.
+          // So let's only accept drops on Folders for now.
+        }
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHovered = candidateData.isNotEmpty;
+        
+        if (node.children.isEmpty && node.nodeType != NodeType.folder) {
+          return Container(
+            color: isHovered ? PrimeTheme.primaryAccent.withOpacity(0.2) : Colors.transparent,
+            child: ListTile(
+              dense: true,
+              visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+              contentPadding: const EdgeInsets.only(left: 32.0, right: 16.0),
+              leading: Icon(iconData, size: 16, color: iconColor),
+              title: isRoot ? titleWidget : draggableTitle,
+            ),
           );
         }
-      );
-    }
 
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
-        childrenPadding: const EdgeInsets.only(left: 16.0),
-        leading: Icon(iconData, size: 18, color: iconColor),
-        title: Text(
-          node.name,
-          style: const TextStyle(fontSize: 13, color: PrimeTheme.textPrimary, fontWeight: FontWeight.w500),
-        ),
-        iconColor: PrimeTheme.textSecondary,
-        collapsedIconColor: PrimeTheme.textSecondary,
-        children: node.children.map((child) => _buildTreeNode(child)).toList(),
-      ),
+        return Container(
+          color: isHovered ? PrimeTheme.primaryAccent.withOpacity(0.2) : Colors.transparent,
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              initiallyExpanded: true,
+              tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
+              childrenPadding: const EdgeInsets.only(left: 16.0),
+              leading: Icon(iconData, size: 18, color: iconColor),
+              title: isRoot ? titleWidget : draggableTitle,
+              iconColor: PrimeTheme.textSecondary,
+              collapsedIconColor: PrimeTheme.textSecondary,
+              children: node.children.map((child) => _buildTreeNode(child)).toList(),
+            ),
+          ),
+        );
+      },
     );
+
+    return targetWidget;
   }
 }

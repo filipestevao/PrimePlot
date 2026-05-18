@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
+import '../../src/rust/api/project.dart';
 import '../components/panel_container.dart';
 import 'custom_title_bar.dart';
 import '../panels/project_explorer.dart';
@@ -30,10 +31,27 @@ class _MainLayoutState extends State<MainLayout> {
     // Left Vertical Split
     _leftController = MultiSplitViewController(
       areas: [
-        Area(flex: 6, builder: (context, area) => const PanelContainer(
+        Area(flex: 6, builder: (context, area) => PanelContainer(
           title: 'Project Explorer',
           icon: Icons.folder_copy,
-          child: ProjectExplorer(),
+          actions: [
+            PopupMenuButton<NodeType>(
+              tooltip: 'Add Item',
+              icon: const Icon(Icons.more_horiz, size: 16, color: PrimeTheme.textSecondary),
+              color: PrimeTheme.backgroundDark,
+              elevation: 8,
+              offset: const Offset(0, 30),
+              onSelected: (NodeType type) {
+                ProjectState.instance.addProjectNodeWrapper('root_1', 'New Item', type);
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<NodeType>>[
+                const PopupMenuItem<NodeType>(value: NodeType.folder, child: Text('Add Folder', style: TextStyle(color: PrimeTheme.textPrimary))),
+                const PopupMenuItem<NodeType>(value: NodeType.dataset, child: Text('Add Table', style: TextStyle(color: PrimeTheme.textPrimary))),
+                const PopupMenuItem<NodeType>(value: NodeType.plot, child: Text('Add Graph', style: TextStyle(color: PrimeTheme.textPrimary))),
+              ],
+            ),
+          ],
+          child: const ProjectExplorer(),
         )),
         Area(flex: 4, builder: (context, area) => const PanelContainer(
           title: 'Layer Stack',

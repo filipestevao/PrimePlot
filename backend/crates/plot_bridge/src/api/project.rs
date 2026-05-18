@@ -36,12 +36,85 @@ impl From<EngineProjectNode> for ProjectNode {
     }
 }
 
+use std::sync::{Mutex, OnceLock};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static PROJECT_STATE: OnceLock<Mutex<EngineProjectNode>> = OnceLock::new();
+static NEXT_ID: AtomicUsize = AtomicUsize::new(100);
+
+fn get_state() -> &'static Mutex<EngineProjectNode> {
+    PROJECT_STATE.get_or_init(|| {
+        let mut root = EngineProjectNode::new("root_1", "Project", EngineNodeType::Folder);
+        root.add_child(EngineProjectNode::new("table_1", "Table", EngineNodeType::Dataset));
+        root.add_child(EngineProjectNode::new("graph_1", "Graph", EngineNodeType::Plot));
+        Mutex::new(root)
+    })
+}
+
+fn generate_id(prefix: &str) -> String {
+    let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
+    format!("{}_{}", prefix, id)
+}
+
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_project_tree() -> ProjectNode {
-    let mut root = EngineProjectNode::new("root_1", "Project", EngineNodeType::Folder);
-    
-    root.add_child(EngineProjectNode::new("table_1", "Table", EngineNodeType::Dataset));
-    root.add_child(EngineProjectNode::new("graph_1", "Graph", EngineNodeType::Plot));
+    let state = get_state().lock().unwrap();
+    state.clone().into()
+}
 
-    root.into()
+#[flutter_rust_bridge::frb(sync)]
+pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) -> ProjectNode {
+    let mut state = get_state().lock().unwrap();
+    
+    let engine_type = match node_type {
+        NodeType::Folder => EngineNodeType::Folder,
+        NodeType::Dataset => EngineNodeType::Dataset,
+        NodeType::Plot => EngineNodeType::Plot,
+    };
+    
+    let prefix = match node_type {
+        NodeType::Folder => "folder",
+        NodeType::Dataset => "table",
+        NodeType::Plot => "graph",
+    };
+    
+    let new_node = EngineProjectNode::new(&generate_id(prefix), &name, engine_type);
+    let mut opt_node = Some(new_node);
+    
+    // Attempt to insert into specified parent.
+    state.insert_node_opt(&parent_id, &mut opt_node);
+    
+    // If we failed to insert (parent not found or it's root but handled), append to root.
+    if let Some(node) = opt_node.take() {
+        state.add_child(node);
+    }
+    
+    state.clone().into()
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn move_project_node(node_id: String, new_parent_id: String) -> ProjectNode {
+    let mut state = get_state().lock().unwrap();
+    
+    if node_id == "root_1" {
+        return state.clone().into();
+    }
+    
+    if let Some(node) = state.remove_node(&node_id) {
+        let mut opt_node = Some(node);
+        state.insert_node_opt(&new_parent_id, &mut opt_node);
+        // If parent not found, put it back to root
+        if let Some(node) = opt_node.take() {
+            state.add_child(node);
+        }
+    }
+    
+    state.clone().into()
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn rename_project_node(node_id: String, new_name: String) -> ProjectNode {
+    let mut state = get_state().lock().unwrap();
+    state.rename_node(&node_id, &new_name);
+    state.clone().into()
 }

@@ -14,7 +14,7 @@ List<Point2D> getMockScientificData({required BigInt numPoints}) => RustLib
     .api
     .crateApiDataGetMockScientificData(numPoints: numPoints);
 
-/// Fetches an initial table structure populated with the mock scientific dataset.
+/// Fetches an initial table structure populated with a simple 5-point dataset.
 DTODataTable getInitialTableData() =>
     RustLib.instance.api.crateApiDataGetInitialTableData();
 

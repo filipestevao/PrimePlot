@@ -6,10 +6,37 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `generate_id`, `get_state`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
 
 ProjectNode getProjectTree() =>
     RustLib.instance.api.crateApiProjectGetProjectTree();
+
+ProjectNode addProjectNode({
+  required String parentId,
+  required String name,
+  required NodeType nodeType,
+}) => RustLib.instance.api.crateApiProjectAddProjectNode(
+  parentId: parentId,
+  name: name,
+  nodeType: nodeType,
+);
+
+ProjectNode moveProjectNode({
+  required String nodeId,
+  required String newParentId,
+}) => RustLib.instance.api.crateApiProjectMoveProjectNode(
+  nodeId: nodeId,
+  newParentId: newParentId,
+);
+
+ProjectNode renameProjectNode({
+  required String nodeId,
+  required String newName,
+}) => RustLib.instance.api.crateApiProjectRenameProjectNode(
+  nodeId: nodeId,
+  newName: newName,
+);
 
 enum NodeType { folder, dataset, plot }
 
