@@ -1,59 +1,94 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/state.dart';
 
 class LayerStack extends StatelessWidget {
   const LayerStack({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Dummy layer data based on mockup
-    final layers = [
-      {'icon': Icons.straighten, 'name': 'Axis', 'visible': true},
-      {'icon': Icons.scatter_plot, 'name': 'Data Series A (Scatter)', 'visible': true},
-      {'icon': Icons.show_chart, 'name': 'Linear Fit A', 'visible': true},
-      {'icon': Icons.timeline, 'name': 'Data Series B (Line)', 'visible': true},
-      {'icon': Icons.north_east, 'name': 'Annotation 1 (Arrow)', 'visible': true},
-      {'icon': Icons.list, 'name': 'Legend', 'visible': false},
-    ];
-
     return Container(
       color: PrimeTheme.panelBackground,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        itemCount: layers.length,
-        itemBuilder: (context, index) {
-          final layer = layers[index];
-          final bool isVisible = layer['visible'] as bool;
-          final bool isSelected = index == 2; // Mocking 'Linear Fit A' as selected
-
-          return Container(
-            color: isSelected ? PrimeTheme.primaryAccent.withOpacity(0.15) : Colors.transparent,
-            child: ListTile(
-              dense: true,
-              visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-              leading: Icon(
-                layer['icon'] as IconData,
-                size: 16,
-                color: isSelected ? PrimeTheme.primaryAccent : PrimeTheme.textSecondary,
-              ),
-              title: Text(
-                layer['name'] as String,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isSelected ? PrimeTheme.primaryAccent : PrimeTheme.textPrimary,
-                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+      child: ValueListenableBuilder<List<LayerItem>>(
+        valueListenable: ProjectState.instance.layers,
+        builder: (context, layers, child) {
+          return ReorderableListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            itemCount: layers.length,
+            onReorder: (oldIndex, newIndex) {
+              ProjectState.instance.reorderLayers(oldIndex, newIndex);
+            },
+            proxyDecorator: (Widget child, int index, Animation<double> animation) {
+              return Material(
+                color: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: PrimeTheme.backgroundDark.withOpacity(0.8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: child,
                 ),
-              ),
-              trailing: Icon(
-                isVisible ? Icons.visibility : Icons.visibility_off,
-                size: 16,
-                color: isVisible ? PrimeTheme.textSecondary : PrimeTheme.textSecondary.withOpacity(0.3),
-              ),
-              onTap: () {
-                // Future: Select layer
-              },
-            ),
+              );
+            },
+            itemBuilder: (context, index) {
+              final layer = layers[index];
+              final bool isVisible = layer.isVisible;
+              final bool isSelected = layer.isSelected;
+
+              return Container(
+                key: ValueKey(layer.id),
+                color: isSelected ? PrimeTheme.primaryAccent.withOpacity(0.15) : Colors.transparent,
+                child: ListTile(
+                  dense: true,
+                  visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  leading: Icon(
+                    layer.iconData,
+                    size: 16,
+                    color: isSelected ? PrimeTheme.primaryAccent : PrimeTheme.textSecondary,
+                  ),
+                  title: Text(
+                    layer.name,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isVisible 
+                          ? (isSelected ? PrimeTheme.primaryAccent : PrimeTheme.textPrimary)
+                          : PrimeTheme.textSecondary.withValues(alpha: 0.5),
+                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          isVisible ? Icons.visibility : Icons.visibility_off,
+                          size: 16,
+                          color: isVisible ? PrimeTheme.textSecondary : PrimeTheme.textSecondary.withOpacity(0.3),
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        splashRadius: 16,
+                        onPressed: () {
+                          ProjectState.instance.toggleLayerVisibility(layer.id);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.drag_indicator, size: 16, color: PrimeTheme.textSecondary.withOpacity(0.5)),
+                    ],
+                  ),
+                  onTap: () {
+                    ProjectState.instance.selectLayer(layer.id);
+                  },
+                ),
+              );
+            },
           );
         },
       ),

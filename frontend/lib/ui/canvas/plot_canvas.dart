@@ -34,11 +34,16 @@ class PlotCanvas extends StatelessWidget {
         xCol ??= tableData.columns[0];
         yCol ??= tableData.columns[1];
 
-        return ClipRRect(
-          child: CustomPaint(
-            painter: _ScientificPlotPainter(xCol.data, yCol.data),
-            child: Container(),
-          ),
+        return ValueListenableBuilder<List<LayerItem>>(
+          valueListenable: ProjectState.instance.layers,
+          builder: (context, layers, child) {
+            return ClipRRect(
+              child: CustomPaint(
+                painter: _ScientificPlotPainter(xCol!.data, yCol!.data, layers),
+                child: Container(),
+              ),
+            );
+          }
         );
       },
     );
@@ -48,8 +53,9 @@ class PlotCanvas extends StatelessWidget {
 class _ScientificPlotPainter extends CustomPainter {
   final List<double> xData;
   final List<double> yData;
+  final List<LayerItem> layers;
 
-  _ScientificPlotPainter(this.xData, this.yData);
+  _ScientificPlotPainter(this.xData, this.yData, this.layers);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -113,18 +119,6 @@ class _ScientificPlotPainter extends CustomPainter {
     final plotWidth = size.width - marginLeft - marginRight;
     final plotHeight = size.height - marginTop - marginBottom;
 
-    // Draw Grid and Axis lines
-    canvas.drawLine(
-      Offset(marginLeft, marginTop),
-      Offset(marginLeft, size.height - marginBottom),
-      paintAxis,
-    ); // Y-axis
-    canvas.drawLine(
-      Offset(marginLeft, size.height - marginBottom),
-      Offset(size.width - marginRight, size.height - marginBottom),
-      paintAxis,
-    ); // X-axis
-
     // Helper to map data to screen coordinates
     Offset mapToScreen(double x, double y) {
       final screenX = marginLeft + ((x - minX) / (maxX - minX)) * plotWidth;
@@ -133,90 +127,129 @@ class _ScientificPlotPainter extends CustomPainter {
       return Offset(screenX, screenY);
     }
 
-    // Draw simple grid lines and labels (5 ticks per axis)
-    const int ticks = 5;
-    const textStyle = TextStyle(color: PrimeTheme.textSecondary, fontSize: 10);
-
-    for (int i = 0; i <= ticks; i++) {
-      // X-axis ticks
-      final xVal = minX + (maxX - minX) * (i / ticks);
-      final screenX = marginLeft + plotWidth * (i / ticks);
+    void drawAxis() {
+      // Draw Grid and Axis lines
       canvas.drawLine(
-        Offset(screenX, size.height - marginBottom),
-        Offset(screenX, size.height - marginBottom + 5),
+        Offset(marginLeft, marginTop),
+        Offset(marginLeft, size.height - marginBottom),
         paintAxis,
-      );
-      
-      final xLabel = TextPainter(
-        text: TextSpan(text: xVal.toStringAsFixed(1), style: textStyle),
-        textDirection: TextDirection.ltr,
-      );
-      xLabel.layout();
-      xLabel.paint(canvas, Offset(screenX - xLabel.width / 2, size.height - marginBottom + 10));
-
-      // Y-axis ticks
-      final yVal = minY + (maxY - minY) * (i / ticks);
-      final screenY = marginTop + plotHeight - plotHeight * (i / ticks);
+      ); // Y-axis
       canvas.drawLine(
-        Offset(marginLeft - 5, screenY),
-        Offset(marginLeft, screenY),
+        Offset(marginLeft, size.height - marginBottom),
+        Offset(size.width - marginRight, size.height - marginBottom),
         paintAxis,
-      );
-      
-      final yLabel = TextPainter(
-        text: TextSpan(text: yVal.toStringAsFixed(1), style: textStyle),
-        textDirection: TextDirection.ltr,
-      );
-      yLabel.layout();
-      yLabel.paint(canvas, Offset(marginLeft - yLabel.width - 10, screenY - yLabel.height / 2));
-    }
+      ); // X-axis
 
-    // Draw axis titles
-    final xTitle = TextPainter(
-      text: const TextSpan(text: 'X', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
-      textDirection: TextDirection.ltr,
-    );
-    xTitle.layout();
-    xTitle.paint(canvas, Offset(marginLeft + plotWidth / 2 - xTitle.width / 2, size.height - 20));
+      // Draw simple grid lines and labels (5 ticks per axis)
+      const int ticks = 5;
+      const textStyle = TextStyle(color: PrimeTheme.textSecondary, fontSize: 10);
 
-    final yTitle = TextPainter(
-      text: const TextSpan(text: 'Y', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
-      textDirection: TextDirection.ltr,
-    );
-    yTitle.layout();
-    
-    canvas.save();
-    canvas.translate(20, marginTop + plotHeight / 2 + yTitle.width / 2);
-    canvas.rotate(-math.pi / 2);
-    yTitle.paint(canvas, Offset.zero);
-    canvas.restore();
+      for (int i = 0; i <= ticks; i++) {
+        // X-axis ticks
+        final xVal = minX + (maxX - minX) * (i / ticks);
+        final screenX = marginLeft + plotWidth * (i / ticks);
+        canvas.drawLine(
+          Offset(screenX, size.height - marginBottom),
+          Offset(screenX, size.height - marginBottom + 5),
+          paintAxis,
+        );
+        
+        final xLabel = TextPainter(
+          text: TextSpan(text: xVal.toStringAsFixed(1), style: textStyle),
+          textDirection: TextDirection.ltr,
+        );
+        xLabel.layout();
+        xLabel.paint(canvas, Offset(screenX - xLabel.width / 2, size.height - marginBottom + 10));
 
-    // Plot Data
-    if (length > 0) {
-      final path = Path();
-      final firstPoint = mapToScreen(xData[0], yData[0]);
-      path.moveTo(firstPoint.dx, firstPoint.dy);
-
-      for (int i = 1; i < length; i++) {
-        final point = mapToScreen(xData[i], yData[i]);
-        path.lineTo(point.dx, point.dy);
+        // Y-axis ticks
+        final yVal = minY + (maxY - minY) * (i / ticks);
+        final screenY = marginTop + plotHeight - plotHeight * (i / ticks);
+        canvas.drawLine(
+          Offset(marginLeft - 5, screenY),
+          Offset(marginLeft, screenY),
+          paintAxis,
+        );
+        
+        final yLabel = TextPainter(
+          text: TextSpan(text: yVal.toStringAsFixed(1), style: textStyle),
+          textDirection: TextDirection.ltr,
+        );
+        yLabel.layout();
+        yLabel.paint(canvas, Offset(marginLeft - yLabel.width - 10, screenY - yLabel.height / 2));
       }
 
-      // Draw connecting lines
-      canvas.drawPath(path, paintLine);
+      // Draw axis titles
+      final xTitle = TextPainter(
+        text: const TextSpan(text: 'X', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+        textDirection: TextDirection.ltr,
+      );
+      xTitle.layout();
+      xTitle.paint(canvas, Offset(marginLeft + plotWidth / 2 - xTitle.width / 2, size.height - 20));
 
-      // Draw scatter points
-      for (int i = 0; i < length; i++) {
-        final point = mapToScreen(xData[i], yData[i]);
-        canvas.drawCircle(point, 4, paintPoint);
-        canvas.drawCircle(point, 4, paintPointBorder);
+      final yTitle = TextPainter(
+        text: const TextSpan(text: 'Y', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+        textDirection: TextDirection.ltr,
+      );
+      yTitle.layout();
+      
+      canvas.save();
+      canvas.translate(20, marginTop + plotHeight / 2 + yTitle.width / 2);
+      canvas.rotate(-math.pi / 2);
+      yTitle.paint(canvas, Offset.zero);
+      canvas.restore();
+    }
+
+    void drawLine() {
+      if (length > 0) {
+        final path = Path();
+        final firstPoint = mapToScreen(xData[0], yData[0]);
+        path.moveTo(firstPoint.dx, firstPoint.dy);
+
+        for (int i = 1; i < length; i++) {
+          final point = mapToScreen(xData[i], yData[i]);
+          path.lineTo(point.dx, point.dy);
+        }
+
+        // Draw connecting lines
+        canvas.drawPath(path, paintLine);
+      }
+    }
+
+    void drawScatter() {
+      if (length > 0) {
+        for (int i = 0; i < length; i++) {
+          final point = mapToScreen(xData[i], yData[i]);
+          canvas.drawCircle(point, 4, paintPoint);
+          canvas.drawCircle(point, 4, paintPointBorder);
+        }
+      }
+    }
+
+    // Draw layers from bottom to top (reverse order of the list)
+    for (int i = layers.length - 1; i >= 0; i--) {
+      final layer = layers[i];
+      if (!layer.isVisible) continue;
+
+      switch (layer.id) {
+        case 'axis':
+          drawAxis();
+          break;
+        case 'line_a':
+          drawLine();
+          break;
+        case 'scatter_a':
+          drawScatter();
+          break;
+        default:
+          // Ignore unsupported mock layers
+          break;
       }
     }
   }
 
   @override
   bool shouldRepaint(covariant _ScientificPlotPainter oldDelegate) {
-    // Basic equality check is sufficient because we create new lists when editing
+    if (layers != oldDelegate.layers) return true;
     if (xData.length != oldDelegate.xData.length) return true;
     for (int i = 0; i < xData.length; i++) {
       if (xData[i] != oldDelegate.xData[i] || yData[i] != oldDelegate.yData[i]) {

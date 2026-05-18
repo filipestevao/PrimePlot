@@ -1,6 +1,38 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../src/rust/api/data.dart';
 import '../src/rust/api/project.dart';
+
+class LayerItem {
+  final String id;
+  final String name;
+  final IconData iconData;
+  final bool isVisible;
+  final bool isSelected;
+
+  LayerItem({
+    required this.id,
+    required this.name,
+    required this.iconData,
+    this.isVisible = true,
+    this.isSelected = false,
+  });
+
+  LayerItem copyWith({
+    String? id,
+    String? name,
+    IconData? iconData,
+    bool? isVisible,
+    bool? isSelected,
+  }) {
+    return LayerItem(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      iconData: iconData ?? this.iconData,
+      isVisible: isVisible ?? this.isVisible,
+      isSelected: isSelected ?? this.isSelected,
+    );
+  }
+}
 
 /// A lightweight, globally accessible state manager.
 class ProjectState {
@@ -20,9 +52,49 @@ class ProjectState {
   // Dynamic project tree state
   final ValueNotifier<ProjectNode?> projectTree = ValueNotifier(null);
 
+  // Layer Stack State
+  final ValueNotifier<List<LayerItem>> layers = ValueNotifier([]);
+
   void loadInitialData() {
     activeTable.value = getInitialTableData();
     projectTree.value = getProjectTree();
+
+    // Initialize Mock Layers
+    layers.value = [
+      LayerItem(id: 'axis', name: 'Axis', iconData: Icons.straighten),
+      LayerItem(id: 'scatter_a', name: 'Data Series A (Scatter)', iconData: Icons.scatter_plot),
+      LayerItem(id: 'line_a', name: 'Data Series B (Line)', iconData: Icons.timeline),
+      LayerItem(id: 'fit_a', name: 'Linear Fit A', iconData: Icons.show_chart),
+      LayerItem(id: 'annotation', name: 'Annotation 1 (Arrow)', iconData: Icons.north_east),
+      LayerItem(id: 'legend', name: 'Legend', iconData: Icons.list, isVisible: false),
+    ];
+  }
+
+  void toggleLayerVisibility(String id) {
+    final currentLayers = List<LayerItem>.from(layers.value);
+    final index = currentLayers.indexWhere((l) => l.id == id);
+    if (index != -1) {
+      currentLayers[index] = currentLayers[index].copyWith(isVisible: !currentLayers[index].isVisible);
+      layers.value = currentLayers;
+    }
+  }
+
+  void selectLayer(String id) {
+    final currentLayers = List<LayerItem>.from(layers.value);
+    for (int i = 0; i < currentLayers.length; i++) {
+      currentLayers[i] = currentLayers[i].copyWith(isSelected: currentLayers[i].id == id);
+    }
+    layers.value = currentLayers;
+  }
+
+  void reorderLayers(int oldIndex, int newIndex) {
+    final currentLayers = List<LayerItem>.from(layers.value);
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final item = currentLayers.removeAt(oldIndex);
+    currentLayers.insert(newIndex, item);
+    layers.value = currentLayers;
   }
 
   void updateTable(DTODataTable newTable) {
