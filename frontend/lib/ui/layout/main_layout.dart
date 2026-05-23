@@ -128,6 +128,82 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: PrimeTheme.backgroundDark,
+      drawer: Drawer(
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(right: Radius.circular(16)),
+        ),
+        backgroundColor: PrimeTheme.panelBackground,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            SizedBox(
+              height: 52, // Match title bar height
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'PrimePlot',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: PrimeTheme.textPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1, thickness: 1, color: PrimeTheme.borderSide),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.folder_open, size: 18, color: PrimeTheme.textSecondary),
+              title: const Text('Open project', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+              onTap: () {
+                debugPrint("Menu Selected: open");
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.save, size: 18, color: PrimeTheme.textSecondary),
+              title: const Text('Save', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+              onTap: () {
+                debugPrint("Menu Selected: save");
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.save_as, size: 18, color: PrimeTheme.textSecondary),
+              title: const Text('Save as...', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+              onTap: () {
+                debugPrint("Menu Selected: save_as");
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(height: 16, thickness: 1, color: PrimeTheme.borderSide),
+            ListTile(
+              leading: const Icon(Icons.settings, size: 18, color: PrimeTheme.textSecondary),
+              title: const Text('Settings', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+              onTap: () {
+                debugPrint("Menu Selected: settings");
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline, size: 18, color: PrimeTheme.textSecondary),
+              title: const Text('About', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+              onTap: () {
+                debugPrint("Menu Selected: about");
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           const CustomTitleBar(),
