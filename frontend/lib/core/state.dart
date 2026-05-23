@@ -40,6 +40,7 @@ class PlotProperties {
   final bool showGrid;
   final String xAxisLabel;
   final String yAxisLabel;
+  final double? aspectRatio;
 
   const PlotProperties({
     required this.lineColor,
@@ -47,6 +48,7 @@ class PlotProperties {
     required this.showGrid,
     required this.xAxisLabel,
     required this.yAxisLabel,
+    this.aspectRatio,
   });
 
   PlotProperties copyWith({
@@ -55,6 +57,7 @@ class PlotProperties {
     bool? showGrid,
     String? xAxisLabel,
     String? yAxisLabel,
+    double? Function()? aspectRatio,
   }) {
     return PlotProperties(
       lineColor: lineColor ?? this.lineColor,
@@ -62,6 +65,7 @@ class PlotProperties {
       showGrid: showGrid ?? this.showGrid,
       xAxisLabel: xAxisLabel ?? this.xAxisLabel,
       yAxisLabel: yAxisLabel ?? this.yAxisLabel,
+      aspectRatio: aspectRatio != null ? aspectRatio() : this.aspectRatio,
     );
   }
 }

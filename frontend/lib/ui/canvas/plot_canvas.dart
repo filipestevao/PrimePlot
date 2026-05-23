@@ -40,11 +40,22 @@ class PlotCanvas extends StatelessWidget {
             return ValueListenableBuilder<PlotProperties>(
               valueListenable: ProjectState.instance.plotProperties,
               builder: (context, props, child) {
+                Widget canvas = CustomPaint(
+                  painter: _ScientificPlotPainter(xCol!.data, yCol!.data, layers, props),
+                  child: Container(),
+                );
+
+                if (props.aspectRatio != null) {
+                  canvas = Center(
+                    child: AspectRatio(
+                      aspectRatio: props.aspectRatio!,
+                      child: canvas,
+                    ),
+                  );
+                }
+
                 return ClipRRect(
-                  child: CustomPaint(
-                    painter: _ScientificPlotPainter(xCol!.data, yCol!.data, layers, props),
-                    child: Container(),
-                  ),
+                  child: canvas,
                 );
               }
             );

@@ -52,19 +52,6 @@ class PropertyInspector extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            child: Text(
-              'PROPERTY INSPECTOR',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-                color: PrimeTheme.textSecondary,
-              ),
-            ),
-          ),
-          const Divider(height: 1, thickness: 1, color: PrimeTheme.borderSide),
           Expanded(
             child: ValueListenableBuilder<PlotProperties>(
               valueListenable: ProjectState.instance.plotProperties,
@@ -79,6 +66,21 @@ class PropertyInspector extends StatelessWidget {
                     _buildSliderProperty(context, 'Thickness', props.lineThickness, 1.0, 10.0, (val) {
                       ProjectState.instance.updatePlotProperties(props.copyWith(lineThickness: val));
                     }),
+                    const SizedBox(height: 16),
+                    _buildDropdownProperty(
+                      'Aspect Ratio',
+                      props.aspectRatio,
+                      {
+                        null: 'Free',
+                        1.0: '1:1',
+                        1.5: '3:2',
+                        1.3333: '4:3',
+                        1.7777: '16:9',
+                      },
+                      (val) {
+                        ProjectState.instance.updatePlotProperties(props.copyWith(aspectRatio: () => val));
+                      },
+                    ),
                     const SizedBox(height: 24),
                     
                     _buildSectionHeader('Axes & Grid'),
@@ -217,6 +219,39 @@ class PropertyInspector extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 borderSide: const BorderSide(color: PrimeTheme.primaryAccent),
               ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownProperty(String label, double? value, Map<double?, String> options, ValueChanged<double?> onChanged) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
+        Container(
+          height: 30, // Increased height
+          padding: const EdgeInsets.symmetric(horizontal: 12), // Increased padding
+          decoration: BoxDecoration(
+            color: PrimeTheme.backgroundDark,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: PrimeTheme.borderSide),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<double?>(
+              value: value,
+              icon: const Icon(Icons.arrow_drop_down, size: 18, color: PrimeTheme.textSecondary), // Slightly larger icon
+              dropdownColor: PrimeTheme.backgroundDark,
+              style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+              onChanged: onChanged,
+              items: options.entries.map((entry) {
+                return DropdownMenuItem<double?>(
+                  value: entry.key,
+                  child: Text(entry.value),
+                );
+              }).toList(),
             ),
           ),
         ),
