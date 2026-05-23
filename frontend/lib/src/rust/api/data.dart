@@ -6,6 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `detect_delimiter`, `normalise_cell`, `row_is_header`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 
 /// Fetches a high-performance mock scientific dataset from the core math engine.
@@ -14,9 +15,29 @@ List<Point2D> getMockScientificData({required BigInt numPoints}) => RustLib
     .api
     .crateApiDataGetMockScientificData(numPoints: numPoints);
 
-/// Fetches an initial table structure populated with a simple 5-point dataset.
+/// Returns an empty two-column table (Position/X, Intensity/Y) with zero rows.
+/// This is the canonical starting state of the application.
+DTODataTable getEmptyTableData() =>
+    RustLib.instance.api.crateApiDataGetEmptyTableData();
+
+/// Compat alias – kept so the existing frb_generated.rs glue compiles until
+/// `flutter_rust_bridge_codegen generate` is re-run.
 DTODataTable getInitialTableData() =>
     RustLib.instance.api.crateApiDataGetInitialTableData();
+
+/// Parses a raw clipboard string (TSV / CSV) into a DTODataTable.
+///
+/// - Blank cells become f64::NAN (empty cell sentinel).
+/// - Decimal normalisation handles European and US formats automatically.
+/// - If the first row is all non-numeric, it is treated as column headers.
+/// - Column roles: col 0 → X, col 1 → Y, rest → Y.
+DTODataTable parseClipboardTable({required String raw}) =>
+    RustLib.instance.api.crateApiDataParseClipboardTable(raw: raw);
+
+/// Returns `true` (Scatter enabled) when `row_count` ≤ 10, `false` (Hide) otherwise.
+/// Rust is the single source of truth for this threshold rule.
+bool applyScatterRule({required BigInt rowCount}) =>
+    RustLib.instance.api.crateApiDataApplyScatterRule(rowCount: rowCount);
 
 /// DTOs for Table Data
 enum DTOColumnRole { x, y, xError, yError, text }
@@ -24,6 +45,8 @@ enum DTOColumnRole { x, y, xError, yError, text }
 class DTODataColumn {
   final String name;
   final DTOColumnRole role;
+
+  /// f64::NAN encodes an empty cell. The Flutter side checks `value.isNaN`.
   final Float64List data;
 
   const DTODataColumn({

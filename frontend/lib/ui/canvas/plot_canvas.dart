@@ -12,7 +12,9 @@ class PlotCanvas extends StatelessWidget {
     return ValueListenableBuilder<DTODataTable?>(
       valueListenable: ProjectState.instance.activeTable,
       builder: (context, tableData, child) {
-        if (tableData == null || tableData.columns.length < 2) {
+        if (tableData == null ||
+            tableData.columns.length < 2 ||
+            tableData.columns.first.data.isEmpty) {
           return const Center(
             child: Text(
               'No data available to plot.',
@@ -40,8 +42,22 @@ class PlotCanvas extends StatelessWidget {
             return ValueListenableBuilder<PlotProperties>(
               valueListenable: ProjectState.instance.plotProperties,
               builder: (context, props, child) {
+                // Build NaN-free paired lists for the painter.
+                final xRaw = xCol!.data;
+                final yRaw = yCol!.data;
+                final List<double> xClean = [];
+                final List<double> yClean = [];
+                final len = math.min(xRaw.length, yRaw.length);
+                for (int i = 0; i < len; i++) {
+                  if (!xRaw[i].isNaN && !yRaw[i].isNaN) {
+                    xClean.add(xRaw[i]);
+                    yClean.add(yRaw[i]);
+                  }
+                }
+
                 Widget canvas = CustomPaint(
-                  painter: _ScientificPlotPainter(xCol!.data, yCol!.data, layers, props),
+                  painter: _ScientificPlotPainter(
+                      xClean, yClean, layers, props),
                   child: Container(),
                 );
 
@@ -54,12 +70,10 @@ class PlotCanvas extends StatelessWidget {
                   );
                 }
 
-                return ClipRRect(
-                  child: canvas,
-                );
-              }
+                return ClipRRect(child: canvas);
+              },
             );
-          }
+          },
         );
       },
     );

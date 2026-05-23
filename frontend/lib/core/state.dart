@@ -107,10 +107,11 @@ class ProjectState {
   }
 
   void loadInitialData() {
-    activeTable.value = getInitialTableData();
+    // Start with an empty table – Rust is the single source of truth.
+    activeTable.value = getEmptyTableData();
     projectTree.value = getProjectTree();
 
-    // Initialize Mock Layers
+    // Initialize layers. Scatter starts visible (empty table has 0 rows ≤ 10).
     layers.value = [
       LayerItem(id: 'axis', name: 'Axis', iconData: Icons.straighten),
       LayerItem(id: 'scatter_a', name: 'Data Series A (Scatter)', iconData: Icons.scatter_plot),
@@ -119,6 +120,28 @@ class ProjectState {
       LayerItem(id: 'annotation', name: 'Annotation 1 (Arrow)', iconData: Icons.north_east),
       LayerItem(id: 'legend', name: 'Legend', iconData: Icons.list, isVisible: false),
     ];
+  }
+
+  /// Parses a raw clipboard string via Rust and updates all dependent state.
+  /// This is the single entry-point for paste operations.
+  void pasteTable(String rawClipboard) {
+    final newTable = parseClipboardTable(raw: rawClipboard);
+    activeTable.value = newTable;
+
+    // Count valid rows (non-empty = at least one non-NaN column in that row).
+    final rowCount = newTable.columns.isNotEmpty
+        ? newTable.columns.first.data.length
+        : 0;
+
+    // Delegate the threshold rule to Rust.
+    final scatterVisible = applyScatterRule(rowCount: BigInt.from(rowCount));
+
+    final currentLayers = List<LayerItem>.from(layers.value);
+    final idx = currentLayers.indexWhere((l) => l.id == 'scatter_a');
+    if (idx != -1) {
+      currentLayers[idx] = currentLayers[idx].copyWith(isVisible: scatterVisible);
+      layers.value = currentLayers;
+    }
   }
 
   void toggleLayerVisibility(String id) {
