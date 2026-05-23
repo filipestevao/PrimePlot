@@ -34,6 +34,38 @@ class LayerItem {
   }
 }
 
+class PlotProperties {
+  final Color lineColor;
+  final double lineThickness;
+  final bool showGrid;
+  final String xAxisLabel;
+  final String yAxisLabel;
+
+  const PlotProperties({
+    required this.lineColor,
+    required this.lineThickness,
+    required this.showGrid,
+    required this.xAxisLabel,
+    required this.yAxisLabel,
+  });
+
+  PlotProperties copyWith({
+    Color? lineColor,
+    double? lineThickness,
+    bool? showGrid,
+    String? xAxisLabel,
+    String? yAxisLabel,
+  }) {
+    return PlotProperties(
+      lineColor: lineColor ?? this.lineColor,
+      lineThickness: lineThickness ?? this.lineThickness,
+      showGrid: showGrid ?? this.showGrid,
+      xAxisLabel: xAxisLabel ?? this.xAxisLabel,
+      yAxisLabel: yAxisLabel ?? this.yAxisLabel,
+    );
+  }
+}
+
 /// A lightweight, globally accessible state manager.
 class ProjectState {
   static final ProjectState instance = ProjectState._internal();
@@ -54,6 +86,21 @@ class ProjectState {
 
   // Layer Stack State
   final ValueNotifier<List<LayerItem>> layers = ValueNotifier([]);
+
+  // Plot Properties State
+  final ValueNotifier<PlotProperties> plotProperties = ValueNotifier(
+    const PlotProperties(
+      lineColor: Color(0xFF00C3FF), // PrimeTheme.primaryAccent roughly
+      lineThickness: 2.5,
+      showGrid: true,
+      xAxisLabel: 'X',
+      yAxisLabel: 'Y',
+    )
+  );
+
+  void updatePlotProperties(PlotProperties newProps) {
+    plotProperties.value = newProps;
+  }
 
   void loadInitialData() {
     activeTable.value = getInitialTableData();

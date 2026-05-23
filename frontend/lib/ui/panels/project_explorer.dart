@@ -183,7 +183,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         final isHovered = candidateData.isNotEmpty;
         
         if (node.children.isEmpty && node.nodeType != NodeType.folder) {
-          return Container(
+          return Material(
             color: isHovered ? PrimeTheme.primaryAccent.withOpacity(0.2) : Colors.transparent,
             child: ListTile(
               dense: true,
@@ -195,7 +195,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           );
         }
 
-        return Container(
+        return Material(
           color: isHovered ? PrimeTheme.primaryAccent.withOpacity(0.2) : Colors.transparent,
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),

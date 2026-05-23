@@ -37,11 +37,16 @@ class PlotCanvas extends StatelessWidget {
         return ValueListenableBuilder<List<LayerItem>>(
           valueListenable: ProjectState.instance.layers,
           builder: (context, layers, child) {
-            return ClipRRect(
-              child: CustomPaint(
-                painter: _ScientificPlotPainter(xCol!.data, yCol!.data, layers),
-                child: Container(),
-              ),
+            return ValueListenableBuilder<PlotProperties>(
+              valueListenable: ProjectState.instance.plotProperties,
+              builder: (context, props, child) {
+                return ClipRRect(
+                  child: CustomPaint(
+                    painter: _ScientificPlotPainter(xCol!.data, yCol!.data, layers, props),
+                    child: Container(),
+                  ),
+                );
+              }
             );
           }
         );
@@ -54,8 +59,9 @@ class _ScientificPlotPainter extends CustomPainter {
   final List<double> xData;
   final List<double> yData;
   final List<LayerItem> layers;
+  final PlotProperties props;
 
-  _ScientificPlotPainter(this.xData, this.yData, this.layers);
+  _ScientificPlotPainter(this.xData, this.yData, this.layers, this.props);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -94,8 +100,8 @@ class _ScientificPlotPainter extends CustomPainter {
       ..strokeWidth = 1.5;
 
     final paintLine = Paint()
-      ..color = PrimeTheme.primaryAccent
-      ..strokeWidth = 2
+      ..color = props.lineColor
+      ..strokeWidth = props.lineThickness
       ..style = PaintingStyle.stroke
       ..isAntiAlias = true;
 
@@ -105,10 +111,14 @@ class _ScientificPlotPainter extends CustomPainter {
       ..isAntiAlias = true;
       
     final paintPointBorder = Paint()
-      ..color = PrimeTheme.primaryAccent
+      ..color = props.lineColor
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke
       ..isAntiAlias = true;
+
+    final paintGrid = Paint()
+      ..color = PrimeTheme.textSecondary.withOpacity(0.2)
+      ..strokeWidth = 1.0;
 
     // Define plotting area margins
     const marginLeft = 60.0;
@@ -148,6 +158,15 @@ class _ScientificPlotPainter extends CustomPainter {
         // X-axis ticks
         final xVal = minX + (maxX - minX) * (i / ticks);
         final screenX = marginLeft + plotWidth * (i / ticks);
+        
+        if (props.showGrid) {
+          canvas.drawLine(
+            Offset(screenX, size.height - marginBottom),
+            Offset(screenX, marginTop),
+            paintGrid,
+          );
+        }
+
         canvas.drawLine(
           Offset(screenX, size.height - marginBottom),
           Offset(screenX, size.height - marginBottom + 5),
@@ -164,6 +183,15 @@ class _ScientificPlotPainter extends CustomPainter {
         // Y-axis ticks
         final yVal = minY + (maxY - minY) * (i / ticks);
         final screenY = marginTop + plotHeight - plotHeight * (i / ticks);
+        
+        if (props.showGrid) {
+          canvas.drawLine(
+            Offset(marginLeft, screenY),
+            Offset(size.width - marginRight, screenY),
+            paintGrid,
+          );
+        }
+
         canvas.drawLine(
           Offset(marginLeft - 5, screenY),
           Offset(marginLeft, screenY),
@@ -180,14 +208,14 @@ class _ScientificPlotPainter extends CustomPainter {
 
       // Draw axis titles
       final xTitle = TextPainter(
-        text: const TextSpan(text: 'X', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+        text: TextSpan(text: props.xAxisLabel, style: const TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       );
       xTitle.layout();
       xTitle.paint(canvas, Offset(marginLeft + plotWidth / 2 - xTitle.width / 2, size.height - 20));
 
       final yTitle = TextPainter(
-        text: const TextSpan(text: 'Y', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+        text: TextSpan(text: props.yAxisLabel, style: const TextStyle(color: PrimeTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       );
       yTitle.layout();
@@ -250,6 +278,7 @@ class _ScientificPlotPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ScientificPlotPainter oldDelegate) {
     if (layers != oldDelegate.layers) return true;
+    if (props != oldDelegate.props) return true;
     if (xData.length != oldDelegate.xData.length) return true;
     for (int i = 0; i < xData.length; i++) {
       if (xData[i] != oldDelegate.xData[i] || yData[i] != oldDelegate.yData[i]) {

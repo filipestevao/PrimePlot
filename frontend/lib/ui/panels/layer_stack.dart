@@ -41,7 +41,7 @@ class LayerStack extends StatelessWidget {
               final bool isVisible = layer.isVisible;
               final bool isSelected = layer.isSelected;
 
-              return Container(
+              return Material(
                 key: ValueKey(layer.id),
                 color: isSelected ? PrimeTheme.primaryAccent.withOpacity(0.15) : Colors.transparent,
                 child: ListTile(

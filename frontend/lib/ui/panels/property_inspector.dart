@@ -1,16 +1,49 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../core/state.dart';
 
-class PropertyInspector extends StatefulWidget {
+class PropertyInspector extends StatelessWidget {
   const PropertyInspector({super.key});
 
-  @override
-  State<PropertyInspector> createState() => _PropertyInspectorState();
-}
+  void _showColorPicker(BuildContext context, PlotProperties props) {
+    final colors = [
+      PrimeTheme.primaryAccent,
+      Colors.redAccent,
+      Colors.greenAccent,
+      Colors.amber,
+      Colors.purpleAccent,
+      Colors.pinkAccent,
+      Colors.tealAccent,
+      Colors.white,
+    ];
 
-class _PropertyInspectorState extends State<PropertyInspector> {
-  bool _showGrid = true;
-  double _lineThickness = 2.5;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PrimeTheme.panelBackground,
+        title: const Text('Select Line Color', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 14)),
+        content: Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: colors.map((c) => InkWell(
+            onTap: () {
+              ProjectState.instance.updatePlotProperties(props.copyWith(lineColor: c));
+              Navigator.pop(ctx);
+            },
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: c,
+                shape: BoxShape.circle,
+                border: Border.all(color: props.lineColor == c ? Colors.white : Colors.transparent, width: 2),
+              ),
+            ),
+          )).toList(),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,28 +66,37 @@ class _PropertyInspectorState extends State<PropertyInspector> {
           ),
           const Divider(height: 1, thickness: 1, color: PrimeTheme.borderSide),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
-                _buildSectionHeader('Appearance'),
-                const SizedBox(height: 12),
-                _buildColorProperty('Line Color', PrimeTheme.primaryAccent),
-                const SizedBox(height: 16),
-                _buildSliderProperty('Thickness', _lineThickness, 1.0, 10.0, (val) {
-                  setState(() => _lineThickness = val);
-                }),
-                const SizedBox(height: 24),
-                
-                _buildSectionHeader('Axes & Grid'),
-                const SizedBox(height: 12),
-                _buildToggleProperty('Show Grid', _showGrid, (val) {
-                  setState(() => _showGrid = val);
-                }),
-                const SizedBox(height: 16),
-                _buildTextProperty('X-Axis Label', '2Theta (deg)'),
-                const SizedBox(height: 16),
-                _buildTextProperty('Y-Axis Label', 'Intensity (a.u.)'),
-              ],
+            child: ValueListenableBuilder<PlotProperties>(
+              valueListenable: ProjectState.instance.plotProperties,
+              builder: (context, props, child) {
+                return ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: [
+                    _buildSectionHeader('Appearance'),
+                    const SizedBox(height: 12),
+                    _buildColorProperty(context, 'Line Color', props),
+                    const SizedBox(height: 16),
+                    _buildSliderProperty(context, 'Thickness', props.lineThickness, 1.0, 10.0, (val) {
+                      ProjectState.instance.updatePlotProperties(props.copyWith(lineThickness: val));
+                    }),
+                    const SizedBox(height: 24),
+                    
+                    _buildSectionHeader('Axes & Grid'),
+                    const SizedBox(height: 12),
+                    _buildToggleProperty('Show Grid', props.showGrid, (val) {
+                      ProjectState.instance.updatePlotProperties(props.copyWith(showGrid: val));
+                    }),
+                    const SizedBox(height: 16),
+                    _buildTextProperty('X-Axis Label', props.xAxisLabel, (val) {
+                      ProjectState.instance.updatePlotProperties(props.copyWith(xAxisLabel: val));
+                    }),
+                    const SizedBox(height: 16),
+                    _buildTextProperty('Y-Axis Label', props.yAxisLabel, (val) {
+                      ProjectState.instance.updatePlotProperties(props.copyWith(yAxisLabel: val));
+                    }),
+                  ],
+                );
+              }
             ),
           ),
         ],
@@ -74,25 +116,28 @@ class _PropertyInspectorState extends State<PropertyInspector> {
     );
   }
 
-  Widget _buildColorProperty(String label, Color color) {
+  Widget _buildColorProperty(BuildContext context, String label, PlotProperties props) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: PrimeTheme.borderSide),
+        InkWell(
+          onTap: () => _showColorPicker(context, props),
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: props.lineColor,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: PrimeTheme.borderSide),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSliderProperty(String label, double value, double min, double max, ValueChanged<double> onChanged) {
+  Widget _buildSliderProperty(BuildContext context, String label, double value, double min, double max, ValueChanged<double> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -144,22 +189,35 @@ class _PropertyInspectorState extends State<PropertyInspector> {
     );
   }
 
-  Widget _buildTextProperty(String label, String value) {
+  Widget _buildTextProperty(String label, String value, ValueChanged<String> onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
         const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: PrimeTheme.backgroundDark,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: PrimeTheme.borderSide),
-          ),
-          child: Text(
-            value,
+        SizedBox(
+          height: 32,
+          child: TextField(
+            controller: TextEditingController(text: value)..selection = TextSelection.collapsed(offset: value.length),
             style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+              filled: true,
+              fillColor: PrimeTheme.backgroundDark,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(4),
+                borderSide: const BorderSide(color: PrimeTheme.borderSide),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(4),
+                borderSide: const BorderSide(color: PrimeTheme.borderSide),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(4),
+                borderSide: const BorderSide(color: PrimeTheme.primaryAccent),
+              ),
+            ),
           ),
         ),
       ],
