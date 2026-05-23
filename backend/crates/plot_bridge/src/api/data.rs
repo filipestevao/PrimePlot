@@ -105,12 +105,31 @@ pub fn get_empty_table_data() -> DTODataTable {
     table.into()
 }
 
+/// Returns a new blank table with `col_count` columns and `row_count` rows.
+/// Every cell is initialised to f64::NAN (empty sentinel).
+/// Column 0 gets role X; all others get role Y.
+#[frb(sync)]
+pub fn get_new_table_data(row_count: usize, col_count: usize) -> DTODataTable {
+    let mut table = EngineDataTable::new("table_001", "Untitled");
+    for i in 0..col_count {
+        let role = if i == 0 { ColumnRole::X } else { ColumnRole::Y };
+        let name = format!("Col {}", i + 1);
+        table.add_column(DataColumn {
+            name,
+            role,
+            data: vec![f64::NAN; row_count],
+        });
+    }
+    table.into()
+}
+
 /// Compat alias – kept so the existing frb_generated.rs glue compiles until
 /// `flutter_rust_bridge_codegen generate` is re-run.
 #[frb(sync)]
 pub fn get_initial_table_data() -> DTODataTable {
     get_empty_table_data()
 }
+
 
 // ---------------------------------------------------------------------------
 // Clipboard paste parser

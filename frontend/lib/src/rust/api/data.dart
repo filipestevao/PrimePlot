@@ -20,6 +20,17 @@ List<Point2D> getMockScientificData({required BigInt numPoints}) => RustLib
 DTODataTable getEmptyTableData() =>
     RustLib.instance.api.crateApiDataGetEmptyTableData();
 
+/// Returns a new blank table with `col_count` columns and `row_count` rows.
+/// Every cell is initialised to f64::NAN (empty sentinel).
+/// Column 0 gets role X; all others get role Y.
+DTODataTable getNewTableData({
+  required BigInt rowCount,
+  required BigInt colCount,
+}) => RustLib.instance.api.crateApiDataGetNewTableData(
+  rowCount: rowCount,
+  colCount: colCount,
+);
+
 /// Compat alias – kept so the existing frb_generated.rs glue compiles until
 /// `flutter_rust_bridge_codegen generate` is re-run.
 DTODataTable getInitialTableData() =>

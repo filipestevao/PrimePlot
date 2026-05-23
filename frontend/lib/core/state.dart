@@ -77,7 +77,10 @@ class ProjectState {
 
   /// Holds the active DataTable. Both the Table UI and the Canvas listen to this.
   final ValueNotifier<DTODataTable?> activeTable = ValueNotifier(null);
-  
+
+  /// Display name shown in the Table panel header (reacts to file drops & resets).
+  final ValueNotifier<String> tableDisplayName = ValueNotifier('Table');
+
   /// Controls whether the table cells are currently editable.
   final ValueNotifier<bool> isTableEditable = ValueNotifier(true);
 
@@ -123,23 +126,47 @@ class ProjectState {
   }
 
   /// Parses a raw clipboard string via Rust and updates all dependent state.
-  /// This is the single entry-point for paste operations.
-  void pasteTable(String rawClipboard) {
-    final newTable = parseClipboardTable(raw: rawClipboard);
-    activeTable.value = newTable;
+  /// [displayName] is used when the data comes from a dropped file.
+  void pasteTable(String rawText, {String? displayName}) {
+    final parsed = parseClipboardTable(raw: rawText);
+    activeTable.value = parsed;
+    tableDisplayName.value = displayName ?? 'Table';
+    if (displayName != null) {
+      renameProjectNodeWrapper('table_1', displayName);
+    }
 
-    // Count valid rows (non-empty = at least one non-NaN column in that row).
-    final rowCount = newTable.columns.isNotEmpty
-        ? newTable.columns.first.data.length
+    final rowCount = parsed.columns.isNotEmpty
+        ? parsed.columns.first.data.length
         : 0;
-
-    // Delegate the threshold rule to Rust.
     final scatterVisible = applyScatterRule(rowCount: BigInt.from(rowCount));
+    _setScatterVisible(scatterVisible);
+  }
 
+  /// Resets the table to a new blank 10-row × 2-column table and resets scatter.
+  void newTable() {
+    activeTable.value = getNewTableData(
+      rowCount: BigInt.from(10),
+      colCount: BigInt.from(2),
+    );
+    tableDisplayName.value = 'Table';
+    renameProjectNodeWrapper('table_1', 'Table');
+    // 10 rows ≤ 10 → Scatter visible.
+    _setScatterVisible(true);
+  }
+
+  /// Clears all data rows, keeping the column schema, resetting to an empty table.
+  void clearTableData() {
+    activeTable.value = getEmptyTableData();
+    tableDisplayName.value = 'Table';
+    renameProjectNodeWrapper('table_1', 'Table');
+    _setScatterVisible(true);
+  }
+
+  void _setScatterVisible(bool visible) {
     final currentLayers = List<LayerItem>.from(layers.value);
     final idx = currentLayers.indexWhere((l) => l.id == 'scatter_a');
     if (idx != -1) {
-      currentLayers[idx] = currentLayers[idx].copyWith(isVisible: scatterVisible);
+      currentLayers[idx] = currentLayers[idx].copyWith(isVisible: visible);
       layers.value = currentLayers;
     }
   }
