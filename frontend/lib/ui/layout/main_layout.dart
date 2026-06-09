@@ -9,8 +9,8 @@ import '../components/panel_container.dart';
 import 'custom_title_bar.dart';
 import '../panels/project_explorer.dart';
 import '../panels/layer_stack.dart';
-import '../panels/data_table_panel.dart';
 import '../panels/property_inspector.dart';
+import '../panels/collapsible_data_panel.dart';
 import '../canvas/plot_canvas.dart';
 
 class MainLayout extends StatefulWidget {
@@ -25,6 +25,7 @@ class _MainLayoutState extends State<MainLayout> {
   late MultiSplitViewController _leftController;
   late MultiSplitViewController _centerController;
   late MultiSplitViewController _rightController;
+  bool _isDataPanelCollapsed = false;
   bool _dragging = false;
 
   @override
@@ -60,76 +61,7 @@ class _MainLayoutState extends State<MainLayout> {
       ],
     );
 
-    // Center Horizontal Split
-    _centerController = MultiSplitViewController(
-      areas: [
-        Area(flex: 4, builder: (context, area) => ValueListenableBuilder<String>(
-          valueListenable: ProjectState.instance.tableName,
-          builder: (context, tableName, child) {
-            return ValueListenableBuilder<bool>(
-              valueListenable: ProjectState.instance.isTableEditable,
-              builder: (context, isEditable, child) {
-                return PanelContainer(
-                  title: tableName,
-                  icon: Icons.table_chart,
-                  actions: [
-                    IconButton(
-                      icon: Icon(
-                        isEditable ? Icons.lock_open : Icons.lock,
-                        size: 14,
-                        color: isEditable ? PrimeTheme.primaryAccent : PrimeTheme.textSecondary,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      splashRadius: 16,
-                      onPressed: () {
-                        ProjectState.instance.toggleTableEditMode();
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    PopupMenuButton<String>(
-                      tooltip: 'Table Options',
-                      icon: const Icon(Icons.more_horiz, size: 16, color: PrimeTheme.textSecondary),
-                      color: PrimeTheme.backgroundDark,
-                      elevation: 8,
-                      offset: const Offset(0, 30),
-                      onSelected: (String choice) {
-                        if (choice == 'new') {
-                          ProjectState.instance.newTable();
-                        } else if (choice == 'clear') {
-                          ProjectState.instance.clearTableData();
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                        const PopupMenuItem<String>(
-                          value: 'new',
-                          child: Text('New table', style: TextStyle(color: PrimeTheme.textPrimary)),
-                        ),
-                        const PopupMenuItem<String>(
-                          value: 'clear',
-                          child: Text('Clean all data', style: TextStyle(color: PrimeTheme.textPrimary)),
-                        ),
-                      ],
-                    ),
-                  ],
-                  child: const DataTablePanel(),
-                );
-              }
-            );
-          }
-        )),
-        Area(flex: 6, builder: (context, area) => ValueListenableBuilder<String>(
-          valueListenable: ProjectState.instance.graphName,
-          builder: (context, graphName, child) {
-            return PanelContainer(
-              title: graphName,
-              icon: Icons.show_chart,
-              child: const PlotCanvas(),
-            );
-          }
-        )),
-      ],
-    );
+    _centerController = MultiSplitViewController(areas: _buildCenterAreas());
 
     // Right Vertical Split
     _rightController = MultiSplitViewController(
@@ -151,10 +83,41 @@ class _MainLayoutState extends State<MainLayout> {
     _mainController = MultiSplitViewController(
       areas: [
         Area(flex: 2, builder: (context, area) => MultiSplitView(controller: _leftController, axis: Axis.vertical)),
-        Area(flex: 6, builder: (context, area) => MultiSplitView(controller: _centerController, axis: Axis.horizontal)),
+        Area(flex: 6, builder: (context, area) => MultiSplitView(controller: _centerController, axis: Axis.vertical)),
         Area(flex: 2, builder: (context, area) => MultiSplitView(controller: _rightController, axis: Axis.vertical)),
       ],
     );
+  }
+
+  List<Area> _buildCenterAreas() {
+    return [
+      Area(flex: _isDataPanelCollapsed ? 1 : 3, builder: (context, area) => ValueListenableBuilder<String>(
+        valueListenable: ProjectState.instance.graphName,
+        builder: (context, graphName, child) {
+          return PanelContainer(
+            title: graphName,
+            icon: Icons.show_chart,
+            child: const PlotCanvas(),
+          );
+        }
+      )),
+      Area(
+        flex: _isDataPanelCollapsed ? null : 2,
+        size: _isDataPanelCollapsed ? 46 : null,
+        min: _isDataPanelCollapsed ? 46 : null,
+        builder: (context, area) => CollapsibleDataPanel(
+          isCollapsed: _isDataPanelCollapsed,
+          onToggle: _toggleDataPanel,
+        ),
+      ),
+    ];
+  }
+
+  void _toggleDataPanel() {
+    setState(() {
+      _isDataPanelCollapsed = !_isDataPanelCollapsed;
+      _centerController.areas = _buildCenterAreas();
+    });
   }
 
   @override
