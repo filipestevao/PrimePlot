@@ -24,6 +24,7 @@ class _MainLayoutState extends State<MainLayout> {
   late MultiSplitViewController _mainController;
   late MultiSplitViewController _leftController;
   late MultiSplitViewController _centerController;
+  late MultiSplitViewController _rightController;
   bool _dragging = false;
 
   @override
@@ -55,11 +56,6 @@ class _MainLayoutState extends State<MainLayout> {
             ),
           ],
           child: const ProjectExplorer(),
-        )),
-        Area(flex: 4, builder: (context, area) => const PanelContainer(
-          title: 'Layer Stack',
-          icon: Icons.layers,
-          child: LayerStack(),
         )),
       ],
     );
@@ -135,16 +131,28 @@ class _MainLayoutState extends State<MainLayout> {
       ],
     );
 
+    // Right Vertical Split
+    _rightController = MultiSplitViewController(
+      areas: [
+        Area(flex: 3, builder: (context, area) => const PanelContainer(
+          title: 'Property Inspector',
+          icon: Icons.tune,
+          child: PropertyInspector(),
+        )),
+        Area(flex: 2, builder: (context, area) => const PanelContainer(
+          title: 'Layer Stack',
+          icon: Icons.layers,
+          child: LayerStack(),
+        )),
+      ],
+    );
+
     // Main Horizontal Split
     _mainController = MultiSplitViewController(
       areas: [
         Area(flex: 2, builder: (context, area) => MultiSplitView(controller: _leftController, axis: Axis.vertical)),
         Area(flex: 6, builder: (context, area) => MultiSplitView(controller: _centerController, axis: Axis.horizontal)),
-        Area(flex: 2, builder: (context, area) => const PanelContainer(
-          title: 'Property Inspector',
-          icon: Icons.tune,
-          child: PropertyInspector(),
-        )),
+        Area(flex: 2, builder: (context, area) => MultiSplitView(controller: _rightController, axis: Axis.vertical)),
       ],
     );
   }
