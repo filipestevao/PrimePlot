@@ -111,6 +111,41 @@ class _DataPanelHeader extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(width: 4),
+            PopupMenuButton<String>(
+              tooltip: 'Table Options',
+              icon: const Icon(
+                Icons.more_horiz,
+                size: 16,
+                color: PrimeTheme.textSecondary,
+              ),
+              color: PrimeTheme.backgroundDark,
+              elevation: 8,
+              offset: const Offset(0, 30),
+              onSelected: (String choice) {
+                if (choice == 'new') {
+                  ProjectState.instance.newTable();
+                } else if (choice == 'clear') {
+                  ProjectState.instance.clearTableData();
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'new',
+                  child: Text(
+                    'New table',
+                    style: TextStyle(color: PrimeTheme.textPrimary),
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'clear',
+                  child: Text(
+                    'Clean all data',
+                    style: TextStyle(color: PrimeTheme.textPrimary),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
