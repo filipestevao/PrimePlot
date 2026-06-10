@@ -237,6 +237,10 @@ class ProjectState {
         try {
           final table = getTable(tableId: nodeId);
           activeTable.value = table;
+          // Set scatter visibility according to table row count (Rust rule)
+          final rowCount = table.columns.isNotEmpty ? table.columns.first.data.length : 0;
+          final scatterVisible = applyScatterRule(rowCount: BigInt.from(rowCount));
+          _setScatterVisible(scatterVisible);
           // Clear multi-table view so canvas shows single table
           activeTables.value = [];
         } catch (e) {
@@ -265,6 +269,15 @@ class ProjectState {
       if (tables.isNotEmpty) {
         activeTable.value = tables.first;
         tableDisplayName.value = tables.first.name;
+        // Determine scatter visibility based on plotted graph point count.
+        // Use max row count across tables (plotted graph size).
+        int maxRows = 0;
+        for (final t in tables) {
+          final rows = t.columns.isNotEmpty ? t.columns.first.data.length : 0;
+          if (rows > maxRows) maxRows = rows;
+        }
+        final scatterVisible = applyScatterRule(rowCount: BigInt.from(maxRows));
+        _setScatterVisible(scatterVisible);
       }
     } catch (e) {
       // Keep previous state on error
