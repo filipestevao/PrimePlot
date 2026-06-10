@@ -47,6 +47,15 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
   bool _isSelected(String id) => ProjectState.instance.selectedProjectNodeId.value == id;
 
+  ProjectNode? _findNodeById(ProjectNode root, String id) {
+    if (root.id == id) return root;
+    for (final c in root.children) {
+      final found = _findNodeById(c, id);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------------------
   // Root build
   // ---------------------------------------------------------------------------
@@ -106,10 +115,15 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
   Widget _buildFolderNode(ProjectNode folder, int indent) {
     return DragTarget<String>(
-      onWillAcceptWithDetails: (d) =>
-          d.data != folder.id && d.data != 'root_1',
-      onAcceptWithDetails: (d) =>
-          ProjectState.instance.moveProjectNodeWrapper(d.data, folder.id),
+      onWillAcceptWithDetails: (d) {
+        // Folders only accept plots
+        if (d.data == folder.id || d.data == 'root_1') return false;
+        final root = ProjectState.instance.projectTree.value;
+        if (root == null) return false;
+        final dragged = _findNodeById(root, d.data);
+        return dragged != null && dragged.nodeType == NodeType.plot;
+      },
+      onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, folder.id),
       builder: (ctx, candidateData, _) => Material(
         color: candidateData.isNotEmpty
             ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
@@ -139,10 +153,15 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     );
 
     return DragTarget<String>(
-      onWillAcceptWithDetails: (d) =>
-          d.data != graph.id && d.data != 'root_1',
-      onAcceptWithDetails: (d) =>
-          ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
+      onWillAcceptWithDetails: (d) {
+        // Graphs only accept datasets
+        if (d.data == graph.id || d.data == 'root_1') return false;
+        final root = ProjectState.instance.projectTree.value;
+        if (root == null) return false;
+        final dragged = _findNodeById(root, d.data);
+        return dragged != null && dragged.nodeType == NodeType.dataset;
+      },
+      onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
       builder: (ctx, candidateData, _) => Material(
         color: candidateData.isNotEmpty
             ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
@@ -173,10 +192,15 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
     if (tables.isEmpty) {
       return DragTarget<String>(
-        onWillAcceptWithDetails: (d) =>
-            d.data != graph.id && d.data != 'root_1',
-        onAcceptWithDetails: (d) =>
-            ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
+        onWillAcceptWithDetails: (d) {
+          // Empty graph area only accepts datasets
+          if (d.data == graph.id || d.data == 'root_1') return false;
+          final root = ProjectState.instance.projectTree.value;
+          if (root == null) return false;
+          final dragged = _findNodeById(root, d.data);
+          return dragged != null && dragged.nodeType == NodeType.dataset;
+        },
+        onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
         builder: (ctx, candidateData, _) => AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: 24,
@@ -219,7 +243,14 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
     return DragTarget<String>(
       key: ValueKey('drop_${table.id}'),
-      onWillAcceptWithDetails: (d) => d.data != table.id,
+      onWillAcceptWithDetails: (d) {
+        // Table rows accept only datasets (for reorder or insert)
+        if (d.data == table.id) return false;
+        final root = ProjectState.instance.projectTree.value;
+        if (root == null) return false;
+        final dragged = _findNodeById(root, d.data);
+        return dragged != null && dragged.nodeType == NodeType.dataset;
+      },
       onAcceptWithDetails: (d) {
         final draggedId = d.data;
         final targetIdx = siblings.indexWhere((n) => n.id == table.id);
@@ -266,10 +297,23 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
           minLeadingWidth: 16,
           contentPadding: EdgeInsets.only(left: leftPad, right: 16),
-          leading: Icon(
-            Icons.table_chart,
-            size: 16,
-            color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent,
+          leading: Draggable<String>(
+            data: table.id,
+            feedback: dragFeedback,
+            dragAnchorStrategy: childDragAnchorStrategy,
+            childWhenDragging: Opacity(
+              opacity: 0.25,
+              child: Icon(
+                Icons.table_chart,
+                size: 16,
+                color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent,
+              ),
+            ),
+            child: Icon(
+              Icons.table_chart,
+              size: 16,
+              color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent,
+            ),
           ),
         title: isEditing
             ? SizedBox(
@@ -309,7 +353,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                   onPressed: () => _finishEditing(table.id),
                 ),
               ],
-              const SizedBox(width: 2),
+              const SizedBox(width: 4),
               _dragHandle(data: table.id, feedback: dragFeedback),
             ],
           ),
@@ -376,7 +420,20 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     Widget titleContent = _buildTitleWidget(node, isEditing,
         isRoot: isRoot, draggableData: draggableData, dragFeedback: dragFeedback);
 
-    return Theme(
+    final Widget leadingWidget = (draggableData != null && dragFeedback != null)
+        ? Draggable<String>(
+            data: draggableData,
+            feedback: dragFeedback,
+            dragAnchorStrategy: childDragAnchorStrategy,
+            childWhenDragging: Opacity(
+              opacity: 0.25,
+              child: Icon(icon, size: 16, color: iconColor),
+            ),
+            child: Icon(icon, size: 16, color: iconColor),
+          )
+        : Icon(icon, size: 16, color: iconColor);
+
+    final expansion = Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         initiallyExpanded: true,
@@ -385,13 +442,15 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         minTileHeight: 28,
         tilePadding: EdgeInsets.only(left: leftPad, right: 16),
         childrenPadding: EdgeInsets.zero,
-        leading: Icon(icon, size: 16, color: iconColor),
+        leading: leadingWidget,
         title: titleContent,
         iconColor: PrimeTheme.textSecondary,
         collapsedIconColor: PrimeTheme.textSecondary,
         children: children,
       ),
     );
+
+    return expansion;
   }
 
   // ---------------------------------------------------------------------------
@@ -456,6 +515,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     return Draggable<String>(
       data: data,
       feedback: feedback,
+      dragAnchorStrategy: childDragAnchorStrategy,
       childWhenDragging: Opacity(
         opacity: 0.25,
         child: Icon(Icons.drag_handle,
