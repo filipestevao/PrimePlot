@@ -15,7 +15,16 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   final TextEditingController _editController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    ProjectState.instance.selectedProjectNodeId.addListener(_onSelectionChanged);
+  }
+
+  void _onSelectionChanged() => setState(() {});
+
+  @override
   void dispose() {
+    ProjectState.instance.selectedProjectNodeId.removeListener(_onSelectionChanged);
     _editController.dispose();
     super.dispose();
   }
@@ -35,6 +44,8 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     }
     setState(() => _editingNodeId = null);
   }
+
+  bool _isSelected(String id) => ProjectState.instance.selectedProjectNodeId.value == id;
 
   // ---------------------------------------------------------------------------
   // Root build
@@ -229,35 +240,37 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
       },
       builder: (ctx, candidateData, _) {
         final isDropTarget = candidateData.isNotEmpty;
-        return LongPressDraggable<String>(
-          data: table.id,
-          delay: const Duration(milliseconds: 250),
-          feedback: feedbackChip,
-          childWhenDragging: Opacity(
-            opacity: 0.25,
-            child: _tableRowContent(table, isEditing, indent, isDropTarget: false),
-          ),
-          child:
-              _tableRowContent(table, isEditing, indent, isDropTarget: isDropTarget),
+        return _tableRowContent(
+          table,
+          isEditing,
+          indent,
+          isDropTarget: isDropTarget,
+          dragFeedback: feedbackChip,
         );
       },
     );
   }
 
   Widget _tableRowContent(ProjectNode table, bool isEditing, int indent,
-      {required bool isDropTarget}) {
+      {required bool isDropTarget, required Widget dragFeedback}) {
     final double leftPad = 12.0 + indent * 16.0 + 16.0;
+    final isSelected = _isSelected(table.id);
     return Material(
-      color: isDropTarget
-          ? PrimeTheme.primaryAccent.withValues(alpha: 0.12)
+      color: isDropTarget || isSelected
+          ? PrimeTheme.primaryAccent.withValues(alpha: isDropTarget ? 0.12 : 0.15)
           : Colors.transparent,
-      child: ListTile(
-        dense: true,
-        visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-        minLeadingWidth: 16,
-        contentPadding: EdgeInsets.only(left: leftPad, right: 16),
-        leading: const Icon(Icons.table_chart,
-            size: 16, color: Colors.greenAccent),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: ListTile(
+          dense: true,
+          visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+          minLeadingWidth: 16,
+          contentPadding: EdgeInsets.only(left: leftPad, right: 16),
+          leading: Icon(
+            Icons.table_chart,
+            size: 16,
+            color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent,
+          ),
         title: isEditing
             ? SizedBox(
                 height: 20,
@@ -281,29 +294,26 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                     fontSize: 13, color: PrimeTheme.textPrimary),
                 overflow: TextOverflow.ellipsis,
               ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!isEditing) ...[
-              _miniIconButton(
-                icon: Icons.edit_outlined,
-                onPressed: () => _startEditing(table.id, table.name),
-              ),
-            ] else ...[
-              _miniIconButton(
-                icon: Icons.check,
-                color: Colors.greenAccent,
-                onPressed: () => _finishEditing(table.id),
-              ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isEditing) ...[
+                _miniIconButton(
+                  icon: Icons.edit_outlined,
+                  onPressed: () => _startEditing(table.id, table.name),
+                ),
+              ] else ...[
+                _miniIconButton(
+                  icon: Icons.check,
+                  color: Colors.greenAccent,
+                  onPressed: () => _finishEditing(table.id),
+                ),
+              ],
+              const SizedBox(width: 2),
+              _dragHandle(data: table.id, feedback: dragFeedback),
             ],
-            const SizedBox(width: 2),
-            MouseRegion(
-              cursor: SystemMouseCursors.grab,
-              child: Icon(Icons.drag_handle,
-                  size: 20,
-                  color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
-            ),
-          ],
+          ),
+          onTap: () => ProjectState.instance.selectProjectNode(table.id),
         ),
       ),
     );
@@ -315,21 +325,32 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
   Widget _buildOrphanTableRow(ProjectNode table, int indent) {
     final double leftPad = 12.0 + indent * 16.0 + 16.0;
+    final feedbackChip = _dragChip(
+      icon: Icons.table_chart,
+      iconColor: Colors.greenAccent,
+      label: table.name,
+    );
+
+    final isSelected = _isSelected(table.id);
+
     return Material(
-      color: Colors.transparent,
+      color: isSelected ? PrimeTheme.primaryAccent.withOpacity(0.15) : Colors.transparent,
       child: ListTile(
         dense: true,
         visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
         minLeadingWidth: 16,
         contentPadding: EdgeInsets.only(left: leftPad, right: 16),
-        leading: const Icon(Icons.table_chart,
-            size: 16, color: Colors.greenAccent),
+        leading: Icon(Icons.table_chart,
+            size: 16, color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent),
         title: Text(
           table.name,
-          style: const TextStyle(
-              fontSize: 13, color: PrimeTheme.textPrimary),
+          style: TextStyle(
+              fontSize: 13,
+              color: isSelected ? PrimeTheme.primaryAccent : PrimeTheme.textPrimary),
           overflow: TextOverflow.ellipsis,
         ),
+        trailing: _dragHandle(data: table.id, feedback: feedbackChip),
+        onTap: () => ProjectState.instance.selectProjectNode(table.id),
       ),
     );
   }
@@ -352,16 +373,8 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   }) {
     final double leftPad = 12.0 + indent * 16.0;
 
-    Widget titleContent = _buildTitleWidget(node, isEditing, isRoot: isRoot);
-
-    if (draggableData != null && dragFeedback != null) {
-      titleContent = LongPressDraggable<String>(
-        data: draggableData,
-        delay: const Duration(milliseconds: 300),
-        feedback: dragFeedback,
-        child: titleContent,
-      );
-    }
+    Widget titleContent = _buildTitleWidget(node, isEditing,
+        isRoot: isRoot, draggableData: draggableData, dragFeedback: dragFeedback);
 
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -439,12 +452,29 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     );
   }
 
+  Widget _dragHandle({required String data, required Widget feedback}) {
+    return Draggable<String>(
+      data: data,
+      feedback: feedback,
+      childWhenDragging: Opacity(
+        opacity: 0.25,
+        child: Icon(Icons.drag_handle,
+            size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
+      ),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.grab,
+        child: Icon(Icons.drag_handle,
+            size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Editable title widget for graph / folder nodes
   // ---------------------------------------------------------------------------
 
   Widget _buildTitleWidget(ProjectNode node, bool isEditing,
-      {bool isRoot = false}) {
+      {bool isRoot = false, String? draggableData, Widget? dragFeedback}) {
     return Row(
       children: [
         Expanded(
@@ -485,6 +515,10 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
               onPressed: () => _finishEditing(node.id),
             ),
           const SizedBox(width: 2),
+          if (draggableData != null && dragFeedback != null) ...[
+            _dragHandle(data: draggableData, feedback: dragFeedback),
+            const SizedBox(width: 4),
+          ],
         ],
       ],
     );

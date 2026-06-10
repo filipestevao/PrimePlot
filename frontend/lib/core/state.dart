@@ -90,6 +90,7 @@ class ProjectState {
   
   // Dynamic project tree state
   final ValueNotifier<ProjectNode?> projectTree = ValueNotifier(null);
+  final ValueNotifier<String?> selectedProjectNodeId = ValueNotifier(null);
 
   // Layer Stack State
   final ValueNotifier<List<LayerItem>> layers = ValueNotifier([]);
@@ -214,6 +215,10 @@ class ProjectState {
   void moveProjectNodeWrapper(String nodeId, String newParentId) {
     final newTree = moveProjectNode(nodeId: nodeId, newParentId: newParentId);
     projectTree.value = newTree;
+  }
+
+  void selectProjectNode(String nodeId) {
+    selectedProjectNodeId.value = nodeId;
   }
 
   void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {
