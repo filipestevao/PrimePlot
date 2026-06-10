@@ -38,11 +38,14 @@ impl From<EngineProjectNode> for ProjectNode {
 
 use std::sync::{Mutex, OnceLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::HashMap;
+use data_engine::table::{DataTable as EngineDataTable, DataColumn as EngineDataColumn, ColumnRole as EngineColumnRole};
+use crate::api::data::{DTODataTable, DTOColumnRole};
 
 static PROJECT_STATE: OnceLock<Mutex<EngineProjectNode>> = OnceLock::new();
 static NEXT_ID: AtomicUsize = AtomicUsize::new(100);
 
-fn get_state() -> &'static Mutex<EngineProjectNode> {
+pub(crate) fn get_state() -> &'static Mutex<EngineProjectNode> {
     PROJECT_STATE.get_or_init(|| {
         let mut root = EngineProjectNode::new("root_1", "Workspace", EngineNodeType::Folder);
         let mut project = EngineProjectNode::new("project_1", "Project", EngineNodeType::Folder);
@@ -127,4 +130,92 @@ pub fn reorder_project_children(parent_id: String, old_index: usize, new_index: 
     let mut state = get_state().lock().unwrap();
     state.reorder_children(&parent_id, old_index, new_index);
     state.clone().into()
+}
+
+static TABLE_STORE: OnceLock<Mutex<HashMap<String, EngineDataTable>>> = OnceLock::new();
+
+fn get_table_store() -> &'static Mutex<HashMap<String, EngineDataTable>> {
+    TABLE_STORE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {
+    let mut et = EngineDataTable::new(&dto.id, &dto.name);
+    for col in dto.columns {
+        let role = match col.role {
+            DTOColumnRole::X => EngineColumnRole::X,
+            DTOColumnRole::Y => EngineColumnRole::Y,
+            DTOColumnRole::XError => EngineColumnRole::XError,
+            DTOColumnRole::YError => EngineColumnRole::YError,
+            DTOColumnRole::Text => EngineColumnRole::Text,
+        };
+        et.add_column(EngineDataColumn { name: col.name, role, data: col.data });
+    }
+    et
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn add_table_from_raw(parent_id: String, raw: String, display_name: String) -> ProjectNode {
+    let mut state = get_state().lock().unwrap();
+    // Parse using existing parser
+    let mut dto = crate::api::data::parse_clipboard_table(raw);
+    // assign unique id and display name
+    let new_id = generate_id("table");
+    dto.id = new_id.clone();
+    dto.name = display_name.clone();
+
+    // store engine table
+    let engine_table = dto_to_engine_table(dto.clone());
+    let mut store = get_table_store().lock().unwrap();
+    store.insert(new_id.clone(), engine_table);
+
+    // insert project node
+    let new_node = EngineProjectNode::new(&new_id, &display_name, EngineNodeType::Dataset);
+    let mut opt_node = Some(new_node);
+    state.insert_node_opt(&parent_id, &mut opt_node);
+    if let Some(node) = opt_node.take() {
+        state.add_child(node);
+    }
+
+    state.clone().into()
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_table(table_id: String) -> crate::api::data::DTODataTable {
+    let store = get_table_store().lock().unwrap();
+    if let Some(t) = store.get(&table_id) {
+        t.clone().into()
+    } else {
+        crate::api::data::get_empty_table_data()
+    }
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_tables_for_graph(graph_id: String) -> Vec<crate::api::data::DTODataTable> {
+    let state = get_state().lock().unwrap();
+    let mut result = Vec::new();
+    // find graph node
+    fn find(node: &EngineProjectNode, target: &str, out: &mut Vec<String>) {
+        if node.id == target {
+            for c in &node.children {
+                match c.node_type {
+                    EngineNodeType::Dataset => out.push(c.id.clone()),
+                    _ => (),
+                }
+            }
+            return;
+        }
+        for c in &node.children {
+            find(c, target, out);
+        }
+    }
+    let mut ids = Vec::new();
+    find(&state, &graph_id, &mut ids);
+
+    let store = get_table_store().lock().unwrap();
+    for id in ids {
+        if let Some(t) = store.get(&id) {
+            result.push(t.clone().into());
+        }
+    }
+    result
 }

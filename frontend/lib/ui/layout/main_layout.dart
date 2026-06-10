@@ -346,7 +346,7 @@ class _MainLayoutState extends State<MainLayout> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "CSV or TSV format datasets",
+                            "CSV or TXT format datasets",
                             style: TextStyle(
                               fontSize: 14,
                               color: PrimeTheme.textSecondary.withOpacity(0.8),

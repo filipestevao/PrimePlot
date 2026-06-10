@@ -4,9 +4,10 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'data.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `generate_id`, `get_state`
+// These functions are ignored because they are not marked as `pub`: `dto_to_engine_table`, `generate_id`, `get_state`, `get_table_store`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
 
 ProjectNode getProjectTree() =>
@@ -47,6 +48,22 @@ ProjectNode reorderProjectChildren({
   oldIndex: oldIndex,
   newIndex: newIndex,
 );
+
+ProjectNode addTableFromRaw({
+  required String parentId,
+  required String raw,
+  required String displayName,
+}) => RustLib.instance.api.crateApiProjectAddTableFromRaw(
+  parentId: parentId,
+  raw: raw,
+  displayName: displayName,
+);
+
+DTODataTable getTable({required String tableId}) =>
+    RustLib.instance.api.crateApiProjectGetTable(tableId: tableId);
+
+List<DTODataTable> getTablesForGraph({required String graphId}) =>
+    RustLib.instance.api.crateApiProjectGetTablesForGraph(graphId: graphId);
 
 enum NodeType { folder, dataset, plot }
 

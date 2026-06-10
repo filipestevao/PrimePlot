@@ -45,6 +45,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<DTODataColumn> dco_decode_list_dto_data_column(dynamic raw);
 
   @protected
+  List<DTODataTable> dco_decode_list_dto_data_table(dynamic raw);
+
+  @protected
   List<Point2D> dco_decode_list_point_2_d(dynamic raw);
 
   @protected
@@ -97,6 +100,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<DTODataColumn> sse_decode_list_dto_data_column(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<DTODataTable> sse_decode_list_dto_data_table(
     SseDeserializer deserializer,
   );
 
@@ -154,6 +162,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_dto_data_column(
     List<DTODataColumn> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_dto_data_table(
+    List<DTODataTable> self,
     SseSerializer serializer,
   );
 

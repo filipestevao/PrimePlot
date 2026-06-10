@@ -36,7 +36,7 @@ DTODataTable getNewTableData({
 DTODataTable getInitialTableData() =>
     RustLib.instance.api.crateApiDataGetInitialTableData();
 
-/// Parses a raw clipboard string (TSV / CSV) into a DTODataTable.
+/// Parses a raw clipboard string (TXT / CSV) into a DTODataTable.
 ///
 /// - Blank cells become f64::NAN (empty cell sentinel).
 /// - Decimal normalisation handles European and US formats automatically.
