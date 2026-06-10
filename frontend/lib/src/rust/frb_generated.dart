@@ -68,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1316662581;
+  int get rustContentHash => 1627373269;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -115,6 +115,12 @@ abstract class RustLibApi extends BaseApi {
   ProjectNode crateApiProjectRenameProjectNode({
     required String nodeId,
     required String newName,
+  });
+
+  ProjectNode crateApiProjectReorderProjectChildren({
+    required String parentId,
+    required BigInt oldIndex,
+    required BigInt newIndex,
   });
 }
 
@@ -440,6 +446,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "rename_project_node",
         argNames: ["nodeId", "newName"],
+      );
+
+  @override
+  ProjectNode crateApiProjectReorderProjectChildren({
+    required String parentId,
+    required BigInt oldIndex,
+    required BigInt newIndex,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(parentId, serializer);
+          sse_encode_usize(oldIndex, serializer);
+          sse_encode_usize(newIndex, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_node,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiProjectReorderProjectChildrenConstMeta,
+        argValues: [parentId, oldIndex, newIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProjectReorderProjectChildrenConstMeta =>
+      const TaskConstMeta(
+        debugName: "reorder_project_children",
+        argNames: ["parentId", "oldIndex", "newIndex"],
       );
 
   @protected

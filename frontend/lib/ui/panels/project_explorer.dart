@@ -24,7 +24,8 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     setState(() {
       _editingNodeId = id;
       _editController.text = currentName;
-      _editController.selection = TextSelection(baseOffset: 0, extentOffset: currentName.length);
+      _editController.selection =
+          TextSelection(baseOffset: 0, extentOffset: currentName.length);
     });
   }
 
@@ -32,10 +33,12 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     if (_editController.text.isNotEmpty) {
       ProjectState.instance.renameProjectNodeWrapper(id, _editController.text);
     }
-    setState(() {
-      _editingNodeId = null;
-    });
+    setState(() => _editingNodeId = null);
   }
+
+  // ---------------------------------------------------------------------------
+  // Root build
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -45,175 +48,445 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         if (rootNode == null) {
           return const Center(child: CircularProgressIndicator());
         }
-
-        return Container(
+        // Material (not Container) so ExpansionTile's internal ListTile
+        // has a proper ancestor to paint ink effects on.
+        return Material(
           color: PrimeTheme.panelBackground,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _buildTreeNode(rootNode),
-                  ],
-                ),
-              ),
-            ],
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 8),
+            children: [_buildRootNode(rootNode)],
           ),
         );
-      }
+      },
     );
   }
 
-  Widget _buildTreeNode(ProjectNode node) {
-    final IconData iconData;
-    final Color iconColor;
+  // ---------------------------------------------------------------------------
+  // Root node
+  // ---------------------------------------------------------------------------
 
-    switch (node.nodeType) {
-      case NodeType.folder:
-        iconData = Icons.folder;
-        iconColor = Colors.amber;
-        break;
-      case NodeType.dataset:
-        iconData = Icons.table_chart;
-        iconColor = Colors.greenAccent;
-        break;
-      case NodeType.plot:
-        iconData = Icons.show_chart;
-        iconColor = PrimeTheme.primaryAccent;
-        break;
-    }
-
-    final isEditing = _editingNodeId == node.id;
-    final bool isRoot = node.id == 'root_1';
-
-    // The inner UI for the node's title
-    Widget titleWidget = Row(
-      children: [
-        Expanded(
-          child: isEditing 
-            ? SizedBox(
-                height: 24,
-                child: TextField(
-                  controller: _editController,
-                  autofocus: true,
-                  style: const TextStyle(fontSize: 13, color: PrimeTheme.primaryAccent),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 4),
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (_) => _finishEditing(node.id),
-                ),
-              )
-            : Text(
-                node.name,
-                style: const TextStyle(fontSize: 13, color: PrimeTheme.textPrimary),
-                overflow: TextOverflow.ellipsis,
-              ),
-        ),
-        if (!isEditing && !isRoot) ...[
-          IconButton(
-            icon: const Icon(Icons.edit, size: 14),
-            color: PrimeTheme.textSecondary,
-            splashRadius: 16,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: () => _startEditing(node.id, node.name),
-          ),
-        ] else if (isEditing) ...[
-          IconButton(
-            icon: const Icon(Icons.check, size: 14),
-            color: Colors.greenAccent,
-            splashRadius: 16,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: () => _finishEditing(node.id),
-          ),
-        ],
-      ],
+  Widget _buildRootNode(ProjectNode root) {
+    return _styledTile(
+      indent: 0,
+      icon: Icons.folder,
+      iconColor: const Color(0xFFFFC107), // amber
+      label: root.name,
+      isEditing: false,
+      node: root,
+      isRoot: true,
+      children: root.children.map(_dispatchNode).toList(),
     );
+  }
 
-    // Draggable wraps the row so we can drag it
-    Widget draggableTitle = LongPressDraggable<String>(
-      data: node.id,
-      delay: const Duration(milliseconds: 300),
-      feedback: Material(
-        color: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: PrimeTheme.backgroundDark.withOpacity(0.8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(iconData, size: 16, color: iconColor),
-              const SizedBox(width: 8),
-              Text(node.name, style: const TextStyle(fontSize: 13, color: PrimeTheme.textPrimary)),
-            ],
-          ),
+  Widget _dispatchNode(ProjectNode node) {
+    switch (node.nodeType) {
+      case NodeType.plot:
+        return _buildGraphNode(node);
+      case NodeType.folder:
+        return _buildFolderNode(node);
+      case NodeType.dataset:
+        return _buildOrphanTableRow(node);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Folder node
+  // ---------------------------------------------------------------------------
+
+  Widget _buildFolderNode(ProjectNode folder) {
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (d) =>
+          d.data != folder.id && d.data != 'root_1',
+      onAcceptWithDetails: (d) =>
+          ProjectState.instance.moveProjectNodeWrapper(d.data, folder.id),
+      builder: (ctx, candidateData, _) => Material(
+        color: candidateData.isNotEmpty
+            ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
+            : Colors.transparent,
+        child: _styledTile(
+          indent: 1,
+          icon: Icons.folder_open,
+          iconColor: const Color(0xFFFFC107),
+          label: folder.name,
+          isEditing: _editingNodeId == folder.id,
+          node: folder,
+          children: folder.children.map(_dispatchNode).toList(),
         ),
       ),
-      child: titleWidget,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Graph node
+  // ---------------------------------------------------------------------------
+
+  Widget _buildGraphNode(ProjectNode graph) {
+    final feedbackChip = _dragChip(
+      icon: Icons.show_chart,
+      iconColor: PrimeTheme.primaryAccent,
+      label: graph.name,
     );
 
-    // DragTarget allows us to drop another node onto this node
-    Widget targetWidget = DragTarget<String>(
-      onWillAcceptWithDetails: (details) {
-        // Prevent dropping onto itself or root dropping
-        if (details.data == node.id || details.data == 'root_1') return false;
-        return true;
-      },
-      onAcceptWithDetails: (details) {
-        // If node is a folder, drop into it. Otherwise, drop into its parent? 
-        // We only have node_id here. For simplicity, drop into folder if it's a folder,
-        // otherwise we could drop into the same parent, but let's just make folder dropping work.
-        if (node.nodeType == NodeType.folder) {
-          ProjectState.instance.moveProjectNodeWrapper(details.data, node.id);
-        } else {
-          // It would be nice to get parent_id, but the backend handles it.
-          // For now, we drop onto a node, so we'll just put it in root if we can't figure it out,
-          // but we can just use moveProjectNodeWrapper and let the user drop strictly on folders.
-          // Let's assume dropping on a leaf does nothing or adds it to the leaf's parent.
-          // Wait, we don't have leaf's parent ID easily here unless we traverse.
-          // So let's only accept drops on Folders for now.
-        }
-      },
-      builder: (context, candidateData, rejectedData) {
-        final isHovered = candidateData.isNotEmpty;
-        
-        if (node.children.isEmpty && node.nodeType != NodeType.folder) {
-          return Material(
-            color: isHovered ? PrimeTheme.primaryAccent.withOpacity(0.2) : Colors.transparent,
-            child: ListTile(
-              dense: true,
-              visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-              contentPadding: const EdgeInsets.only(left: 32.0, right: 16.0),
-              leading: Icon(iconData, size: 16, color: iconColor),
-              title: isRoot ? titleWidget : draggableTitle,
-            ),
-          );
-        }
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (d) =>
+          d.data != graph.id && d.data != 'root_1',
+      onAcceptWithDetails: (d) =>
+          ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
+      builder: (ctx, candidateData, _) => Material(
+        color: candidateData.isNotEmpty
+            ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
+            : Colors.transparent,
+        child: _styledTile(
+          indent: 1,
+          icon: Icons.show_chart,
+          iconColor: PrimeTheme.primaryAccent,
+          label: graph.name,
+          isEditing: _editingNodeId == graph.id,
+          node: graph,
+          draggableData: graph.id,
+          dragFeedback: feedbackChip,
+          children: [_buildTableList(graph)],
+        ),
+      ),
+    );
+  }
 
-        return Material(
-          color: isHovered ? PrimeTheme.primaryAccent.withOpacity(0.2) : Colors.transparent,
-          child: Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              initiallyExpanded: true,
-              tilePadding: const EdgeInsets.symmetric(horizontal: 16.0),
-              childrenPadding: const EdgeInsets.only(left: 16.0),
-              leading: Icon(iconData, size: 18, color: iconColor),
-              title: isRoot ? titleWidget : draggableTitle,
-              iconColor: PrimeTheme.textSecondary,
-              collapsedIconColor: PrimeTheme.textSecondary,
-              children: node.children.map((child) => _buildTreeNode(child)).toList(),
+  // ---------------------------------------------------------------------------
+  // Table list
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTableList(ProjectNode graph) {
+    final tables = graph.children
+        .where((n) => n.nodeType == NodeType.dataset)
+        .toList();
+
+    if (tables.isEmpty) {
+      return DragTarget<String>(
+        onWillAcceptWithDetails: (d) =>
+            d.data != graph.id && d.data != 'root_1',
+        onAcceptWithDetails: (d) =>
+            ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
+        builder: (ctx, candidateData, _) => AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: 24,
+          padding: const EdgeInsets.only(left: 44),
+          alignment: Alignment.centerLeft,
+          color: candidateData.isNotEmpty
+              ? PrimeTheme.primaryAccent.withValues(alpha: 0.08)
+              : Colors.transparent,
+          child: Text(
+            'No tables',
+            style: TextStyle(
+              fontSize: 10,
+              color: PrimeTheme.textSecondary.withValues(alpha: 0.35),
             ),
           ),
+        ),
+      );
+    }
+
+    return Column(
+      children: tables
+          .map((t) => _buildTableRow(t, graph, tables))
+          .toList(),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Table row — LongPressDraggable + DragTarget
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTableRow(
+      ProjectNode table, ProjectNode parentGraph, List<ProjectNode> siblings) {
+    final isEditing = _editingNodeId == table.id;
+
+    final feedbackChip = _dragChip(
+      icon: Icons.table_chart,
+      iconColor: Colors.greenAccent,
+      label: table.name,
+    );
+
+    return DragTarget<String>(
+      key: ValueKey('drop_${table.id}'),
+      onWillAcceptWithDetails: (d) => d.data != table.id,
+      onAcceptWithDetails: (d) {
+        final draggedId = d.data;
+        final targetIdx = siblings.indexWhere((n) => n.id == table.id);
+        final inSameGraph = parentGraph.children.any((n) => n.id == draggedId);
+
+        if (inSameGraph) {
+          final fromIdx = siblings.indexWhere((n) => n.id == draggedId);
+          if (fromIdx != -1 && targetIdx != -1) {
+            ProjectState.instance
+                .reorderGraphChildren(parentGraph.id, fromIdx, targetIdx);
+          }
+        } else {
+          ProjectState.instance
+              .moveProjectNodeWrapper(draggedId, parentGraph.id);
+          ProjectState.instance
+              .reorderGraphChildren(parentGraph.id, siblings.length, targetIdx);
+        }
+      },
+      builder: (ctx, candidateData, _) {
+        final isDropTarget = candidateData.isNotEmpty;
+        return LongPressDraggable<String>(
+          data: table.id,
+          delay: const Duration(milliseconds: 250),
+          feedback: feedbackChip,
+          childWhenDragging: Opacity(
+            opacity: 0.25,
+            child: _tableRowContent(table, isEditing, isDropTarget: false),
+          ),
+          child:
+              _tableRowContent(table, isEditing, isDropTarget: isDropTarget),
         );
       },
     );
+  }
 
-    return targetWidget;
+  Widget _tableRowContent(ProjectNode table, bool isEditing,
+      {required bool isDropTarget}) {
+    return Material(
+      color: isDropTarget
+          ? PrimeTheme.primaryAccent.withValues(alpha: 0.12)
+          : Colors.transparent,
+      child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+        minLeadingWidth: 14,
+        contentPadding: const EdgeInsets.only(left: 44, right: 6),
+        leading: const Icon(Icons.table_chart,
+            size: 13, color: Colors.greenAccent),
+        title: isEditing
+            ? SizedBox(
+                height: 20,
+                child: TextField(
+                  controller: _editController,
+                  autofocus: true,
+                  style: const TextStyle(
+                      fontSize: 11, color: PrimeTheme.primaryAccent),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => _finishEditing(table.id),
+                ),
+              )
+            : Text(
+                table.name,
+                style: const TextStyle(
+                    fontSize: 11, color: PrimeTheme.textPrimary),
+                overflow: TextOverflow.ellipsis,
+              ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!isEditing) ...[
+              _miniIconButton(
+                icon: Icons.edit_outlined,
+                onPressed: () => _startEditing(table.id, table.name),
+              ),
+            ] else ...[
+              _miniIconButton(
+                icon: Icons.check,
+                color: Colors.greenAccent,
+                onPressed: () => _finishEditing(table.id),
+              ),
+            ],
+            const SizedBox(width: 2),
+            MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: Icon(Icons.drag_indicator,
+                  size: 14,
+                  color: PrimeTheme.textSecondary.withValues(alpha: 0.4)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Orphan dataset (direct child of root/folder, not inside any graph)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildOrphanTableRow(ProjectNode table) {
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+        minLeadingWidth: 14,
+        contentPadding: const EdgeInsets.only(left: 28, right: 16),
+        leading: const Icon(Icons.table_chart,
+            size: 13, color: Colors.greenAccent),
+        title: Text(
+          table.name,
+          style: const TextStyle(
+              fontSize: 11, color: PrimeTheme.textPrimary),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shared compact ExpansionTile builder
+  // ---------------------------------------------------------------------------
+
+  /// Builds a compact, consistently styled ExpansionTile for any tree level.
+  /// [indent] controls the left padding offset (0 = root, 1 = child of root).
+  Widget _styledTile({
+    required int indent,
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required bool isEditing,
+    required ProjectNode node,
+    required List<Widget> children,
+    bool isRoot = false,
+    String? draggableData,
+    Widget? dragFeedback,
+  }) {
+    final double leftPad = 8.0 + indent * 10.0;
+
+    Widget titleContent = _buildTitleWidget(node, isEditing, isRoot: isRoot);
+
+    if (draggableData != null && dragFeedback != null) {
+      titleContent = LongPressDraggable<String>(
+        data: draggableData,
+        delay: const Duration(milliseconds: 300),
+        feedback: dragFeedback,
+        child: titleContent,
+      );
+    }
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        dense: true,
+        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+        minTileHeight: 28,
+        tilePadding: EdgeInsets.only(left: leftPad, right: 4),
+        childrenPadding: EdgeInsets.zero,
+        leading: Icon(icon, size: 14, color: iconColor),
+        title: titleContent,
+        iconColor: PrimeTheme.textSecondary,
+        collapsedIconColor: PrimeTheme.textSecondary,
+        children: children,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Drag feedback chip
+  // ---------------------------------------------------------------------------
+
+  Widget _dragChip(
+      {required IconData icon,
+      required Color iconColor,
+      required String label}) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: PrimeTheme.backgroundDark.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            )
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: iconColor),
+            const SizedBox(width: 6),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 11, color: PrimeTheme.textPrimary)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mini icon button helper
+  // ---------------------------------------------------------------------------
+
+  Widget _miniIconButton({
+    required IconData icon,
+    Color? color,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Icon(icon,
+            size: 12,
+            color: color ?? PrimeTheme.textSecondary.withValues(alpha: 0.6)),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Editable title widget for graph / folder nodes
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTitleWidget(ProjectNode node, bool isEditing,
+      {bool isRoot = false}) {
+    return Row(
+      children: [
+        Expanded(
+          child: isEditing
+              ? SizedBox(
+                  height: 20,
+                  child: TextField(
+                    controller: _editController,
+                    autofocus: true,
+                    style: const TextStyle(
+                        fontSize: 12, color: PrimeTheme.primaryAccent),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _finishEditing(node.id),
+                  ),
+                )
+              : Text(
+                  node.name,
+                  style: const TextStyle(
+                      fontSize: 12, color: PrimeTheme.textPrimary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+        ),
+        if (!isRoot) ...[
+          if (!isEditing)
+            _miniIconButton(
+              icon: Icons.edit_outlined,
+              onPressed: () => _startEditing(node.id, node.name),
+            )
+          else
+            _miniIconButton(
+              icon: Icons.check,
+              color: Colors.greenAccent,
+              onPressed: () => _finishEditing(node.id),
+            ),
+          const SizedBox(width: 2),
+        ],
+      ],
+    );
   }
 }

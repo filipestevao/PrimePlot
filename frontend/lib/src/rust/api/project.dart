@@ -38,6 +38,16 @@ ProjectNode renameProjectNode({
   newName: newName,
 );
 
+ProjectNode reorderProjectChildren({
+  required String parentId,
+  required BigInt oldIndex,
+  required BigInt newIndex,
+}) => RustLib.instance.api.crateApiProjectReorderProjectChildren(
+  parentId: parentId,
+  oldIndex: oldIndex,
+  newIndex: newIndex,
+);
+
 enum NodeType { folder, dataset, plot }
 
 class ProjectNode {

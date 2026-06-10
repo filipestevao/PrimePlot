@@ -56,6 +56,22 @@ impl ProjectNode {
         }
     }
 
+    pub fn reorder_children(&mut self, target_parent_id: &str, old_index: usize, new_index: usize) -> bool {
+        if self.id == target_parent_id {
+            if old_index < self.children.len() && new_index < self.children.len() {
+                let child = self.children.remove(old_index);
+                self.children.insert(new_index, child);
+            }
+            return true;
+        }
+        for child in &mut self.children {
+            if child.reorder_children(target_parent_id, old_index, new_index) {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn rename_node(&mut self, target_id: &str, new_name: &str) -> bool {
         if self.id == target_id {
             self.name = new_name.to_string();

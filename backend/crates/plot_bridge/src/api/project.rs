@@ -45,8 +45,9 @@ static NEXT_ID: AtomicUsize = AtomicUsize::new(100);
 fn get_state() -> &'static Mutex<EngineProjectNode> {
     PROJECT_STATE.get_or_init(|| {
         let mut root = EngineProjectNode::new("root_1", "Project", EngineNodeType::Folder);
-        root.add_child(EngineProjectNode::new("table_1", "Table", EngineNodeType::Dataset));
-        root.add_child(EngineProjectNode::new("graph_1", "Graph", EngineNodeType::Plot));
+        let mut graph = EngineProjectNode::new("graph_1", "Graph", EngineNodeType::Plot);
+        graph.add_child(EngineProjectNode::new("table_1", "Table", EngineNodeType::Dataset));
+        root.add_child(graph);
         Mutex::new(root)
     })
 }
@@ -116,5 +117,12 @@ pub fn move_project_node(node_id: String, new_parent_id: String) -> ProjectNode 
 pub fn rename_project_node(node_id: String, new_name: String) -> ProjectNode {
     let mut state = get_state().lock().unwrap();
     state.rename_node(&node_id, &new_name);
+    state.clone().into()
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn reorder_project_children(parent_id: String, old_index: usize, new_index: usize) -> ProjectNode {
+    let mut state = get_state().lock().unwrap();
+    state.reorder_children(&parent_id, old_index, new_index);
     state.clone().into()
 }

@@ -216,6 +216,11 @@ class ProjectState {
     projectTree.value = newTree;
   }
 
+  void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {
+    final newTree = reorderProjectChildren(parentId: parentId, oldIndex: BigInt.from(oldIndex), newIndex: BigInt.from(newIndex));
+    projectTree.value = newTree;
+  }
+
   void renameProjectNodeWrapper(String nodeId, String newName) {
     final newTree = renameProjectNode(nodeId: nodeId, newName: newName);
     projectTree.value = newTree;

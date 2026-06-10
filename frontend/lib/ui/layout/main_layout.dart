@@ -40,19 +40,38 @@ class _MainLayoutState extends State<MainLayout> {
           title: 'Project Explorer',
           icon: Icons.folder_copy,
           actions: [
-            PopupMenuButton<NodeType>(
+            PopupMenuButton<_ExplorerAction>(
               tooltip: 'Add Item',
               icon: const Icon(Icons.more_horiz, size: 16, color: PrimeTheme.textSecondary),
               color: PrimeTheme.backgroundDark,
               elevation: 8,
               offset: const Offset(0, 30),
-              onSelected: (NodeType type) {
-                ProjectState.instance.addProjectNodeWrapper('root_1', 'New Item', type);
+              onSelected: (_ExplorerAction action) {
+                switch (action) {
+                  case _ExplorerAction.addGraph:
+                    ProjectState.instance.addProjectNodeWrapper('root_1', 'Graph', NodeType.plot);
+                    break;
+                  case _ExplorerAction.addTable:
+                    // Tables belong inside a graph — add to the first graph by default.
+                    // A more refined "pick which graph" UI comes in the next step.
+                    final root = ProjectState.instance.projectTree.value;
+                    if (root != null) {
+                      final graphs = root.children.where((n) => n.nodeType == NodeType.plot).toList();
+                      final target = graphs.isNotEmpty ? graphs.first : (root.children.isNotEmpty ? root.children.first : null);
+                      if (target != null) {
+                        ProjectState.instance.addProjectNodeWrapper(target.id, 'Table', NodeType.dataset);
+                      }
+                    }
+                    break;
+                  case _ExplorerAction.addFolder:
+                    ProjectState.instance.addProjectNodeWrapper('root_1', 'Folder', NodeType.folder);
+                    break;
+                }
               },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<NodeType>>[
-                const PopupMenuItem<NodeType>(value: NodeType.folder, child: Text('Add Folder', style: TextStyle(color: PrimeTheme.textPrimary))),
-                const PopupMenuItem<NodeType>(value: NodeType.dataset, child: Text('Add Table', style: TextStyle(color: PrimeTheme.textPrimary))),
-                const PopupMenuItem<NodeType>(value: NodeType.plot, child: Text('Add Graph', style: TextStyle(color: PrimeTheme.textPrimary))),
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<_ExplorerAction>>[
+                const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addGraph, child: Text('Add Graph', style: TextStyle(color: PrimeTheme.textPrimary))),
+                const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addTable, child: Text('Add Table', style: TextStyle(color: PrimeTheme.textPrimary))),
+                const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addFolder, child: Text('Add Folder', style: TextStyle(color: PrimeTheme.textPrimary))),
               ],
             ),
           ],
@@ -317,3 +336,6 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 }
+
+/// Actions for the Project Explorer "Add Item" popup menu.
+enum _ExplorerAction { addGraph, addTable, addFolder }
