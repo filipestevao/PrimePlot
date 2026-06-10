@@ -189,7 +189,17 @@ class _MainLayoutState extends State<MainLayout> {
           final file = details.files.first;
           try {
             final content = await file.readAsString();
-            ProjectState.instance.pasteTable(content, displayName: file.name);
+            // Prefer server-side insertion so Rust remains single source of truth.
+            try {
+              final selected = ProjectState.instance.selectedProjectNodeId.value;
+              final parentId = selected ?? 'graph_1';
+              addTableFromRaw(parentId: parentId, raw: content, displayName: file.name);
+              ProjectState.instance.projectTree.value = getProjectTree();
+              ProjectState.instance.fetchTablesForGraph(parentId);
+            } catch (e) {
+              // Fallback to local parsing on error
+              ProjectState.instance.pasteTable(content, displayName: file.name);
+            }
           } catch (e) {
             debugPrint("Error reading dropped file: $e");
           }

@@ -78,6 +78,10 @@ class ProjectState {
   /// Holds the active DataTable. Both the Table UI and the Canvas listen to this.
   final ValueNotifier<DTODataTable?> activeTable = ValueNotifier(null);
 
+  /// Holds list of tables for currently selected graph. Canvas will render these
+  /// when non-empty. Kept separate to preserve legacy single-table flows.
+  final ValueNotifier<List<DTODataTable>> activeTables = ValueNotifier([]);
+
   /// Display name shown in the Table panel header (reacts to file drops & resets).
   final ValueNotifier<String> tableDisplayName = ValueNotifier('Table');
 
@@ -219,6 +223,52 @@ class ProjectState {
 
   void selectProjectNode(String nodeId) {
     selectedProjectNodeId.value = nodeId;
+
+    // Attempt to resolve node type from current project tree and fetch tables
+    final root = projectTree.value;
+    ProjectNode? node = _findNodeById(root, nodeId);
+    if (node != null) {
+      if (node.nodeType == NodeType.plot) {
+        // Fetch all tables for this graph from Rust and update state
+        fetchTablesForGraph(nodeId);
+        graphName.value = node.name;
+      } else if (node.nodeType == NodeType.dataset) {
+        // Single dataset selected — fetch that table and set activeTable
+        try {
+          final table = getTable(tableId: nodeId);
+          activeTable.value = table;
+          // Clear multi-table view so canvas shows single table
+          activeTables.value = [];
+        } catch (e) {
+          // ignore and keep existing state
+        }
+      }
+    }
+  }
+
+  ProjectNode? _findNodeById(ProjectNode? node, String id) {
+    if (node == null) return null;
+    if (node.id == id) return node;
+    for (var child in node.children) {
+      final found = _findNodeById(child, id);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  /// Fetch tables for a graph from Rust and update activeTables.
+  void fetchTablesForGraph(String graphId) {
+    try {
+      final tables = getTablesForGraph(graphId: graphId);
+      activeTables.value = tables;
+      // Also set legacy activeTable to first table if present to avoid breaking
+      if (tables.isNotEmpty) {
+        activeTable.value = tables.first;
+        tableDisplayName.value = tables.first.name;
+      }
+    } catch (e) {
+      // Keep previous state on error
+    }
   }
 
   void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {

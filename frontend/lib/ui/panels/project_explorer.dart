@@ -535,52 +535,55 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
   Widget _buildTitleWidget(ProjectNode node, bool isEditing,
       {bool isRoot = false, String? draggableData, Widget? dragFeedback}) {
-    return Row(
-      children: [
-        Expanded(
-          child: isEditing
-              ? SizedBox(
-                  height: 20,
-                  child: TextField(
-                    controller: _editController,
-                    autofocus: true,
-                    style: const TextStyle(
-                        fontSize: 13, color: PrimeTheme.primaryAccent),
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 0, horizontal: 4),
-                      border: OutlineInputBorder(),
+    return InkWell(
+      onTap: () => ProjectState.instance.selectProjectNode(node.id),
+      child: Row(
+        children: [
+          Expanded(
+            child: isEditing
+                ? SizedBox(
+                    height: 20,
+                    child: TextField(
+                      controller: _editController,
+                      autofocus: true,
+                      style: const TextStyle(
+                          fontSize: 13, color: PrimeTheme.primaryAccent),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _finishEditing(node.id),
                     ),
-                    onSubmitted: (_) => _finishEditing(node.id),
+                  )
+                : Text(
+                    node.name,
+                    style: const TextStyle(
+                        fontSize: 13, color: PrimeTheme.textPrimary),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                )
-              : Text(
-                  node.name,
-                  style: const TextStyle(
-                      fontSize: 13, color: PrimeTheme.textPrimary),
-                  overflow: TextOverflow.ellipsis,
-                ),
-        ),
-        if (!isRoot) ...[
-          if (!isEditing)
-            _miniIconButton(
-              icon: Icons.edit_outlined,
-              onPressed: () => _startEditing(node.id, node.name),
-            )
-          else
-            _miniIconButton(
-              icon: Icons.check,
-              color: Colors.greenAccent,
-              onPressed: () => _finishEditing(node.id),
-            ),
-          const SizedBox(width: 2),
-          if (draggableData != null && dragFeedback != null) ...[
-            _dragHandle(data: draggableData, feedback: dragFeedback),
-            const SizedBox(width: 4),
+          ),
+          if (!isRoot) ...[
+            if (!isEditing)
+              _miniIconButton(
+                icon: Icons.edit_outlined,
+                onPressed: () => _startEditing(node.id, node.name),
+              )
+            else
+              _miniIconButton(
+                icon: Icons.check,
+                color: Colors.greenAccent,
+                onPressed: () => _finishEditing(node.id),
+              ),
+            const SizedBox(width: 2),
+            if (draggableData != null && dragFeedback != null) ...[
+              _dragHandle(data: draggableData, feedback: dragFeedback),
+              const SizedBox(width: 4),
+            ],
           ],
         ],
-      ],
+      ),
     );
   }
 }
