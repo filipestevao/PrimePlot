@@ -80,7 +80,7 @@ class LayerStack extends StatelessWidget {
                         },
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.drag_indicator, size: 16, color: PrimeTheme.textSecondary.withOpacity(0.5)),
+                      Icon(Icons.drag_handle, size: 16, color: PrimeTheme.textSecondary.withOpacity(0.5)),
                     ],
                   ),
                   onTap: () {

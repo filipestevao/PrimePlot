@@ -44,10 +44,12 @@ static NEXT_ID: AtomicUsize = AtomicUsize::new(100);
 
 fn get_state() -> &'static Mutex<EngineProjectNode> {
     PROJECT_STATE.get_or_init(|| {
-        let mut root = EngineProjectNode::new("root_1", "Project", EngineNodeType::Folder);
+        let mut root = EngineProjectNode::new("root_1", "Workspace", EngineNodeType::Folder);
+        let mut project = EngineProjectNode::new("project_1", "Project", EngineNodeType::Folder);
         let mut graph = EngineProjectNode::new("graph_1", "Graph", EngineNodeType::Plot);
         graph.add_child(EngineProjectNode::new("table_1", "Table", EngineNodeType::Dataset));
-        root.add_child(graph);
+        project.add_child(graph);
+        root.add_child(project);
         Mutex::new(root)
     })
 }

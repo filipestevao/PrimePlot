@@ -54,7 +54,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           color: PrimeTheme.panelBackground,
           child: ListView(
             padding: const EdgeInsets.only(bottom: 8),
-            children: [_buildRootNode(rootNode)],
+            children: rootNode.children.map((child) => _dispatchNode(child, 0)).toList(),
           ),
         );
       },
@@ -74,18 +74,18 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
       isEditing: false,
       node: root,
       isRoot: true,
-      children: root.children.map(_dispatchNode).toList(),
+      children: root.children.map((child) => _dispatchNode(child, 1)).toList(),
     );
   }
 
-  Widget _dispatchNode(ProjectNode node) {
+  Widget _dispatchNode(ProjectNode node, int indent) {
     switch (node.nodeType) {
       case NodeType.plot:
-        return _buildGraphNode(node);
+        return _buildGraphNode(node, indent);
       case NodeType.folder:
-        return _buildFolderNode(node);
+        return _buildFolderNode(node, indent);
       case NodeType.dataset:
-        return _buildOrphanTableRow(node);
+        return _buildOrphanTableRow(node, indent);
     }
   }
 
@@ -93,7 +93,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // Folder node
   // ---------------------------------------------------------------------------
 
-  Widget _buildFolderNode(ProjectNode folder) {
+  Widget _buildFolderNode(ProjectNode folder, int indent) {
     return DragTarget<String>(
       onWillAcceptWithDetails: (d) =>
           d.data != folder.id && d.data != 'root_1',
@@ -104,13 +104,13 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
             : Colors.transparent,
         child: _styledTile(
-          indent: 1,
-          icon: Icons.folder_open,
+          indent: indent,
+          icon: Icons.folder,
           iconColor: const Color(0xFFFFC107),
           label: folder.name,
           isEditing: _editingNodeId == folder.id,
           node: folder,
-          children: folder.children.map(_dispatchNode).toList(),
+          children: folder.children.map((child) => _dispatchNode(child, indent + 1)).toList(),
         ),
       ),
     );
@@ -120,7 +120,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // Graph node
   // ---------------------------------------------------------------------------
 
-  Widget _buildGraphNode(ProjectNode graph) {
+  Widget _buildGraphNode(ProjectNode graph, int indent) {
     final feedbackChip = _dragChip(
       icon: Icons.show_chart,
       iconColor: PrimeTheme.primaryAccent,
@@ -137,7 +137,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
             : Colors.transparent,
         child: _styledTile(
-          indent: 1,
+          indent: indent,
           icon: Icons.show_chart,
           iconColor: PrimeTheme.primaryAccent,
           label: graph.name,
@@ -145,7 +145,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           node: graph,
           draggableData: graph.id,
           dragFeedback: feedbackChip,
-          children: [_buildTableList(graph)],
+          children: [_buildTableList(graph, indent + 1)],
         ),
       ),
     );
@@ -155,7 +155,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // Table list
   // ---------------------------------------------------------------------------
 
-  Widget _buildTableList(ProjectNode graph) {
+  Widget _buildTableList(ProjectNode graph, int indent) {
     final tables = graph.children
         .where((n) => n.nodeType == NodeType.dataset)
         .toList();
@@ -169,7 +169,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         builder: (ctx, candidateData, _) => AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: 24,
-          padding: const EdgeInsets.only(left: 44),
+          padding: EdgeInsets.only(left: 12.0 + indent * 16.0 + 16.0),
           alignment: Alignment.centerLeft,
           color: candidateData.isNotEmpty
               ? PrimeTheme.primaryAccent.withValues(alpha: 0.08)
@@ -187,7 +187,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
 
     return Column(
       children: tables
-          .map((t) => _buildTableRow(t, graph, tables))
+          .map((t) => _buildTableRow(t, graph, tables, indent))
           .toList(),
     );
   }
@@ -197,7 +197,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // ---------------------------------------------------------------------------
 
   Widget _buildTableRow(
-      ProjectNode table, ProjectNode parentGraph, List<ProjectNode> siblings) {
+      ProjectNode table, ProjectNode parentGraph, List<ProjectNode> siblings, int indent) {
     final isEditing = _editingNodeId == table.id;
 
     final feedbackChip = _dragChip(
@@ -235,28 +235,29 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           feedback: feedbackChip,
           childWhenDragging: Opacity(
             opacity: 0.25,
-            child: _tableRowContent(table, isEditing, isDropTarget: false),
+            child: _tableRowContent(table, isEditing, indent, isDropTarget: false),
           ),
           child:
-              _tableRowContent(table, isEditing, isDropTarget: isDropTarget),
+              _tableRowContent(table, isEditing, indent, isDropTarget: isDropTarget),
         );
       },
     );
   }
 
-  Widget _tableRowContent(ProjectNode table, bool isEditing,
+  Widget _tableRowContent(ProjectNode table, bool isEditing, int indent,
       {required bool isDropTarget}) {
+    final double leftPad = 12.0 + indent * 16.0 + 16.0;
     return Material(
       color: isDropTarget
           ? PrimeTheme.primaryAccent.withValues(alpha: 0.12)
           : Colors.transparent,
       child: ListTile(
         dense: true,
-        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-        minLeadingWidth: 14,
-        contentPadding: const EdgeInsets.only(left: 44, right: 6),
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+        minLeadingWidth: 16,
+        contentPadding: EdgeInsets.only(left: leftPad, right: 16),
         leading: const Icon(Icons.table_chart,
-            size: 13, color: Colors.greenAccent),
+            size: 16, color: Colors.greenAccent),
         title: isEditing
             ? SizedBox(
                 height: 20,
@@ -264,7 +265,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                   controller: _editController,
                   autofocus: true,
                   style: const TextStyle(
-                      fontSize: 11, color: PrimeTheme.primaryAccent),
+                      fontSize: 13, color: PrimeTheme.primaryAccent),
                   decoration: const InputDecoration(
                     isDense: true,
                     contentPadding:
@@ -277,7 +278,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             : Text(
                 table.name,
                 style: const TextStyle(
-                    fontSize: 11, color: PrimeTheme.textPrimary),
+                    fontSize: 13, color: PrimeTheme.textPrimary),
                 overflow: TextOverflow.ellipsis,
               ),
         trailing: Row(
@@ -298,9 +299,9 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             const SizedBox(width: 2),
             MouseRegion(
               cursor: SystemMouseCursors.grab,
-              child: Icon(Icons.drag_indicator,
-                  size: 14,
-                  color: PrimeTheme.textSecondary.withValues(alpha: 0.4)),
+              child: Icon(Icons.drag_handle,
+                  size: 20,
+                  color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
             ),
           ],
         ),
@@ -312,20 +313,21 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // Orphan dataset (direct child of root/folder, not inside any graph)
   // ---------------------------------------------------------------------------
 
-  Widget _buildOrphanTableRow(ProjectNode table) {
+  Widget _buildOrphanTableRow(ProjectNode table, int indent) {
+    final double leftPad = 12.0 + indent * 16.0 + 16.0;
     return Material(
       color: Colors.transparent,
       child: ListTile(
         dense: true,
-        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-        minLeadingWidth: 14,
-        contentPadding: const EdgeInsets.only(left: 28, right: 16),
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+        minLeadingWidth: 16,
+        contentPadding: EdgeInsets.only(left: leftPad, right: 16),
         leading: const Icon(Icons.table_chart,
-            size: 13, color: Colors.greenAccent),
+            size: 16, color: Colors.greenAccent),
         title: Text(
           table.name,
           style: const TextStyle(
-              fontSize: 11, color: PrimeTheme.textPrimary),
+              fontSize: 13, color: PrimeTheme.textPrimary),
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -336,8 +338,6 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // Shared compact ExpansionTile builder
   // ---------------------------------------------------------------------------
 
-  /// Builds a compact, consistently styled ExpansionTile for any tree level.
-  /// [indent] controls the left padding offset (0 = root, 1 = child of root).
   Widget _styledTile({
     required int indent,
     required IconData icon,
@@ -350,7 +350,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     String? draggableData,
     Widget? dragFeedback,
   }) {
-    final double leftPad = 8.0 + indent * 10.0;
+    final double leftPad = 12.0 + indent * 16.0;
 
     Widget titleContent = _buildTitleWidget(node, isEditing, isRoot: isRoot);
 
@@ -368,11 +368,11 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
       child: ExpansionTile(
         initiallyExpanded: true,
         dense: true,
-        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
         minTileHeight: 28,
-        tilePadding: EdgeInsets.only(left: leftPad, right: 4),
+        tilePadding: EdgeInsets.only(left: leftPad, right: 16),
         childrenPadding: EdgeInsets.zero,
-        leading: Icon(icon, size: 14, color: iconColor),
+        leading: Icon(icon, size: 16, color: iconColor),
         title: titleContent,
         iconColor: PrimeTheme.textSecondary,
         collapsedIconColor: PrimeTheme.textSecondary,
@@ -407,11 +407,11 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 13, color: iconColor),
+            Icon(icon, size: 16, color: iconColor),
             const SizedBox(width: 6),
             Text(label,
                 style: const TextStyle(
-                    fontSize: 11, color: PrimeTheme.textPrimary)),
+                    fontSize: 13, color: PrimeTheme.textPrimary)),
           ],
         ),
       ),
@@ -455,7 +455,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                     controller: _editController,
                     autofocus: true,
                     style: const TextStyle(
-                        fontSize: 12, color: PrimeTheme.primaryAccent),
+                        fontSize: 13, color: PrimeTheme.primaryAccent),
                     decoration: const InputDecoration(
                       isDense: true,
                       contentPadding:
@@ -468,7 +468,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
               : Text(
                   node.name,
                   style: const TextStyle(
-                      fontSize: 12, color: PrimeTheme.textPrimary),
+                      fontSize: 13, color: PrimeTheme.textPrimary),
                   overflow: TextOverflow.ellipsis,
                 ),
         ),

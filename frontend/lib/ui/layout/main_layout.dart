@@ -49,17 +49,46 @@ class _MainLayoutState extends State<MainLayout> {
               onSelected: (_ExplorerAction action) {
                 switch (action) {
                   case _ExplorerAction.addGraph:
-                    ProjectState.instance.addProjectNodeWrapper('root_1', 'Graph', NodeType.plot);
+                    // Find the first folder (Project) node in the tree to add the Graph to.
+                    final root = ProjectState.instance.projectTree.value;
+                    String targetParentId = 'root_1';
+                    if (root != null) {
+                      ProjectNode? targetFolder;
+                      void findFolder(ProjectNode node) {
+                        if (node.nodeType == NodeType.folder && node.id != 'root_1') {
+                          targetFolder = node;
+                          return;
+                        }
+                        for (var child in node.children) {
+                          findFolder(child);
+                          if (targetFolder != null) return;
+                        }
+                      }
+                      findFolder(root);
+                      if (targetFolder != null) {
+                        targetParentId = targetFolder!.id;
+                      }
+                    }
+                    ProjectState.instance.addProjectNodeWrapper(targetParentId, 'Graph', NodeType.plot);
                     break;
                   case _ExplorerAction.addTable:
                     // Tables belong inside a graph — add to the first graph by default.
-                    // A more refined "pick which graph" UI comes in the next step.
                     final root = ProjectState.instance.projectTree.value;
                     if (root != null) {
-                      final graphs = root.children.where((n) => n.nodeType == NodeType.plot).toList();
-                      final target = graphs.isNotEmpty ? graphs.first : (root.children.isNotEmpty ? root.children.first : null);
-                      if (target != null) {
-                        ProjectState.instance.addProjectNodeWrapper(target.id, 'Table', NodeType.dataset);
+                      ProjectNode? targetGraph;
+                      void findGraph(ProjectNode node) {
+                        if (node.nodeType == NodeType.plot) {
+                          targetGraph = node;
+                          return;
+                        }
+                        for (var child in node.children) {
+                          findGraph(child);
+                          if (targetGraph != null) return;
+                        }
+                      }
+                      findGraph(root);
+                      if (targetGraph != null) {
+                        ProjectState.instance.addProjectNodeWrapper(targetGraph!.id, 'Table', NodeType.dataset);
                       }
                     }
                     break;

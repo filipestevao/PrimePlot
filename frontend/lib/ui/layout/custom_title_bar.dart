@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../core/theme.dart';
@@ -105,7 +106,7 @@ class WindowButtons extends StatelessWidget {
             windowManager.maximize();
           }
         }),
-        _buildButton(Icons.close, () => windowManager.close(), hoverColor: Colors.red.withOpacity(0.8)),
+        _buildButton(Icons.close, () => exit(0), hoverColor: Colors.red.withOpacity(0.8)),
         const SizedBox(width: 4),
       ],
     );
