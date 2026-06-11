@@ -98,8 +98,8 @@ class _MainLayoutState extends State<MainLayout> {
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<_ExplorerAction>>[
-                const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addGraph, child: Text('Add Graph', style: TextStyle(color: PrimeTheme.textPrimary))),
                 const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addTable, child: Text('Add Table', style: TextStyle(color: PrimeTheme.textPrimary))),
+                const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addGraph, child: Text('Add Graph', style: TextStyle(color: PrimeTheme.textPrimary))),
                 const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addFolder, child: Text('Add Folder', style: TextStyle(color: PrimeTheme.textPrimary))),
               ],
             ),
@@ -189,17 +189,7 @@ class _MainLayoutState extends State<MainLayout> {
           final file = details.files.first;
           try {
             final content = await file.readAsString();
-            // Prefer server-side insertion so Rust remains single source of truth.
-            try {
-              final selected = ProjectState.instance.selectedProjectNodeId.value;
-              final parentId = selected ?? 'graph_1';
-              addTableFromRaw(parentId: parentId, raw: content, displayName: file.name);
-              ProjectState.instance.projectTree.value = getProjectTree();
-              ProjectState.instance.fetchTablesForGraph(parentId);
-            } catch (e) {
-              // Fallback to local parsing on error
-              ProjectState.instance.pasteTable(content, displayName: file.name);
-            }
+            ProjectState.instance.handleDataImport(content, file.name);
           } catch (e) {
             debugPrint("Error reading dropped file: $e");
           }

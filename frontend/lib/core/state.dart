@@ -260,6 +260,50 @@ class ProjectState {
     return null;
   }
 
+  void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {
+    final newTree = reorderProjectChildren(parentId: parentId, oldIndex: BigInt.from(oldIndex), newIndex: BigInt.from(newIndex));
+    projectTree.value = newTree;
+  }
+
+  /// Resolves the nearest valid parent Graph node ID (NodeType.plot).
+  /// If no graph is found, returns null.
+  String? getValidParentGraphId() {
+    final selectedId = selectedProjectNodeId.value;
+    final root = projectTree.value;
+    if (root == null) return null;
+
+    if (selectedId != null) {
+      final selectedNode = _findNodeById(root, selectedId);
+      if (selectedNode != null) {
+        if (selectedNode.nodeType == NodeType.plot) return selectedNode.id;
+        // If selected is a dataset, try to find its parent graph
+        final parent = _findParentOfNode(root, selectedId);
+        if (parent != null && parent.nodeType == NodeType.plot) return parent.id;
+      }
+    }
+
+    // Fallback: return the first graph in the tree
+    return _findFirstGraphNode(root);
+  }
+
+  ProjectNode? _findParentOfNode(ProjectNode root, String nodeId) {
+    for (var child in root.children) {
+      if (child.id == nodeId) return root;
+      final found = _findParentOfNode(child, nodeId);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  String? _findFirstGraphNode(ProjectNode node) {
+    if (node.nodeType == NodeType.plot) return node.id;
+    for (var child in node.children) {
+      final found = _findFirstGraphNode(child);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
   /// Fetch tables for a graph from Rust and update activeTables.
   void fetchTablesForGraph(String graphId) {
     try {
@@ -284,9 +328,19 @@ class ProjectState {
     }
   }
 
-  void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {
-    final newTree = reorderProjectChildren(parentId: parentId, oldIndex: BigInt.from(oldIndex), newIndex: BigInt.from(newIndex));
+  void handleDataImport(String raw, String displayName) {
+    final parentId = getValidParentGraphId();
+    if (parentId == null) {
+      debugPrint("No valid graph found to import data into.");
+      return;
+    }
+    
+    // Perform insertion
+    final newTree = addTableFromRaw(parentId: parentId, raw: raw, displayName: displayName);
     projectTree.value = newTree;
+    
+    // Automatically fetch and switch to this graph
+    selectProjectNode(parentId);
   }
 
   void renameProjectNodeWrapper(String nodeId, String newName) {
