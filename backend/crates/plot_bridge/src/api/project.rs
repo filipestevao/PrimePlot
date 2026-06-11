@@ -53,6 +53,12 @@ pub(crate) fn get_state() -> &'static Mutex<EngineProjectNode> {
         graph.add_child(EngineProjectNode::new("table_1", "Table", EngineNodeType::Dataset));
         project.add_child(graph);
         root.add_child(project);
+
+        // Also seed TABLE_STORE with the initial empty table so get_table / update_table_from_raw work.
+        let initial = crate::api::data::get_empty_table_data();
+        let mut store = TABLE_STORE.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap();
+        store.insert(initial.id.clone(), dto_to_engine_table(initial));
+
         Mutex::new(root)
     })
 }
@@ -165,11 +171,10 @@ pub fn update_table_from_raw(table_id: String, raw: String) {
     
     let mut store = get_table_store().lock().unwrap();
     if let Some(existing_table) = store.get_mut(&table_id) {
-        new_dto.id = table_id.clone();
         new_dto.name = existing_table.name.clone();
-        
-        *existing_table = dto_to_engine_table(new_dto);
     }
+    new_dto.id = table_id.clone();
+    store.insert(table_id, dto_to_engine_table(new_dto));
 }
 
 static TABLE_STORE: OnceLock<Mutex<HashMap<String, EngineDataTable>>> = OnceLock::new();

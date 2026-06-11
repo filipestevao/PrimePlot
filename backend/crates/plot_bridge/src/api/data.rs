@@ -91,7 +91,7 @@ pub fn get_mock_scientific_data(num_points: usize) -> Vec<Point2D> {
 /// This is the canonical starting state of the application.
 #[frb(sync)]
 pub fn get_empty_table_data() -> DTODataTable {
-    let mut table = EngineDataTable::new("table_001", "Untitled");
+    let mut table = EngineDataTable::new("table_1", "Untitled");
     table.add_column(DataColumn {
         name: "Position".to_string(),
         role: ColumnRole::X,

@@ -58,10 +58,18 @@ class _DataTablePanelState extends State<DataTablePanel> {
   // Paste handler
   // ---------------------------------------------------------------------------
 
+  bool _isPasting = false;
+
   Future<void> _handlePaste() async {
+    if (_isPasting) return;
+    _isPasting = true;
     final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (data?.text == null || data!.text!.trim().isEmpty) return;
+    if (data?.text == null || data!.text!.trim().isEmpty) {
+        _isPasting = false;
+        return;
+    }
     ProjectState.instance.handlePaste(data.text!, displayName: 'Pasted Table');
+    _isPasting = false;
   }
 
   // ---------------------------------------------------------------------------
