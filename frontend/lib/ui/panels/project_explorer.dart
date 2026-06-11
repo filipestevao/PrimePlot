@@ -3,6 +3,9 @@ import '../../src/rust/api/project.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 
+
+enum TableAction { rename, delete }
+
 class ProjectExplorer extends StatefulWidget {
   const ProjectExplorer({super.key});
 
@@ -228,6 +231,42 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   }
 
   // ---------------------------------------------------------------------------
+  // Popup menu actions
+  // ---------------------------------------------------------------------------
+
+  void _onTableAction(TableAction action, ProjectNode node) {
+    if (action == TableAction.rename) {
+      _startEditing(node.id, node.name);
+    } else if (action == TableAction.delete) {
+      _showDeleteConfirmationDialog(node);
+    }
+  }
+
+  void _showDeleteConfirmationDialog(ProjectNode node) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PrimeTheme.panelBackground,
+        title: const Text('Delete Table'),
+        content: Text('Do you really want to delete the table "${node.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              ProjectState.instance.deleteProjectNodeWrapper(node.id);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Yes', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Table row — LongPressDraggable + DragTarget
   // ---------------------------------------------------------------------------
 
@@ -342,9 +381,20 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (!isEditing) ...[
-                _miniIconButton(
-                  icon: Icons.edit_outlined,
-                  onPressed: () => _startEditing(table.id, table.name),
+                PopupMenuButton<TableAction>(
+                  icon: const Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
+                  color: PrimeTheme.backgroundDark,
+                  onSelected: (action) => _onTableAction(action, table),
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: TableAction.rename,
+                      child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+                    ),
+                    const PopupMenuItem(
+                      value: TableAction.delete,
+                      child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                    ),
+                  ],
                 ),
               ] else ...[
                 _miniIconButton(
@@ -529,6 +579,14 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     );
   }
 
+  void _onGraphAction(TableAction action, ProjectNode node) {
+    if (action == TableAction.rename) {
+      _startEditing(node.id, node.name);
+    } else if (action == TableAction.delete) {
+      _showDeleteConfirmationDialog(node);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Editable title widget for graph / folder nodes
   // ---------------------------------------------------------------------------
@@ -566,9 +624,20 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           ),
           if (!isRoot) ...[
             if (!isEditing)
-              _miniIconButton(
-                icon: Icons.edit_outlined,
-                onPressed: () => _startEditing(node.id, node.name),
+              PopupMenuButton<TableAction>(
+                icon: const Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
+                color: PrimeTheme.backgroundDark,
+                onSelected: (action) => _onGraphAction(action, node),
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: TableAction.rename,
+                    child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+                  ),
+                  const PopupMenuItem(
+                    value: TableAction.delete,
+                    child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                  ),
+                ],
               )
             else
               _miniIconButton(

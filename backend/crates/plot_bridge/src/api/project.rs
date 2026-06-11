@@ -132,6 +132,46 @@ pub fn reorder_project_children(parent_id: String, old_index: usize, new_index: 
     state.clone().into()
 }
 
+#[flutter_rust_bridge::frb(sync)]
+pub fn delete_project_node(node_id: String) -> ProjectNode {
+    let mut state = get_state().lock().unwrap();
+    
+    if let Some(removed_node) = state.remove_node(&node_id) {
+        let mut datasets_to_remove = Vec::new();
+        
+        // Recursive collector to find all dataset IDs in the removed subtree
+        fn collect_datasets(n: &EngineProjectNode, datasets: &mut Vec<String>) {
+            if let EngineNodeType::Dataset = n.node_type {
+                datasets.push(n.id.clone());
+            }
+            for child in &n.children {
+                collect_datasets(child, datasets);
+            }
+        }
+        collect_datasets(&removed_node, &mut datasets_to_remove);
+        
+        let mut store = get_table_store().lock().unwrap();
+        for id in datasets_to_remove {
+            store.remove(&id);
+        }
+    }
+    
+    state.clone().into()
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn update_table_from_raw(table_id: String, raw: String) {
+    let mut new_dto = crate::api::data::parse_clipboard_table(raw);
+    
+    let mut store = get_table_store().lock().unwrap();
+    if let Some(existing_table) = store.get_mut(&table_id) {
+        new_dto.id = table_id.clone();
+        new_dto.name = existing_table.name.clone();
+        
+        *existing_table = dto_to_engine_table(new_dto);
+    }
+}
+
 static TABLE_STORE: OnceLock<Mutex<HashMap<String, EngineDataTable>>> = OnceLock::new();
 
 fn get_table_store() -> &'static Mutex<HashMap<String, EngineDataTable>> {

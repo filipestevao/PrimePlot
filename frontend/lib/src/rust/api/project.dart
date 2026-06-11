@@ -49,6 +49,15 @@ ProjectNode reorderProjectChildren({
   newIndex: newIndex,
 );
 
+ProjectNode deleteProjectNode({required String nodeId}) =>
+    RustLib.instance.api.crateApiProjectDeleteProjectNode(nodeId: nodeId);
+
+void updateTableFromRaw({required String tableId, required String raw}) =>
+    RustLib.instance.api.crateApiProjectUpdateTableFromRaw(
+      tableId: tableId,
+      raw: raw,
+    );
+
 ProjectNode addTableFromRaw({
   required String parentId,
   required String raw,
