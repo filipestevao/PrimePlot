@@ -217,6 +217,56 @@ fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {
 }
 
 #[flutter_rust_bridge::frb(sync)]
+pub fn save_table(table_id: String, columns: Vec<crate::api::data::DTODataColumn>) {
+    let mut store = get_table_store().lock().unwrap();
+    let name = store.get(&table_id).map(|t| t.name.clone()).unwrap_or_default();
+    let mut et = EngineDataTable::new(&table_id, &name);
+    for col in columns {
+        let role = match col.role {
+            DTOColumnRole::X => EngineColumnRole::X,
+            DTOColumnRole::Y => EngineColumnRole::Y,
+            DTOColumnRole::XError => EngineColumnRole::XError,
+            DTOColumnRole::YError => EngineColumnRole::YError,
+            DTOColumnRole::Text => EngineColumnRole::Text,
+        };
+        et.add_column(EngineDataColumn { name: col.name, role, data: col.data });
+    }
+    store.insert(table_id, et);
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_count: usize) -> ProjectNode {
+    let mut state = get_state().lock().unwrap();
+    let new_id = generate_id("table");
+
+    let mut et = EngineDataTable::new(&new_id, &name);
+    for i in 0..col_count {
+        let (col_name, role) = if i == 0 {
+            ("Position".to_string(), EngineColumnRole::X)
+        } else {
+            (format!("Col {}", i + 1), EngineColumnRole::Y)
+        };
+        et.add_column(EngineDataColumn {
+            name: col_name,
+            role,
+            data: vec![f64::NAN; row_count],
+        });
+    }
+
+    let mut store = get_table_store().lock().unwrap();
+    store.insert(new_id.clone(), et);
+
+    let new_node = EngineProjectNode::new(&new_id, &name, EngineNodeType::Dataset);
+    let mut opt_node = Some(new_node);
+    state.insert_node_opt(&parent_id, &mut opt_node);
+    if let Some(node) = opt_node.take() {
+        state.add_child(node);
+    }
+
+    state.clone().into()
+}
+
+#[flutter_rust_bridge::frb(sync)]
 pub fn add_table_from_raw(parent_id: String, raw: String, display_name: String) -> ProjectNode {
     let mut state = get_state().lock().unwrap();
     // Parse using existing parser

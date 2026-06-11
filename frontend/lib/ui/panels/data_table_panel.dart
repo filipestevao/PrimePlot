@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/data.dart';
+import '../../src/rust/api/project.dart';
 
 class DataTablePanel extends StatefulWidget {
   const DataTablePanel({super.key});
@@ -579,6 +580,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
     );
 
     ProjectState.instance.updateTable(newTable);
+    saveTable(tableId: newTable.id, columns: newTable.columns);
     setState(() {
       _editingRow = null;
       _editingCol = null;

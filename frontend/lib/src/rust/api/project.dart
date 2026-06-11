@@ -58,6 +58,26 @@ void updateTableFromRaw({required String tableId, required String raw}) =>
       raw: raw,
     );
 
+void saveTable({
+  required String tableId,
+  required List<DTODataColumn> columns,
+}) => RustLib.instance.api.crateApiProjectSaveTable(
+  tableId: tableId,
+  columns: columns,
+);
+
+ProjectNode addEmptyTable({
+  required String parentId,
+  required String name,
+  required BigInt rowCount,
+  required BigInt colCount,
+}) => RustLib.instance.api.crateApiProjectAddEmptyTable(
+  parentId: parentId,
+  name: name,
+  rowCount: rowCount,
+  colCount: colCount,
+);
+
 ProjectNode addTableFromRaw({
   required String parentId,
   required String raw,

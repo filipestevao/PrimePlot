@@ -147,15 +147,19 @@ class ProjectState {
     _setScatterVisible(scatterVisible);
   }
 
-  /// Resets the table to a new blank 10-row × 2-column table and resets scatter.
+  /// Creates a new blank 10-row × 2-column table in the active graph.
   void newTable() {
-    activeTable.value = getNewTableData(
-      rowCount: BigInt.from(10),
-      colCount: BigInt.from(2),
-    );
-    tableDisplayName.value = 'Table';
-    renameProjectNodeWrapper('table_1', 'Table');
-    // 10 rows ≤ 10 → Scatter visible.
+    final parentId = getValidParentGraphId();
+    if (parentId == null) return;
+    final newTree = addEmptyTable(parentId: parentId, name: 'Table', rowCount: BigInt.from(10), colCount: BigInt.from(2));
+    projectTree.value = newTree;
+    // Select the newly created node
+    final root = projectTree.value;
+    final parent = _findNodeById(root, parentId);
+    if (parent != null && parent.children.isNotEmpty) {
+      final newNode = parent.children.last;
+      selectProjectNode(newNode.id);
+    }
     _setScatterVisible(true);
   }
 
