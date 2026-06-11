@@ -343,6 +343,30 @@ class ProjectState {
     selectProjectNode(parentId);
   }
 
+  /// Handles paste operations by either updating an existing selected table
+  /// or creating a new table node within the currently active graph.
+  void handlePaste(String rawText, {String? displayName}) {
+    final selectedNodeId = selectedProjectNodeId.value;
+    final root = projectTree.value;
+
+    // 1. Determine if we are updating an existing table or creating a new one
+    ProjectNode? selectedNode = _findNodeById(root, selectedNodeId ?? '');
+    
+    if (selectedNode != null && selectedNode.nodeType == NodeType.dataset) {
+      // User has a specific table selected: use the parent graph
+      final parentGraph = _findParentOfNode(root!, selectedNodeId!);
+      if (parentGraph != null && parentGraph.nodeType == NodeType.plot) {
+        final newTree = addTableFromRaw(parentId: parentGraph.id, raw: rawText, displayName: displayName ?? 'Pasted Table');
+        projectTree.value = newTree;
+        selectProjectNode(parentGraph.id); // Refresh view
+        return;
+      }
+    }
+
+    // 2. Fallback: Import as new data node into current graph
+    handleDataImport(rawText, displayName ?? 'Pasted Table');
+  }
+
   void renameProjectNodeWrapper(String nodeId, String newName) {
     final newTree = renameProjectNode(nodeId: nodeId, newName: newName);
     projectTree.value = newTree;
