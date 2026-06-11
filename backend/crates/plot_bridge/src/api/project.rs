@@ -90,7 +90,8 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
         NodeType::Plot => "graph",
     };
     
-    let new_node = EngineProjectNode::new(&generate_id(prefix), &name, engine_type);
+    let new_id = generate_id(prefix);
+    let new_node = EngineProjectNode::new(&new_id, &name, engine_type);
     let mut opt_node = Some(new_node);
     
     // Attempt to insert into specified parent.
@@ -99,6 +100,23 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
     // If we failed to insert (parent not found or it's root but handled), append to root.
     if let Some(node) = opt_node.take() {
         state.add_child(node);
+    }
+
+    // Seed TABLE_STORE with an empty table for new Dataset nodes.
+    if let NodeType::Dataset = node_type {
+        let mut table = EngineDataTable::new(&new_id, &name);
+        table.add_column(EngineDataColumn {
+            name: "Position".to_string(),
+            role: EngineColumnRole::X,
+            data: Vec::new(),
+        });
+        table.add_column(EngineDataColumn {
+            name: "Intensity".to_string(),
+            role: EngineColumnRole::Y,
+            data: Vec::new(),
+        });
+        let mut store = get_table_store().lock().unwrap();
+        store.insert(new_id, table);
     }
     
     state.clone().into()

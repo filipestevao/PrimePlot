@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import '../src/rust/api/data.dart';
 import '../src/rust/api/project.dart';
 
@@ -353,7 +352,6 @@ class ProjectState {
     // 1. If an active table exists, update it.
     if (activeTable.value != null) {
       final tableId = activeTable.value!.id;
-      debugPrint("handlePaste: Updating table $tableId with data: ${rawText.substring(0, math.min(rawText.length, 20))}...");
       updateTableFromRaw(tableId: tableId, raw: rawText);
       
       // If a displayName is provided (e.g., "Pasted Table"), rename the node.
@@ -365,9 +363,7 @@ class ProjectState {
       final updatedTable = getTable(tableId: tableId);
       activeTable.value = updatedTable;
       tableDisplayName.value = updatedTable.name;
-      debugPrint("handlePaste: New table name: ${updatedTable.name}, Columns: ${updatedTable.columns.length}, Rows: ${updatedTable.columns.isNotEmpty ? updatedTable.columns.first.data.length : 0}");
       
-      // Update graph if it's the active graph
       final parentGraph = _findParentOfNode(root!, tableId);
       if (parentGraph != null) {
         fetchTablesForGraph(parentGraph.id);
@@ -376,7 +372,6 @@ class ProjectState {
     }
 
     // 2. Fallback: Import as new data node into current graph
-    debugPrint("handlePaste: No active table, importing as new data node.");
     handleDataImport(rawText, displayName ?? 'Pasted Table');
   }
 
