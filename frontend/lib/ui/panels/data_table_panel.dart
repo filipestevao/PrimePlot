@@ -404,18 +404,16 @@ class _DataTablePanelState extends State<DataTablePanel> {
             elevation: 8,
             offset: const Offset(0, 30),
             onSelected: (DTOColumnRole newRole) {
-              final newTable = DTODataTable(
-                id: tableData.id,
-                name: tableData.name,
-                columns: List.from(tableData.columns),
-              );
-              newTable.columns[columnIndex] = DTODataColumn(
-                name: col.name,
-                role: newRole,
-                data: col.data,
-              );
-              ProjectState.instance.updateTable(newTable);
-            },
+                final newColumns = List<DTODataColumn>.from(tableData.columns);
+                newColumns[columnIndex] = DTODataColumn(
+                  name: col.name,
+                  role: newRole,
+                  data: col.data,
+                );
+                saveTable(tableId: tableData.id, columns: newColumns);
+                final updated = getTable(tableId: tableData.id);
+                ProjectState.instance.updateTable(updated);
+              },
             itemBuilder: (BuildContext context) =>
                 <PopupMenuEntry<DTOColumnRole>>[
               const PopupMenuItem<DTOColumnRole>(
@@ -559,28 +557,23 @@ class _DataTablePanelState extends State<DataTablePanel> {
   void _commitEdit(DTODataTable tableData, int rowIndex, int colIndex,
       String newValue) {
     final trimmed = newValue.trim();
-    // Empty input or just whitespace → clear to NaN
     final double parsed =
         trimmed.isEmpty ? double.nan : (double.tryParse(trimmed) ?? double.nan);
 
-    final newTable = DTODataTable(
-      id: tableData.id,
-      name: tableData.name,
-      columns: List.from(tableData.columns),
-    );
-
     final newData =
-        Float64List.fromList(newTable.columns[colIndex].data.toList());
+        Float64List.fromList(tableData.columns[colIndex].data.toList());
     newData[rowIndex] = parsed;
 
-    newTable.columns[colIndex] = DTODataColumn(
-      name: newTable.columns[colIndex].name,
-      role: newTable.columns[colIndex].role,
+    final newColumns = List<DTODataColumn>.from(tableData.columns);
+    newColumns[colIndex] = DTODataColumn(
+      name: tableData.columns[colIndex].name,
+      role: tableData.columns[colIndex].role,
       data: newData,
     );
 
-    ProjectState.instance.updateTable(newTable);
-    saveTable(tableId: newTable.id, columns: newTable.columns);
+    saveTable(tableId: tableData.id, columns: newColumns);
+    final updated = getTable(tableId: tableData.id);
+    ProjectState.instance.updateTable(updated);
     setState(() {
       _editingRow = null;
       _editingCol = null;

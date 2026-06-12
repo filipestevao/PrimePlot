@@ -184,9 +184,17 @@ class ProjectState {
 
   /// Clears all data rows, keeping the column schema, resetting to an empty table.
   void clearTableData() {
-    activeTable.value = getEmptyTableData();
-    tableDisplayName.value = 'Table';
-    renameProjectNodeWrapper('table_1', 'Table');
+    final active = activeTable.value;
+    if (active == null) return;
+    final newColumns = active.columns.map((col) => DTODataColumn(
+      name: col.name,
+      role: col.role,
+      data: Float64List(0),
+    )).toList();
+    saveTable(tableId: active.id, columns: newColumns);
+    final updated = getTable(tableId: active.id);
+    activeTable.value = updated;
+    tableDisplayName.value = updated.name;
     _setScatterVisible(true);
   }
 
