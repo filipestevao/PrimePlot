@@ -106,12 +106,12 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
     if let NodeType::Dataset = node_type {
         let mut table = EngineDataTable::new(&new_id, &name);
         table.add_column(EngineDataColumn {
-            name: "Position".to_string(),
+            name: "Col 1".to_string(),
             role: EngineColumnRole::X,
             data: Vec::new(),
         });
         table.add_column(EngineDataColumn {
-            name: "Intensity".to_string(),
+            name: "Col 2".to_string(),
             role: EngineColumnRole::Y,
             data: Vec::new(),
         });

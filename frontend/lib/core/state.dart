@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../src/rust/api/data.dart';
 import '../src/rust/api/project.dart';
@@ -151,9 +152,27 @@ class ProjectState {
   void newTable() {
     final parentId = getValidParentGraphId();
     if (parentId == null) return;
+
+    final active = activeTable.value;
+    final isEmptyTable = active != null &&
+        active.columns.every((c) => c.data.isEmpty);
+
+    if (isEmptyTable) {
+      final newColumns = active!.columns.map((col) => DTODataColumn(
+        name: col.name,
+        role: col.role,
+        data: Float64List.fromList(List.generate(10, (_) => double.nan)),
+      )).toList();
+      saveTable(tableId: active.id, columns: newColumns);
+      final updated = getTable(tableId: active.id);
+      activeTable.value = updated;
+      tableDisplayName.value = updated.name;
+      _setScatterVisible(true);
+      return;
+    }
+
     final newTree = addEmptyTable(parentId: parentId, name: 'Table', rowCount: BigInt.from(10), colCount: BigInt.from(2));
     projectTree.value = newTree;
-    // Select the newly created node
     final root = projectTree.value;
     final parent = _findNodeById(root, parentId);
     if (parent != null && parent.children.isNotEmpty) {

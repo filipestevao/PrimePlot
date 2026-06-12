@@ -15,7 +15,7 @@ List<Point2D> getMockScientificData({required BigInt numPoints}) => RustLib
     .api
     .crateApiDataGetMockScientificData(numPoints: numPoints);
 
-/// Returns an empty two-column table (Position/X, Intensity/Y) with zero rows.
+/// Returns an empty two-column table (X, Y) with zero rows.
 /// This is the canonical starting state of the application.
 DTODataTable getEmptyTableData() =>
     RustLib.instance.api.crateApiDataGetEmptyTableData();

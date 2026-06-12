@@ -93,12 +93,12 @@ pub fn get_mock_scientific_data(num_points: usize) -> Vec<Point2D> {
 pub fn get_empty_table_data() -> DTODataTable {
     let mut table = EngineDataTable::new("table_1", "Untitled");
     table.add_column(DataColumn {
-        name: "Position".to_string(),
+        name: "Col 1".to_string(),
         role: ColumnRole::X,
         data: Vec::new(),
     });
     table.add_column(DataColumn {
-        name: "Intensity".to_string(),
+        name: "Col 2".to_string(),
         role: ColumnRole::Y,
         data: Vec::new(),
     });
