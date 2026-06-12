@@ -494,15 +494,18 @@ class _DataTablePanelState extends State<DataTablePanel> {
 
     return GestureDetector(
       onTap: () {
-        if (isEditable) {
-          _editController.text = displayText;
-          _editController.selection = TextSelection(
-              baseOffset: 0, extentOffset: _editController.text.length);
-          setState(() {
-            _editingRow = rowIndex;
-            _editingCol = colIndex;
-          });
+        if (!isEditable) return;
+        // Commit any in-progress edit before starting a new one
+        if (_editingRow != null && _editingCol != null) {
+          _commitEdit(tableData, _editingRow!, _editingCol!, _editController.text);
         }
+        _editController.text = displayText;
+        _editController.selection = TextSelection(
+            baseOffset: 0, extentOffset: _editController.text.length);
+        setState(() {
+          _editingRow = rowIndex;
+          _editingCol = colIndex;
+        });
       },
       child: Container(
         width: 100,
@@ -535,7 +538,11 @@ class _DataTablePanelState extends State<DataTablePanel> {
                     decimal: true, signed: true),
                 onFieldSubmitted: (newValue) =>
                     _commitEdit(tableData, rowIndex, colIndex, newValue),
-                onEditingComplete: () {},
+                onTapOutside: (_) {
+                  if (_editingRow != null && _editingCol != null) {
+                    _commitEdit(tableData, _editingRow!, _editingCol!, _editController.text);
+                  }
+                },
               )
             : Text(
                 displayText,

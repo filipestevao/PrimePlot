@@ -236,6 +236,15 @@ class ProjectState {
 
   void updateTable(DTODataTable newTable) {
     activeTable.value = newTable;
+    final tables = activeTables.value;
+    if (tables.isNotEmpty) {
+      final idx = tables.indexWhere((t) => t.id == newTable.id);
+      if (idx != -1) {
+        final newList = List<DTODataTable>.from(tables);
+        newList[idx] = newTable;
+        activeTables.value = newList;
+      }
+    }
   }
 
   void toggleTableEditMode() {
