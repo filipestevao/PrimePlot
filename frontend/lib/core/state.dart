@@ -244,6 +244,8 @@ class ProjectState {
         newList[idx] = newTable;
         activeTables.value = newList;
       }
+    } else {
+      activeTables.value = [newTable];
     }
   }
 
