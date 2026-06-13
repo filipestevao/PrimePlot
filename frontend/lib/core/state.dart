@@ -381,8 +381,14 @@ class ProjectState {
     final newTree = addTableFromRaw(parentId: parentId, raw: raw, displayName: displayName);
     projectTree.value = newTree;
     
-    // Automatically fetch and switch to this graph
-    selectProjectNode(parentId);
+    // Refresh chart + selection directly (mirrors handlePaste pattern)
+    selectedProjectNodeId.value = parentId;
+    final root = projectTree.value;
+    final graph = root != null ? _findNodeById(root, parentId) : null;
+    if (graph != null) {
+      graphName.value = graph.name;
+    }
+    fetchTablesForGraph(parentId);
   }
 
   /// Handles paste operations by either updating an existing selected table

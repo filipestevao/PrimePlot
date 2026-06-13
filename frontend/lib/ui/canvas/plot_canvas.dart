@@ -17,10 +17,17 @@ class PlotCanvas extends StatelessWidget {
         if (tables.isEmpty) {
           primaryTable = ProjectState.instance.activeTable.value;
         } else {
-          primaryTable = tables.first;
+          primaryTable = tables.firstWhere(
+            (t) => t.columns.length >= 2 && t.columns.first.data.isNotEmpty,
+            orElse: () => tables.first,
+          );
         }
 
-        if (primaryTable == null || primaryTable.columns.length < 2 || primaryTable.columns.first.data.isEmpty) {
+        final bool hasData = tables.isNotEmpty
+            ? tables.any((t) => t.columns.length >= 2 && t.columns.first.data.isNotEmpty)
+            : primaryTable != null && primaryTable.columns.length >= 2 && primaryTable.columns.first.data.isNotEmpty;
+
+        if (primaryTable == null || !hasData) {
           return const Center(
             child: Text(
               'No data available to plot.',
