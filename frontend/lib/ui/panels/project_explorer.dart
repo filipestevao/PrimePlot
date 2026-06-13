@@ -16,6 +16,8 @@ class ProjectExplorer extends StatefulWidget {
 class _ProjectExplorerState extends State<ProjectExplorer> {
   String? _editingNodeId;
   final TextEditingController _editController = TextEditingController();
+  final Set<String> _expandedNodes = {};
+  final Set<String> _hoveredNodeIds = {};
 
   @override
   void initState() {
@@ -450,7 +452,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   }
 
   // ---------------------------------------------------------------------------
-  // Shared compact ExpansionTile builder
+  // Shared expandable tile builder
   // ---------------------------------------------------------------------------
 
   Widget _styledTile({
@@ -466,41 +468,25 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     Widget? dragFeedback,
   }) {
     final double leftPad = 12.0 + indent * 16.0;
+    final isExpanded = !_expandedNodes.contains(node.id);
 
-    Widget titleContent = _buildTitleWidget(node, isEditing,
-        isRoot: isRoot, draggableData: draggableData, dragFeedback: dragFeedback);
-
-    final Widget leadingWidget = (draggableData != null && dragFeedback != null)
-        ? Draggable<String>(
-            data: draggableData,
-            feedback: dragFeedback,
-            dragAnchorStrategy: childDragAnchorStrategy,
-            childWhenDragging: Opacity(
-              opacity: 0.25,
-              child: Icon(icon, size: 16, color: iconColor),
-            ),
-            child: Icon(icon, size: 16, color: iconColor),
-          )
-        : Icon(icon, size: 16, color: iconColor);
-
-    final expansion = Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        dense: true,
-        visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-        minTileHeight: 28,
-        tilePadding: EdgeInsets.only(left: leftPad, right: 16),
-        childrenPadding: EdgeInsets.zero,
-        leading: leadingWidget,
-        title: titleContent,
-        iconColor: PrimeTheme.textSecondary,
-        collapsedIconColor: PrimeTheme.textSecondary,
-        children: children,
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeader(node, isEditing, isRoot, draggableData, dragFeedback,
+            icon, iconColor, leftPad, isExpanded, children.isNotEmpty),
+        if (children.isNotEmpty)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: isExpanded
+                ? Column(children: children)
+                : const SizedBox.shrink(),
+          ),
+      ],
     );
-
-    return expansion;
   }
 
   // ---------------------------------------------------------------------------
@@ -587,71 +573,146 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     }
   }
 
-  // ---------------------------------------------------------------------------
+  // -------------- ------------------------------------------------------------
   // Editable title widget for graph / folder nodes
   // ---------------------------------------------------------------------------
 
-  Widget _buildTitleWidget(ProjectNode node, bool isEditing,
-      {bool isRoot = false, String? draggableData, Widget? dragFeedback}) {
-    return InkWell(
-      onTap: () => ProjectState.instance.selectProjectNode(node.id),
-      child: Row(
-        children: [
-          Expanded(
-            child: isEditing
-                ? SizedBox(
-                    height: 20,
-                    child: TextField(
-                      controller: _editController,
-                      autofocus: true,
-                      style: const TextStyle(
-                          fontSize: 13, color: PrimeTheme.primaryAccent),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(vertical: 0, horizontal: 4),
-                        border: OutlineInputBorder(),
-                      ),
-                      onSubmitted: (_) => _finishEditing(node.id),
-                    ),
-                  )
-                : Text(
-                    node.name,
-                    style: const TextStyle(
-                        fontSize: 13, color: PrimeTheme.textPrimary),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-          ),
-          if (!isRoot) ...[
-            if (!isEditing)
-              PopupMenuButton<TableAction>(
-                icon: const Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
-                color: PrimeTheme.backgroundDark,
-                onSelected: (action) => _onGraphAction(action, node),
-                itemBuilder: (ctx) => [
-                  const PopupMenuItem(
-                    value: TableAction.rename,
-                    child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
-                  ),
-                  const PopupMenuItem(
-                    value: TableAction.delete,
-                    child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
-                  ),
-                ],
-              )
-            else
-              _miniIconButton(
-                icon: Icons.check,
-                color: Colors.greenAccent,
-                onPressed: () => _finishEditing(node.id),
+  Widget _buildHeader(
+    ProjectNode node, bool isEditing, bool isRoot,
+    String? draggableData, Widget? dragFeedback,
+    IconData icon, Color iconColor, double leftPad, bool isExpanded,
+    bool hasChildren,
+  ) {
+    final isSelected = _isSelected(node.id);
+
+    // Leading icon (draggable when applicable)
+    final leadingWidget = (draggableData != null && dragFeedback != null)
+        ? Draggable<String>(
+            data: draggableData,
+            feedback: dragFeedback,
+            dragAnchorStrategy: childDragAnchorStrategy,
+            childWhenDragging: Opacity(
+              opacity: 0.25,
+              child: Icon(icon, size: 16, color: iconColor),
+            ),
+            child: Icon(icon, size: 16, color: isSelected ? PrimeTheme.primaryAccent : iconColor),
+          )
+        : Icon(icon, size: 16, color: isSelected ? PrimeTheme.primaryAccent : iconColor);
+
+    // Title widget
+    final titleWidget = isEditing
+        ? SizedBox(
+            height: 20,
+            child: TextField(
+              controller: _editController,
+              autofocus: true,
+              style: const TextStyle(fontSize: 13, color: PrimeTheme.primaryAccent),
+              decoration: const InputDecoration(
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                border: OutlineInputBorder(),
               ),
-            const SizedBox(width: 2),
-            if (draggableData != null && dragFeedback != null) ...[
-              _dragHandle(data: draggableData, feedback: dragFeedback),
-              const SizedBox(width: 4),
+              onSubmitted: (_) => _finishEditing(node.id),
+            ),
+          )
+        : Text(
+            node.name,
+            style: TextStyle(
+                fontSize: 13, color: isSelected ? PrimeTheme.primaryAccent : PrimeTheme.textPrimary),
+            overflow: TextOverflow.ellipsis,
+          );
+
+    // Expand toggle widget (rightmost)
+    final expandToggle = (!isRoot && hasChildren)
+        ? InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedNodes.add(node.id);
+                } else {
+                  _expandedNodes.remove(node.id);
+                }
+              });
+            },
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setState(() => _hoveredNodeIds.add(node.id)),
+              onExit: (_) => setState(() => _hoveredNodeIds.remove(node.id)),
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  border: _hoveredNodeIds.contains(node.id)
+                      ? Border.all(color: PrimeTheme.textSecondary.withValues(alpha: 0.5))
+                      : null,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(
+                  isExpanded ? Icons.expand_more : Icons.chevron_right,
+                  size: 16,
+                  color: PrimeTheme.textSecondary,
+                ),
+              ),
+            ),
+          )
+        : null;
+
+    // Trailing controls (popup menu + drag handle + expand toggle)
+    final trailingWidget = !isRoot
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isEditing)
+                PopupMenuButton<TableAction>(
+                  icon: const Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
+                  color: PrimeTheme.backgroundDark,
+                  onSelected: (action) => _onGraphAction(action, node),
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: TableAction.rename,
+                      child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+                    ),
+                    const PopupMenuItem(
+                      value: TableAction.delete,
+                      child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                    ),
+                  ],
+                )
+              else
+                _miniIconButton(
+                  icon: Icons.check,
+                  color: Colors.greenAccent,
+                  onPressed: () => _finishEditing(node.id),
+                ),
+              if (draggableData != null && dragFeedback != null) ...[
+                const SizedBox(width: 4),
+                _dragHandle(data: draggableData, feedback: dragFeedback),
+              ],
+              if (expandToggle != null) ...[
+                const SizedBox(width: 4),
+                expandToggle,
+              ],
             ],
-          ],
-        ],
+          )
+        : null;
+
+    // Single ListTile matching table row visual style, spans full width
+    return Material(
+      color: isSelected
+          ? PrimeTheme.primaryAccent.withValues(alpha: 0.15)
+          : Colors.transparent,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: ListTile(
+          dense: true,
+          visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
+          minLeadingWidth: 16,
+          contentPadding: EdgeInsets.only(left: leftPad, right: 16),
+          leading: leadingWidget,
+          title: titleWidget,
+          trailing: trailingWidget,
+          onTap: () => ProjectState.instance.selectProjectNode(node.id),
+        ),
       ),
     );
   }
