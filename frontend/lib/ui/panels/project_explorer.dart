@@ -77,9 +77,17 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         // has a proper ancestor to paint ink effects on.
         return Material(
           color: PrimeTheme.panelBackground,
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 8),
-            children: rootNode.children.map((child) => _dispatchNode(child, 0)).toList(),
+          child: DragTarget<String>(
+            onWillAcceptWithDetails: (d) {
+              if (d.data == 'root_1') return false;
+              final dragged = _findNodeById(rootNode, d.data);
+              return dragged != null && (dragged.nodeType == NodeType.folder || dragged.nodeType == NodeType.plot);
+            },
+            onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, 'root_1'),
+            builder: (ctx, candidateData, _) => ListView(
+              padding: const EdgeInsets.only(bottom: 8),
+              children: rootNode.children.map((child) => _dispatchNode(child, 0)).toList(),
+            ),
           ),
         );
       },
@@ -119,14 +127,20 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // ---------------------------------------------------------------------------
 
   Widget _buildFolderNode(ProjectNode folder, int indent) {
+    final feedbackChip = _dragChip(
+      icon: Icons.folder,
+      iconColor: const Color(0xFFFFC107),
+      label: folder.name,
+    );
+
     return DragTarget<String>(
       onWillAcceptWithDetails: (d) {
-        // Folders only accept plots
+        // Folders accept plots and other folders
         if (d.data == folder.id || d.data == 'root_1') return false;
         final root = ProjectState.instance.projectTree.value;
         if (root == null) return false;
         final dragged = _findNodeById(root, d.data);
-        return dragged != null && dragged.nodeType == NodeType.plot;
+        return dragged != null && (dragged.nodeType == NodeType.plot || dragged.nodeType == NodeType.folder);
       },
       onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, folder.id),
       builder: (ctx, candidateData, _) => Material(
@@ -140,6 +154,8 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           label: folder.name,
           isEditing: _editingNodeId == folder.id,
           node: folder,
+          draggableData: folder.id,
+          dragFeedback: feedbackChip,
           children: folder.children.map((child) => _dispatchNode(child, indent + 1)).toList(),
         ),
       ),
