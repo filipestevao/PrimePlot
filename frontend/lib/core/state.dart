@@ -258,6 +258,20 @@ class ProjectState {
     projectTree.value = newTree;
   }
 
+  /// Adds a project node and returns its generated ID.
+  String addProjectNodeAndReturnId(String parentId, String name, NodeType type) {
+    final newTree = addProjectNode(parentId: parentId, name: name, nodeType: type);
+    projectTree.value = newTree;
+    // New node is the last child of parent with the matching type
+    final parent = _findNodeById(newTree, parentId);
+    if (parent != null) {
+      for (int i = parent.children.length - 1; i >= 0; i--) {
+        if (parent.children[i].nodeType == type) return parent.children[i].id;
+      }
+    }
+    return '';
+  }
+
   void moveProjectNodeWrapper(String nodeId, String newParentId) {
     final newTree = moveProjectNode(nodeId: nodeId, newParentId: newParentId);
     projectTree.value = newTree;

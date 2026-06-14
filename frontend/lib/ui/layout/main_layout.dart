@@ -47,55 +47,62 @@ class _MainLayoutState extends State<MainLayout> {
               elevation: 8,
               offset: const Offset(0, 30),
               onSelected: (_ExplorerAction action) {
-                switch (action) {
-                  case _ExplorerAction.addGraph:
-                    // Find the first folder (Project) node in the tree to add the Graph to.
-                    final root = ProjectState.instance.projectTree.value;
-                    String targetParentId = 'root_1';
-                    if (root != null) {
-                      ProjectNode? targetFolder;
-                      void findFolder(ProjectNode node) {
-                        if (node.nodeType == NodeType.folder && node.id != 'root_1') {
-                          targetFolder = node;
-                          return;
+                  switch (action) {
+                    case _ExplorerAction.addGraph:
+                      final root = ProjectState.instance.projectTree.value;
+                      if (root != null) {
+                        // Find first folder (not the root_1 pseudo-folder)
+                        ProjectNode? targetFolder;
+                        void findFolder(ProjectNode node) {
+                          if (node.nodeType == NodeType.folder && node.id != 'root_1') {
+                            targetFolder = node;
+                            return;
+                          }
+                          for (var child in node.children) {
+                            if (targetFolder != null) return;
+                            findFolder(child);
+                          }
                         }
-                        for (var child in node.children) {
-                          findFolder(child);
-                          if (targetFolder != null) return;
-                        }
-                      }
-                      findFolder(root);
-                      if (targetFolder != null) {
-                        targetParentId = targetFolder!.id;
-                      }
-                    }
-                    ProjectState.instance.addProjectNodeWrapper(targetParentId, 'Graph', NodeType.plot);
-                    break;
-                  case _ExplorerAction.addTable:
-                    // Tables belong inside a graph — add to the first graph by default.
-                    final root = ProjectState.instance.projectTree.value;
-                    if (root != null) {
-                      ProjectNode? targetGraph;
-                      void findGraph(ProjectNode node) {
-                        if (node.nodeType == NodeType.plot) {
-                          targetGraph = node;
-                          return;
-                        }
-                        for (var child in node.children) {
-                          findGraph(child);
-                          if (targetGraph != null) return;
+                        findFolder(root);
+                        if (targetFolder != null) {
+                          ProjectState.instance.addProjectNodeWrapper(targetFolder!.id, 'Graph', NodeType.plot);
+                        } else {
+                          // Auto-create folder first
+                          final folderId = ProjectState.instance.addProjectNodeAndReturnId('root_1', 'Folder', NodeType.folder);
+                          ProjectState.instance.addProjectNodeWrapper(folderId, 'Graph', NodeType.plot);
                         }
                       }
-                      findGraph(root);
-                      if (targetGraph != null) {
-                        ProjectState.instance.addProjectNodeWrapper(targetGraph!.id, 'Table', NodeType.dataset);
+                      break;
+                    case _ExplorerAction.addTable:
+                      final root = ProjectState.instance.projectTree.value;
+                      if (root != null) {
+                        // Find first graph (inside any folder or at root)
+                        ProjectNode? targetGraph;
+                        void findGraph(ProjectNode node) {
+                          if (node.nodeType == NodeType.plot) {
+                            targetGraph = node;
+                            return;
+                          }
+                          for (var child in node.children) {
+                            if (targetGraph != null) return;
+                            findGraph(child);
+                          }
+                        }
+                        findGraph(root);
+                        if (targetGraph != null) {
+                          ProjectState.instance.addProjectNodeWrapper(targetGraph!.id, 'Table', NodeType.dataset);
+                        } else {
+                          // Auto-create folder → graph → table
+                          final folderId = ProjectState.instance.addProjectNodeAndReturnId('root_1', 'Folder', NodeType.folder);
+                          final graphId = ProjectState.instance.addProjectNodeAndReturnId(folderId, 'Graph', NodeType.plot);
+                          ProjectState.instance.addProjectNodeWrapper(graphId, 'Table', NodeType.dataset);
+                        }
                       }
-                    }
-                    break;
-                  case _ExplorerAction.addFolder:
-                    ProjectState.instance.addProjectNodeWrapper('root_1', 'Folder', NodeType.folder);
-                    break;
-                }
+                      break;
+                    case _ExplorerAction.addFolder:
+                      ProjectState.instance.addProjectNodeWrapper('root_1', 'Folder', NodeType.folder);
+                      break;
+                  }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<_ExplorerAction>>[
                 const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addTable, child: Text('Add Table', style: TextStyle(color: PrimeTheme.textPrimary))),

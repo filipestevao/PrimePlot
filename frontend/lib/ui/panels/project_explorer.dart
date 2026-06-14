@@ -77,17 +77,22 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         // has a proper ancestor to paint ink effects on.
         return Material(
           color: PrimeTheme.panelBackground,
-          child: DragTarget<String>(
-            onWillAcceptWithDetails: (d) {
-              if (d.data == 'root_1') return false;
-              final dragged = _findNodeById(rootNode, d.data);
-              return dragged != null && (dragged.nodeType == NodeType.folder || dragged.nodeType == NodeType.plot);
+          child: ReorderableListView.builder(
+            buildDefaultDragHandles: false,
+            padding: const EdgeInsets.only(bottom: 8),
+            itemCount: rootNode.children.length,
+            itemBuilder: (context, index) {
+              final node = rootNode.children[index];
+              return ReorderableDragStartListener(
+                key: ValueKey(node.id),
+                index: index,
+                child: _dispatchNode(node, 0),
+              );
             },
-            onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, 'root_1'),
-            builder: (ctx, candidateData, _) => ListView(
-              padding: const EdgeInsets.only(bottom: 8),
-              children: rootNode.children.map((child) => _dispatchNode(child, 0)).toList(),
-            ),
+            proxyDecorator: (child, index, animation) => child,
+            onReorder: (oldIndex, newIndex) {
+              ProjectState.instance.reorderGraphChildren('root_1', oldIndex, newIndex);
+            },
           ),
         );
       },
@@ -134,13 +139,14 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     );
 
     return DragTarget<String>(
+      key: ValueKey(folder.id),
       onWillAcceptWithDetails: (d) {
-        // Folders accept plots and other folders
+        // Folders only accept plots
         if (d.data == folder.id || d.data == 'root_1') return false;
         final root = ProjectState.instance.projectTree.value;
         if (root == null) return false;
         final dragged = _findNodeById(root, d.data);
-        return dragged != null && (dragged.nodeType == NodeType.plot || dragged.nodeType == NodeType.folder);
+        return dragged != null && dragged.nodeType == NodeType.plot;
       },
       onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, folder.id),
       builder: (ctx, candidateData, _) => Material(
@@ -174,6 +180,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     );
 
     return DragTarget<String>(
+      key: ValueKey(graph.id),
       onWillAcceptWithDetails: (d) {
         // Graphs only accept datasets
         if (d.data == graph.id || d.data == 'root_1') return false;
@@ -212,8 +219,8 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         .toList();
 
     if (tables.isEmpty) {
-      return DragTarget<String>(
-        onWillAcceptWithDetails: (d) {
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (d) {
           // Empty graph area only accepts datasets
           if (d.data == graph.id || d.data == 'root_1') return false;
           final root = ProjectState.instance.projectTree.value;
@@ -446,6 +453,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     final isSelected = _isSelected(table.id);
 
     return Material(
+      key: ValueKey(table.id),
       color: isSelected ? PrimeTheme.primaryAccent.withOpacity(0.15) : Colors.transparent,
       child: ListTile(
         dense: true,
