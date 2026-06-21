@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Filipe Estevão
+// This program is licensed under the GPLv3. See LICENSE for details.
+
 #[flutter_rust_bridge::frb(sync)] // Synchronous execution for simple greeting
 pub fn greet(name: String) -> String {
     format!("Hello, {name}!")

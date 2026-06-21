@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Filipe Estevão
+// This program is licensed under the GPLv3. See LICENSE for details.
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:multi_split_view/multi_split_view.dart';

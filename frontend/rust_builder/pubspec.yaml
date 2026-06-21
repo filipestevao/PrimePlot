@@ -1,3 +1,7 @@
+# Copyright (C) 2026 Filipe Estevão
+# This program is licensed under the GPLv3. See LICENSE for details.
+# license: GPL-3.0
+
 name: rust_lib_frontend
 description: "Utility to build Rust code"
 version: 0.0.1

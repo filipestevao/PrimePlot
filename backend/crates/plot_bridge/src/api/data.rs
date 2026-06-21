@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Filipe Estevão
+// This program is licensed under the GPLv3. See LICENSE for details.
+
 use core_math::{generate_scientific_dataset, Point2D as CorePoint2D};
 use data_engine::table::{ColumnRole, DataColumn, DataTable as EngineDataTable};
 use flutter_rust_bridge::frb;

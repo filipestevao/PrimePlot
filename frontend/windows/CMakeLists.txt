@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Filipe Estevão
+# This program is licensed under the GPLv3. See LICENSE for details.
+
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
 project(PrimePlot LANGUAGES CXX)

@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (C) 2026 Filipe Estevão
+# This program is licensed under the GPLv3. See LICENSE for details.
+
 # test_app.sh - Run the PrimePlot desktop application
 
 echo "🚀 Starting PrimePlot..."

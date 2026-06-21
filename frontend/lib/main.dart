@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Filipe Estevão
+// This program is licensed under the GPLv3. See LICENSE for details.
+
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:frontend/src/rust/frb_generated.dart';
