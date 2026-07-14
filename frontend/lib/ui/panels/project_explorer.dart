@@ -6,8 +6,21 @@ import '../../src/rust/api/project.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 
-
 enum TableAction { rename, delete }
+
+class _FlatNode {
+  final ProjectNode node;
+  final int indent;
+  final String parentId;
+  final bool isRoot;
+
+  _FlatNode({
+    required this.node,
+    required this.indent,
+    required this.parentId,
+    this.isRoot = false,
+  });
+}
 
 class ProjectExplorer extends StatefulWidget {
   const ProjectExplorer({super.key});
@@ -20,7 +33,6 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   String? _editingNodeId;
   final TextEditingController _editController = TextEditingController();
   final Set<String> _expandedNodes = {};
-  final Set<String> _hoveredNodeIds = {};
 
   @override
   void initState() {
@@ -64,6 +76,128 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     return null;
   }
 
+  List<_FlatNode> _flattenTree(ProjectNode root) {
+    final List<_FlatNode> flatList = [];
+    // Do not add root to flatList, so it remains hidden.
+    
+    // _expandedNodes stores the nodes that are COLLAPSED (hidden children)
+    if (!_expandedNodes.contains(root.id)) {
+      for (final child in root.children) {
+        _traverseNode(child, 0, root.id, flatList); // Children of root start at indent 0
+      }
+    }
+    return flatList;
+  }
+
+  void _traverseNode(ProjectNode node, int indent, String parentId, List<_FlatNode> flatList) {
+    flatList.add(_FlatNode(node: node, indent: indent, parentId: parentId));
+    
+    if (!_expandedNodes.contains(node.id)) {
+      for (final child in node.children) {
+        _traverseNode(child, indent + 1, node.id, flatList);
+      }
+    }
+  }
+
+  void _onReorder(int oldIndex, int newIndex, List<_FlatNode> flatNodes, ProjectNode rootNode) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    if (oldIndex == newIndex) return;
+
+    final draggedItem = flatNodes[oldIndex];
+    if (draggedItem.isRoot) return; // Cannot reorder root
+
+    String targetParentId = '';
+    
+    // Fallback: the node above the drop index. 
+    // If we dropped it at index 0, that's before root, invalid.
+    if (newIndex == 0) return;
+    
+    // Identify what item is just above our drop position
+    final prevNode = flatNodes[newIndex];
+
+    if (draggedItem.node.nodeType == NodeType.dataset) {
+      // Must go into a plot (chart)
+      if (prevNode.node.nodeType == NodeType.plot) {
+        // Drop onto a plot: place inside the plot if it's not collapsed
+        if (!_expandedNodes.contains(prevNode.node.id)) {
+          targetParentId = prevNode.node.id;
+        } else {
+          // It's collapsed, so maybe the user meant to drop it into the plot's parent? 
+          // But datasets can ONLY be in plots. If plot is collapsed, we still put it in this plot.
+          targetParentId = prevNode.node.id;
+        }
+      } else if (prevNode.node.nodeType == NodeType.dataset) {
+        // Drop onto another dataset: put it in the same parent plot
+        targetParentId = prevNode.parentId;
+      } else {
+        // Invalid (dropped onto folder or root directly)
+        return;
+      }
+    } else if (draggedItem.node.nodeType == NodeType.plot) {
+      // Must go into a folder or root
+      if (prevNode.node.nodeType == NodeType.folder) {
+        if (!_expandedNodes.contains(prevNode.node.id)) {
+          targetParentId = prevNode.node.id;
+        } else {
+          targetParentId = prevNode.parentId;
+        }
+      } else if (prevNode.node.nodeType == NodeType.plot) {
+        targetParentId = prevNode.parentId;
+      } else if (prevNode.node.nodeType == NodeType.dataset) {
+        final plotId = prevNode.parentId;
+        final plotNode = flatNodes.firstWhere((n) => n.node.id == plotId);
+        targetParentId = plotNode.parentId;
+      } else {
+        targetParentId = rootNode.id;
+      }
+    } else if (draggedItem.node.nodeType == NodeType.folder) {
+      // Must go into root
+      targetParentId = rootNode.id;
+    }
+
+    final draggedId = draggedItem.node.id;
+    final inSameParent = draggedItem.parentId == targetParentId;
+
+    if (inSameParent) {
+      // Find the old and new index within the parent's children array
+      final parentNode = _findNodeById(rootNode, targetParentId);
+      if (parentNode == null) return;
+      
+      int fromIdx = parentNode.children.indexWhere((n) => n.id == draggedId);
+      if (fromIdx == -1) return;
+      
+      // Calculate target index among siblings
+      // This is tricky, so we rely on rust backend to handle insert.
+      // For now, let's just move it to end, or just accept that dragging down moves it
+      // For a more accurate reorder:
+      int toIdx = 0;
+      for (int i = 0; i <= newIndex; i++) {
+         if (flatNodes[i].parentId == targetParentId && flatNodes[i].node.id != draggedId) {
+            toIdx++;
+         }
+      }
+      ProjectState.instance.reorderGraphChildren(targetParentId, fromIdx, toIdx);
+    } else {
+      // Changing parent
+      ProjectState.instance.moveProjectNodeWrapper(draggedId, targetParentId);
+      
+      // Calculate where to place it in the new parent
+      final parentNode = _findNodeById(rootNode, targetParentId);
+      if (parentNode != null) {
+         int toIdx = 0;
+         for (int i = 0; i <= newIndex; i++) {
+            if (flatNodes[i].parentId == targetParentId && flatNodes[i].node.id != draggedId) {
+               toIdx++;
+            }
+         }
+         // Move is appended to end by default in rust, so fromIdx is children.length
+         ProjectState.instance.reorderGraphChildren(targetParentId, parentNode.children.length, toIdx);
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Root build
   // ---------------------------------------------------------------------------
@@ -76,37 +210,57 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         if (rootNode == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        // Material (not Container) so ExpansionTile's internal ListTile
-        // has a proper ancestor to paint ink effects on.
+        
+        final flatNodes = _flattenTree(rootNode);
+
         return Material(
           color: PrimeTheme.panelBackground,
           child: ReorderableListView.builder(
             buildDefaultDragHandles: false,
             padding: const EdgeInsets.only(bottom: 8),
-            itemCount: rootNode.children.length,
+            itemCount: flatNodes.length,
             itemBuilder: (context, index) {
-              final node = rootNode.children[index];
-              return ReorderableDragStartListener(
-                key: ValueKey(node.id),
-                index: index,
-                child: _dispatchNode(node, 0),
-              );
+              final flatNode = flatNodes[index];
+              return _dispatchFlatNode(flatNode, index);
             },
-            proxyDecorator: (child, index, animation) => child,
-            onReorder: (oldIndex, newIndex) {
-              ProjectState.instance.reorderGraphChildren('root_1', oldIndex, newIndex);
-            },
+            onReorder: (oldIndex, newIndex) => _onReorder(oldIndex, newIndex, flatNodes, rootNode),
           ),
         );
       },
     );
   }
 
+  Widget _dispatchFlatNode(_FlatNode flatNode, int index) {
+    if (flatNode.isRoot) {
+      return Container(
+        key: ValueKey(flatNode.node.id),
+        child: _buildRootNode(flatNode.node, index),
+      );
+    }
+    switch (flatNode.node.nodeType) {
+      case NodeType.plot:
+        return Container(
+          key: ValueKey(flatNode.node.id),
+          child: _buildGraphNode(flatNode, index),
+        );
+      case NodeType.folder:
+        return Container(
+          key: ValueKey(flatNode.node.id),
+          child: _buildFolderNode(flatNode, index),
+        );
+      case NodeType.dataset:
+        return Container(
+          key: ValueKey(flatNode.node.id),
+          child: _buildTableRow(flatNode, index),
+        );
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Root node
   // ---------------------------------------------------------------------------
 
-  Widget _buildRootNode(ProjectNode root) {
+  Widget _buildRootNode(ProjectNode root, int index) {
     return _styledTile(
       indent: 0,
       icon: Icons.folder,
@@ -115,59 +269,25 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
       isEditing: false,
       node: root,
       isRoot: true,
-      children: root.children.map((child) => _dispatchNode(child, 1)).toList(),
+      hasChildren: root.children.isNotEmpty,
+      index: index,
     );
-  }
-
-  Widget _dispatchNode(ProjectNode node, int indent) {
-    switch (node.nodeType) {
-      case NodeType.plot:
-        return _buildGraphNode(node, indent);
-      case NodeType.folder:
-        return _buildFolderNode(node, indent);
-      case NodeType.dataset:
-        return _buildOrphanTableRow(node, indent);
-    }
   }
 
   // ---------------------------------------------------------------------------
   // Folder node
   // ---------------------------------------------------------------------------
 
-  Widget _buildFolderNode(ProjectNode folder, int indent) {
-    final feedbackChip = _dragChip(
+  Widget _buildFolderNode(_FlatNode folderNode, int index) {
+    return _styledTile(
+      indent: folderNode.indent,
       icon: Icons.folder,
       iconColor: const Color(0xFFFFC107),
-      label: folder.name,
-    );
-
-    return DragTarget<String>(
-      key: ValueKey(folder.id),
-      onWillAcceptWithDetails: (d) {
-        // Folders only accept plots
-        if (d.data == folder.id || d.data == 'root_1') return false;
-        final root = ProjectState.instance.projectTree.value;
-        if (root == null) return false;
-        final dragged = _findNodeById(root, d.data);
-        return dragged != null && dragged.nodeType == NodeType.plot;
-      },
-      onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, folder.id),
-      builder: (ctx, candidateData, _) => Material(
-        color: candidateData.isNotEmpty
-            ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
-            : Colors.transparent,
-        child: _styledTile(
-          indent: indent,
-          icon: Icons.folder,
-          iconColor: const Color(0xFFFFC107),
-          label: folder.name,
-          isEditing: _editingNodeId == folder.id,
-          node: folder,
-          draggableData: folder.id,
-          dragFeedback: feedbackChip,
-          children: folder.children.map((child) => _dispatchNode(child, indent + 1)).toList(),
-        ),
-      ),
+      label: folderNode.node.name,
+      isEditing: _editingNodeId == folderNode.node.id,
+      node: folderNode.node,
+      hasChildren: folderNode.node.children.isNotEmpty,
+      index: index,
     );
   }
 
@@ -175,86 +295,110 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // Graph node
   // ---------------------------------------------------------------------------
 
-  Widget _buildGraphNode(ProjectNode graph, int indent) {
-    final feedbackChip = _dragChip(
+  Widget _buildGraphNode(_FlatNode graphNode, int index) {
+    return _styledTile(
+      indent: graphNode.indent,
       icon: Icons.show_chart,
       iconColor: PrimeTheme.primaryAccent,
-      label: graph.name,
-    );
-
-    return DragTarget<String>(
-      key: ValueKey(graph.id),
-      onWillAcceptWithDetails: (d) {
-        // Graphs only accept datasets
-        if (d.data == graph.id || d.data == 'root_1') return false;
-        final root = ProjectState.instance.projectTree.value;
-        if (root == null) return false;
-        final dragged = _findNodeById(root, d.data);
-        return dragged != null && dragged.nodeType == NodeType.dataset;
-      },
-      onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
-      builder: (ctx, candidateData, _) => Material(
-        color: candidateData.isNotEmpty
-            ? PrimeTheme.primaryAccent.withValues(alpha: 0.10)
-            : Colors.transparent,
-        child: _styledTile(
-          indent: indent,
-          icon: Icons.show_chart,
-          iconColor: PrimeTheme.primaryAccent,
-          label: graph.name,
-          isEditing: _editingNodeId == graph.id,
-          node: graph,
-          draggableData: graph.id,
-          dragFeedback: feedbackChip,
-          children: [_buildTableList(graph, indent + 1)],
-        ),
-      ),
+      label: graphNode.node.name,
+      isEditing: _editingNodeId == graphNode.node.id,
+      node: graphNode.node,
+      hasChildren: graphNode.node.children.isNotEmpty,
+      index: index,
     );
   }
 
   // ---------------------------------------------------------------------------
-  // Table list
+  // Table row
   // ---------------------------------------------------------------------------
 
-  Widget _buildTableList(ProjectNode graph, int indent) {
-    final tables = graph.children
-        .where((n) => n.nodeType == NodeType.dataset)
-        .toList();
+  Widget _buildTableRow(_FlatNode tableNode, int index) {
+    final table = tableNode.node;
+    final isEditing = _editingNodeId == table.id;
+    final isSelected = _isSelected(table.id);
+    final double leftPad = 12.0 + tableNode.indent * 16.0 + 16.0;
 
-    if (tables.isEmpty) {
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (d) {
-          // Empty graph area only accepts datasets
-          if (d.data == graph.id || d.data == 'root_1') return false;
-          final root = ProjectState.instance.projectTree.value;
-          if (root == null) return false;
-          final dragged = _findNodeById(root, d.data);
-          return dragged != null && dragged.nodeType == NodeType.dataset;
-        },
-        onAcceptWithDetails: (d) => ProjectState.instance.moveProjectNodeWrapper(d.data, graph.id),
-        builder: (ctx, candidateData, _) => AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          height: 24,
-          padding: EdgeInsets.only(left: 12.0 + indent * 16.0 + 16.0),
-          alignment: Alignment.centerLeft,
-          color: candidateData.isNotEmpty
-              ? PrimeTheme.primaryAccent.withValues(alpha: 0.08)
-              : Colors.transparent,
-          child: Text(
-            'No tables',
-            style: TextStyle(
-              fontSize: 10,
-              color: PrimeTheme.textSecondary.withValues(alpha: 0.35),
+    return Material(
+      color: isSelected
+          ? PrimeTheme.primaryAccent.withValues(alpha: 0.15)
+          : Colors.transparent,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: InkWell(
+          onTap: () => ProjectState.instance.selectProjectNode(table.id),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 32),
+            padding: EdgeInsets.only(left: leftPad, right: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.table_chart,
+                  size: 16,
+                  color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: isEditing
+                      ? SizedBox(
+                          height: 20,
+                          child: TextField(
+                            controller: _editController,
+                            autofocus: true,
+                            style: const TextStyle(
+                                fontSize: 13, color: PrimeTheme.primaryAccent),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding:
+                                  EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: (_) => _finishEditing(table.id),
+                          ),
+                        )
+                      : Text(
+                          table.name,
+                          style: const TextStyle(
+                              fontSize: 13, color: PrimeTheme.textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isEditing) ...[
+                      Builder(
+                        builder: (ctx) => InkWell(
+                          onTap: () => _showNodeMenu(ctx, table),
+                          borderRadius: BorderRadius.circular(4),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.grab,
+                          child: Icon(Icons.drag_handle,
+                              size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
+                        ),
+                      ),
+                    ] else ...[
+                      _miniIconButton(
+                        icon: Icons.check,
+                        color: Colors.greenAccent,
+                        onPressed: () => _finishEditing(table.id),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
         ),
-      );
-    }
-
-    return Column(
-      children: tables
-          .map((t) => _buildTableRow(t, graph, tables, indent))
-          .toList(),
+      ),
     );
   }
 
@@ -262,7 +406,50 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   // Popup menu actions
   // ---------------------------------------------------------------------------
 
+  void _showNodeMenu(BuildContext context, ProjectNode node) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+    showMenu<TableAction>(
+      context: context,
+      position: position,
+      color: PrimeTheme.backgroundDark,
+      items: [
+        const PopupMenuItem(
+          value: TableAction.rename,
+          child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+        ),
+        const PopupMenuItem(
+          value: TableAction.delete,
+          child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+        ),
+      ],
+    ).then((action) {
+      if (action != null) {
+        if (node.nodeType == NodeType.dataset) {
+          _onTableAction(action, node);
+        } else {
+          _onGraphAction(action, node);
+        }
+      }
+    });
+  }
+
   void _onTableAction(TableAction action, ProjectNode node) {
+    if (action == TableAction.rename) {
+      _startEditing(node.id, node.name);
+    } else if (action == TableAction.delete) {
+      _showDeleteConfirmationDialog(node);
+    }
+  }
+
+  void _onGraphAction(TableAction action, ProjectNode node) {
     if (action == TableAction.rename) {
       _startEditing(node.id, node.name);
     } else if (action == TableAction.delete) {
@@ -275,8 +462,8 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: PrimeTheme.panelBackground,
-        title: const Text('Delete Table'),
-        content: Text('Do you really want to delete the table "${node.name}"?'),
+        title: const Text('Delete Node'),
+        content: Text('Do you really want to delete "${node.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -295,190 +482,6 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   }
 
   // ---------------------------------------------------------------------------
-  // Table row — LongPressDraggable + DragTarget
-  // ---------------------------------------------------------------------------
-
-  Widget _buildTableRow(
-      ProjectNode table, ProjectNode parentGraph, List<ProjectNode> siblings, int indent) {
-    final isEditing = _editingNodeId == table.id;
-
-    final feedbackChip = _dragChip(
-      icon: Icons.table_chart,
-      iconColor: Colors.greenAccent,
-      label: table.name,
-    );
-
-    return DragTarget<String>(
-      key: ValueKey('drop_${table.id}'),
-      onWillAcceptWithDetails: (d) {
-        // Table rows accept only datasets (for reorder or insert)
-        if (d.data == table.id) return false;
-        final root = ProjectState.instance.projectTree.value;
-        if (root == null) return false;
-        final dragged = _findNodeById(root, d.data);
-        return dragged != null && dragged.nodeType == NodeType.dataset;
-      },
-      onAcceptWithDetails: (d) {
-        final draggedId = d.data;
-        final targetIdx = siblings.indexWhere((n) => n.id == table.id);
-        final inSameGraph = parentGraph.children.any((n) => n.id == draggedId);
-
-        if (inSameGraph) {
-          final fromIdx = siblings.indexWhere((n) => n.id == draggedId);
-          if (fromIdx != -1 && targetIdx != -1) {
-            ProjectState.instance
-                .reorderGraphChildren(parentGraph.id, fromIdx, targetIdx);
-          }
-        } else {
-          ProjectState.instance
-              .moveProjectNodeWrapper(draggedId, parentGraph.id);
-          ProjectState.instance
-              .reorderGraphChildren(parentGraph.id, siblings.length, targetIdx);
-        }
-      },
-      builder: (ctx, candidateData, _) {
-        final isDropTarget = candidateData.isNotEmpty;
-        return _tableRowContent(
-          table,
-          isEditing,
-          indent,
-          isDropTarget: isDropTarget,
-          dragFeedback: feedbackChip,
-        );
-      },
-    );
-  }
-
-  Widget _tableRowContent(ProjectNode table, bool isEditing, int indent,
-      {required bool isDropTarget, required Widget dragFeedback}) {
-    final double leftPad = 12.0 + indent * 16.0 + 16.0;
-    final isSelected = _isSelected(table.id);
-    return Material(
-      color: isDropTarget || isSelected
-          ? PrimeTheme.primaryAccent.withValues(alpha: isDropTarget ? 0.12 : 0.15)
-          : Colors.transparent,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: ListTile(
-          dense: true,
-          visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-          minLeadingWidth: 16,
-          contentPadding: EdgeInsets.only(left: leftPad, right: 16),
-          leading: Draggable<String>(
-            data: table.id,
-            feedback: dragFeedback,
-            dragAnchorStrategy: childDragAnchorStrategy,
-            childWhenDragging: Opacity(
-              opacity: 0.25,
-              child: Icon(
-                Icons.table_chart,
-                size: 16,
-                color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent,
-              ),
-            ),
-            child: Icon(
-              Icons.table_chart,
-              size: 16,
-              color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent,
-            ),
-          ),
-        title: isEditing
-            ? SizedBox(
-                height: 20,
-                child: TextField(
-                  controller: _editController,
-                  autofocus: true,
-                  style: const TextStyle(
-                      fontSize: 13, color: PrimeTheme.primaryAccent),
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 0, horizontal: 4),
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (_) => _finishEditing(table.id),
-                ),
-              )
-            : Text(
-                table.name,
-                style: const TextStyle(
-                    fontSize: 13, color: PrimeTheme.textPrimary),
-                overflow: TextOverflow.ellipsis,
-              ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isEditing) ...[
-                PopupMenuButton<TableAction>(
-                  icon: const Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
-                  color: PrimeTheme.backgroundDark,
-                  onSelected: (action) => _onTableAction(action, table),
-                  itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                      value: TableAction.rename,
-                      child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
-                    ),
-                    const PopupMenuItem(
-                      value: TableAction.delete,
-                      child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                _miniIconButton(
-                  icon: Icons.check,
-                  color: Colors.greenAccent,
-                  onPressed: () => _finishEditing(table.id),
-                ),
-              ],
-              const SizedBox(width: 4),
-              _dragHandle(data: table.id, feedback: dragFeedback),
-            ],
-          ),
-          onTap: () => ProjectState.instance.selectProjectNode(table.id),
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Orphan dataset (direct child of root/folder, not inside any graph)
-  // ---------------------------------------------------------------------------
-
-  Widget _buildOrphanTableRow(ProjectNode table, int indent) {
-    final double leftPad = 12.0 + indent * 16.0 + 16.0;
-    final feedbackChip = _dragChip(
-      icon: Icons.table_chart,
-      iconColor: Colors.greenAccent,
-      label: table.name,
-    );
-
-    final isSelected = _isSelected(table.id);
-
-    return Material(
-      key: ValueKey(table.id),
-      color: isSelected ? PrimeTheme.primaryAccent.withOpacity(0.15) : Colors.transparent,
-      child: ListTile(
-        dense: true,
-        visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-        minLeadingWidth: 16,
-        contentPadding: EdgeInsets.only(left: leftPad, right: 16),
-        leading: Icon(Icons.table_chart,
-            size: 16, color: isSelected ? PrimeTheme.primaryAccent : Colors.greenAccent),
-        title: Text(
-          table.name,
-          style: TextStyle(
-              fontSize: 13,
-              color: isSelected ? PrimeTheme.primaryAccent : PrimeTheme.textPrimary),
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: _dragHandle(data: table.id, feedback: feedbackChip),
-        onTap: () => ProjectState.instance.selectProjectNode(table.id),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
   // Shared expandable tile builder
   // ---------------------------------------------------------------------------
 
@@ -489,144 +492,14 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     required String label,
     required bool isEditing,
     required ProjectNode node,
-    required List<Widget> children,
+    required bool hasChildren,
+    required int index,
     bool isRoot = false,
-    String? draggableData,
-    Widget? dragFeedback,
   }) {
     final double leftPad = 12.0 + indent * 16.0;
     final isExpanded = !_expandedNodes.contains(node.id);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildHeader(node, isEditing, isRoot, draggableData, dragFeedback,
-            icon, iconColor, leftPad, isExpanded, children.isNotEmpty),
-        if (children.isNotEmpty)
-          AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: isExpanded
-                ? Column(children: children)
-                : const SizedBox.shrink(),
-          ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Drag feedback chip
-  // ---------------------------------------------------------------------------
-
-  Widget _dragChip(
-      {required IconData icon,
-      required Color iconColor,
-      required String label}) {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: PrimeTheme.backgroundDark.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.45),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            )
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: iconColor),
-            const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 13, color: PrimeTheme.textPrimary)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Mini icon button helper
-  // ---------------------------------------------------------------------------
-
-  Widget _miniIconButton({
-    required IconData icon,
-    Color? color,
-    required VoidCallback onPressed,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Icon(icon,
-            size: 12,
-            color: color ?? PrimeTheme.textSecondary.withValues(alpha: 0.6)),
-      ),
-    );
-  }
-
-  Widget _dragHandle({required String data, required Widget feedback}) {
-    return Draggable<String>(
-      data: data,
-      feedback: feedback,
-      dragAnchorStrategy: childDragAnchorStrategy,
-      childWhenDragging: Opacity(
-        opacity: 0.25,
-        child: Icon(Icons.drag_handle,
-            size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
-      ),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.grab,
-        child: Icon(Icons.drag_handle,
-            size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
-      ),
-    );
-  }
-
-  void _onGraphAction(TableAction action, ProjectNode node) {
-    if (action == TableAction.rename) {
-      _startEditing(node.id, node.name);
-    } else if (action == TableAction.delete) {
-      _showDeleteConfirmationDialog(node);
-    }
-  }
-
-  // -------------- ------------------------------------------------------------
-  // Editable title widget for graph / folder nodes
-  // ---------------------------------------------------------------------------
-
-  Widget _buildHeader(
-    ProjectNode node, bool isEditing, bool isRoot,
-    String? draggableData, Widget? dragFeedback,
-    IconData icon, Color iconColor, double leftPad, bool isExpanded,
-    bool hasChildren,
-  ) {
     final isSelected = _isSelected(node.id);
 
-    // Leading icon (draggable when applicable)
-    final leadingWidget = (draggableData != null && dragFeedback != null)
-        ? Draggable<String>(
-            data: draggableData,
-            feedback: dragFeedback,
-            dragAnchorStrategy: childDragAnchorStrategy,
-            childWhenDragging: Opacity(
-              opacity: 0.25,
-              child: Icon(icon, size: 16, color: iconColor),
-            ),
-            child: Icon(icon, size: 16, color: isSelected ? PrimeTheme.primaryAccent : iconColor),
-          )
-        : Icon(icon, size: 16, color: isSelected ? PrimeTheme.primaryAccent : iconColor);
-
-    // Title widget
     final titleWidget = isEditing
         ? SizedBox(
             height: 20,
@@ -649,31 +522,22 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             overflow: TextOverflow.ellipsis,
           );
 
-    // Expand toggle widget (rightmost)
     final expandToggle = (!isRoot && hasChildren)
-        ? InkWell(
-            onTap: () {
-              setState(() {
-                if (isExpanded) {
-                  _expandedNodes.add(node.id);
-                } else {
-                  _expandedNodes.remove(node.id);
-                }
-              });
-            },
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              onEnter: (_) => setState(() => _hoveredNodeIds.add(node.id)),
-              onExit: (_) => setState(() => _hoveredNodeIds.remove(node.id)),
-              child: Container(
-                alignment: Alignment.center,
+        ? Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () {
+                setState(() {
+                  if (isExpanded) {
+                    _expandedNodes.add(node.id);
+                  } else {
+                    _expandedNodes.remove(node.id);
+                  }
+                });
+              },
+              child: Padding(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  border: _hoveredNodeIds.contains(node.id)
-                      ? Border.all(color: PrimeTheme.textSecondary.withValues(alpha: 0.5))
-                      : null,
-                  borderRadius: BorderRadius.circular(4),
-                ),
                 child: Icon(
                   isExpanded ? Icons.expand_more : Icons.chevron_right,
                   size: 16,
@@ -684,62 +548,81 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           )
         : null;
 
-    // Trailing controls (popup menu + drag handle + expand toggle)
-    final trailingWidget = !isRoot
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isEditing)
-                PopupMenuButton<TableAction>(
-                  icon: const Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
-                  color: PrimeTheme.backgroundDark,
-                  onSelected: (action) => _onGraphAction(action, node),
-                  itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                      value: TableAction.rename,
-                      child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
-                    ),
-                    const PopupMenuItem(
-                      value: TableAction.delete,
-                      child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
-                    ),
-                  ],
-                )
-              else
-                _miniIconButton(
-                  icon: Icons.check,
-                  color: Colors.greenAccent,
-                  onPressed: () => _finishEditing(node.id),
-                ),
-              if (draggableData != null && dragFeedback != null) ...[
-                const SizedBox(width: 4),
-                _dragHandle(data: draggableData, feedback: dragFeedback),
-              ],
-              if (expandToggle != null) ...[
-                const SizedBox(width: 4),
-                expandToggle,
-              ],
-            ],
-          )
-        : null;
+    final trailingWidget = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!isEditing) ...[
+          Builder(
+            builder: (ctx) => InkWell(
+              onTap: () => _showNodeMenu(ctx, node),
+              borderRadius: BorderRadius.circular(4),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          ReorderableDragStartListener(
+            index: index,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: Icon(Icons.drag_handle,
+                  size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
+            ),
+          ),
+        ] else ...[
+          _miniIconButton(
+            icon: Icons.check,
+            color: Colors.greenAccent,
+            onPressed: () => _finishEditing(node.id),
+          ),
+        ],
+        if (expandToggle != null) ...[
+          const SizedBox(width: 4),
+          expandToggle,
+        ],
+      ],
+    );
 
-    // Single ListTile matching table row visual style, spans full width
     return Material(
       color: isSelected
           ? PrimeTheme.primaryAccent.withValues(alpha: 0.15)
           : Colors.transparent,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        child: ListTile(
-          dense: true,
-          visualDensity: const VisualDensity(horizontal: 0, vertical: -4),
-          minLeadingWidth: 16,
-          contentPadding: EdgeInsets.only(left: leftPad, right: 16),
-          leading: leadingWidget,
-          title: titleWidget,
-          trailing: trailingWidget,
+        child: InkWell(
           onTap: () => ProjectState.instance.selectProjectNode(node.id),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 32),
+            padding: EdgeInsets.only(left: leftPad, right: 16),
+            child: Row(
+              children: [
+                Icon(icon, size: 16, color: isSelected ? PrimeTheme.primaryAccent : iconColor),
+                const SizedBox(width: 16),
+                Expanded(child: titleWidget),
+                if (trailingWidget != null) trailingWidget,
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _miniIconButton({
+    required IconData icon,
+    Color? color,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Icon(icon,
+            size: 12,
+            color: color ?? PrimeTheme.textSecondary.withValues(alpha: 0.6)),
       ),
     );
   }
