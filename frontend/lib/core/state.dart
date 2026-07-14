@@ -441,14 +441,28 @@ class ProjectState {
   }
 
   void deleteProjectNodeWrapper(String nodeId) {
+    final rootBefore = projectTree.value;
+    final parentBefore = rootBefore != null ? _findParentOfNode(rootBefore, nodeId) : null;
+
     final newTree = deleteProjectNode(nodeId: nodeId);
     projectTree.value = newTree;
     
     // Clean up active selections if deleted
     if (selectedProjectNodeId.value == nodeId) {
       selectedProjectNodeId.value = null;
-      activeTable.value = null;
+      activeTable.value = getEmptyTableData();
       activeTables.value = [];
+    } else {
+      // If we deleted a table that was currently the activeTable
+      if (activeTable.value?.id == nodeId) {
+         activeTable.value = getEmptyTableData();
+      }
+      
+      // If the selected node is a graph, we should refresh its tables because one of its children might have been deleted
+      final stillSelected = _findNodeById(newTree, selectedProjectNodeId.value ?? '');
+      if (stillSelected != null && stillSelected.nodeType == NodeType.plot) {
+         fetchTablesForGraph(stillSelected.id);
+      }
     }
   }
 
