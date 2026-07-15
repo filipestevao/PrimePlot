@@ -176,8 +176,8 @@ class ProjectState {
     layers.value = [
       LayerItem(id: 'grid', name: 'Grid', iconData: Icons.grid_on),
       LayerItem(id: 'axis', name: 'Axis', iconData: Icons.straighten),
-      LayerItem(id: 'scatter_a', name: 'Data Series A (Scatter)', iconData: Icons.scatter_plot),
-      LayerItem(id: 'line_a', name: 'Data Series B (Line)', iconData: Icons.timeline),
+      LayerItem(id: 'scatter_a', name: 'Scatter', iconData: Icons.scatter_plot),
+      LayerItem(id: 'line_a', name: 'Line', iconData: Icons.timeline),
       LayerItem(id: 'fit_a', name: 'Linear Fit A', iconData: Icons.show_chart),
       LayerItem(id: 'annotation', name: 'Annotation 1 (Arrow)', iconData: Icons.north_east),
       LayerItem(id: 'legend', name: 'Legend', iconData: Icons.list, isVisible: false),

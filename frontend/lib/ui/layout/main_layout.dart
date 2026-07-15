@@ -245,6 +245,14 @@ class _MainLayoutState extends State<MainLayout> {
                   const Divider(height: 1, thickness: 1, color: PrimeTheme.borderSide),
                   const SizedBox(height: 8),
                   ListTile(
+                    leading: const Icon(Icons.create_new_folder, size: 18, color: PrimeTheme.textSecondary),
+                    title: const Text('New project', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+                    onTap: () {
+                      debugPrint("Menu Selected: new");
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.folder_open, size: 18, color: PrimeTheme.textSecondary),
                     title: const Text('Open project', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
                     onTap: () {
