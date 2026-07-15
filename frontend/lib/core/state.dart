@@ -45,6 +45,10 @@ class PlotProperties {
   final String xAxisLabel;
   final String yAxisLabel;
   final double? aspectRatio;
+  final double? xMin;
+  final double? xMax;
+  final double? yMin;
+  final double? yMax;
 
   const PlotProperties({
     required this.lineColor,
@@ -53,6 +57,10 @@ class PlotProperties {
     required this.xAxisLabel,
     required this.yAxisLabel,
     this.aspectRatio,
+    this.xMin,
+    this.xMax,
+    this.yMin,
+    this.yMax,
   });
 
   PlotProperties copyWith({
@@ -62,6 +70,10 @@ class PlotProperties {
     String? xAxisLabel,
     String? yAxisLabel,
     double? Function()? aspectRatio,
+    double? Function()? xMin,
+    double? Function()? xMax,
+    double? Function()? yMin,
+    double? Function()? yMax,
   }) {
     return PlotProperties(
       lineColor: lineColor ?? this.lineColor,
@@ -70,6 +82,10 @@ class PlotProperties {
       xAxisLabel: xAxisLabel ?? this.xAxisLabel,
       yAxisLabel: yAxisLabel ?? this.yAxisLabel,
       aspectRatio: aspectRatio != null ? aspectRatio() : this.aspectRatio,
+      xMin: xMin != null ? xMin() : this.xMin,
+      xMax: xMax != null ? xMax() : this.xMax,
+      yMin: yMin != null ? yMin() : this.yMin,
+      yMax: yMax != null ? yMax() : this.yMax,
     );
   }
 }
@@ -104,18 +120,51 @@ class ProjectState {
   final ValueNotifier<List<LayerItem>> layers = ValueNotifier([]);
 
   // Plot Properties State
-  final ValueNotifier<PlotProperties> plotProperties = ValueNotifier(
-    const PlotProperties(
-      lineColor: Color(0xFF00C3FF), // PrimeTheme.primaryAccent roughly
-      lineThickness: 2.5,
-      showGrid: true,
-      xAxisLabel: 'X',
-      yAxisLabel: 'Y',
-    )
+  final Map<String, PlotProperties> _graphProperties = {};
+  
+  static const PlotProperties _defaultPlotProperties = PlotProperties(
+    lineColor: Color(0xFF00C3FF), // PrimeTheme.primaryAccent roughly
+    lineThickness: 2.5,
+    showGrid: true,
+    xAxisLabel: 'X',
+    yAxisLabel: 'Y',
   );
+
+  final ValueNotifier<PlotProperties> plotProperties = ValueNotifier(_defaultPlotProperties);
 
   void updatePlotProperties(PlotProperties newProps) {
     plotProperties.value = newProps;
+    final activePlotId = _getActivePlotId();
+    if (activePlotId != null) {
+      _graphProperties[activePlotId] = newProps;
+    }
+  }
+
+  String? _getActivePlotId() {
+    final root = projectTree.value;
+    final selectedId = selectedProjectNodeId.value;
+    if (root == null || selectedId == null) return null;
+    
+    final node = _findNodeById(root, selectedId);
+    if (node == null) return null;
+    
+    if (node.nodeType == NodeType.plot) return node.id;
+    if (node.nodeType == NodeType.dataset) {
+      final parent = _findParentById(root, selectedId);
+      if (parent != null && parent.nodeType == NodeType.plot) {
+        return parent.id;
+      }
+    }
+    return null;
+  }
+  
+  ProjectNode? _findParentById(ProjectNode root, String targetId) {
+    for (final c in root.children) {
+      if (c.id == targetId) return root;
+      final found = _findParentById(c, targetId);
+      if (found != null) return found;
+    }
+    return null;
   }
 
   void loadInitialData() {
@@ -287,6 +336,22 @@ class ProjectState {
     final root = projectTree.value;
     ProjectNode? node = _findNodeById(root, nodeId);
     if (node != null) {
+      // Switch plot properties context
+      String? plotId;
+      if (node.nodeType == NodeType.plot) {
+        plotId = node.id;
+      } else if (node.nodeType == NodeType.dataset) {
+        if (root != null) {
+          final parent = _findParentById(root, node.id);
+          if (parent != null && parent.nodeType == NodeType.plot) {
+            plotId = parent.id;
+          }
+        }
+      }
+      if (plotId != null) {
+        plotProperties.value = _graphProperties[plotId] ?? _defaultPlotProperties;
+      }
+
       if (node.nodeType == NodeType.plot) {
         // Fetch all tables for this graph from Rust and update state
         fetchTablesForGraph(nodeId);

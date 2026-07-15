@@ -62,14 +62,38 @@ class PropertyInspector extends StatelessWidget {
                 return ListView(
                   padding: const EdgeInsets.all(16.0),
                   children: [
-                    _buildSectionHeader('Appearance'),
+                    _buildSectionHeader('Axes'),
                     const SizedBox(height: 12),
-                    _buildColorProperty(context, 'Line Color', props),
+                    _buildAxisRangeProperty(
+                      'X-Axis',
+                      props.xMin,
+                      props.xMax,
+                      (minVal) => ProjectState.instance.updatePlotProperties(props.copyWith(xMin: () => minVal)),
+                      (maxVal) => ProjectState.instance.updatePlotProperties(props.copyWith(xMax: () => maxVal)),
+                    ),
                     const SizedBox(height: 16),
-                    _buildSliderProperty(context, 'Thickness', props.lineThickness, 1.0, 10.0, (val) {
-                      ProjectState.instance.updatePlotProperties(props.copyWith(lineThickness: val));
+                    _buildAxisRangeProperty(
+                      'Y-Axis',
+                      props.yMin,
+                      props.yMax,
+                      (minVal) => ProjectState.instance.updatePlotProperties(props.copyWith(yMin: () => minVal)),
+                      (maxVal) => ProjectState.instance.updatePlotProperties(props.copyWith(yMax: () => maxVal)),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    _buildSectionHeader('Labels'),
+                    const SizedBox(height: 12),
+                    _buildTextProperty('X-Axis Label', props.xAxisLabel, (val) {
+                      ProjectState.instance.updatePlotProperties(props.copyWith(xAxisLabel: val));
                     }),
                     const SizedBox(height: 16),
+                    _buildTextProperty('Y-Axis Label', props.yAxisLabel, (val) {
+                      ProjectState.instance.updatePlotProperties(props.copyWith(yAxisLabel: val));
+                    }),
+                    const SizedBox(height: 24),
+
+                    _buildSectionHeader('Aspect Ratio'),
+                    const SizedBox(height: 12),
                     _buildDropdownProperty(
                       'Aspect Ratio',
                       props.aspectRatio,
@@ -85,19 +109,13 @@ class PropertyInspector extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 24),
-                    
-                    _buildSectionHeader('Axes & Grid'),
+
+                    _buildSectionHeader('Appearance'),
                     const SizedBox(height: 12),
-                    _buildToggleProperty('Show Grid', props.showGrid, (val) {
-                      ProjectState.instance.updatePlotProperties(props.copyWith(showGrid: val));
-                    }),
+                    _buildColorProperty(context, 'Line Color', props),
                     const SizedBox(height: 16),
-                    _buildTextProperty('X-Axis Label', props.xAxisLabel, (val) {
-                      ProjectState.instance.updatePlotProperties(props.copyWith(xAxisLabel: val));
-                    }),
-                    const SizedBox(height: 16),
-                    _buildTextProperty('Y-Axis Label', props.yAxisLabel, (val) {
-                      ProjectState.instance.updatePlotProperties(props.copyWith(yAxisLabel: val));
+                    _buildSliderProperty(context, 'Thickness', props.lineThickness, 1.0, 10.0, (val) {
+                      ProjectState.instance.updatePlotProperties(props.copyWith(lineThickness: val));
                     }),
                   ],
                 );
@@ -174,23 +192,73 @@ class PropertyInspector extends StatelessWidget {
     );
   }
 
-  Widget _buildToggleProperty(String label, bool value, ValueChanged<bool> onChanged) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildAxisRangeProperty(
+    String label,
+    double? minVal,
+    double? maxVal,
+    ValueChanged<double?> onMinChanged,
+    ValueChanged<double?> onMaxChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-        SizedBox(
-          height: 24,
-          child: Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: PrimeTheme.primaryAccent,
-            activeTrackColor: PrimeTheme.primaryAccent.withOpacity(0.3),
-            inactiveThumbColor: PrimeTheme.textSecondary,
-            inactiveTrackColor: PrimeTheme.backgroundDark,
-          ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(child: _buildNumberField(minVal, onMinChanged)),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text('-', style: TextStyle(color: PrimeTheme.textSecondary)),
+            ),
+            Expanded(child: _buildNumberField(maxVal, onMaxChanged)),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildNumberField(double? value, ValueChanged<double?> onChanged) {
+    final controller = TextEditingController(text: value != null ? value.toString() : '');
+    // Ensure cursor stays at end when updating
+    controller.selection = TextSelection.collapsed(offset: controller.text.length);
+
+    return SizedBox(
+      height: 32,
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+        onChanged: (val) {
+          if (val.trim().isEmpty) {
+            onChanged(null);
+          } else {
+            final parsed = double.tryParse(val);
+            if (parsed != null) {
+              onChanged(parsed);
+            }
+          }
+        },
+        decoration: InputDecoration(
+          hintText: 'Auto',
+          hintStyle: TextStyle(fontSize: 12, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+          filled: true,
+          fillColor: PrimeTheme.backgroundDark.withValues(alpha: 0.5),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: const BorderSide(color: PrimeTheme.borderSide),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: const BorderSide(color: PrimeTheme.borderSide),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: const BorderSide(color: PrimeTheme.primaryAccent),
+          ),
+        ),
+      ),
     );
   }
 
