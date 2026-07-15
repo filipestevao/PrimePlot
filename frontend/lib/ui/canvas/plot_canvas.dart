@@ -156,6 +156,18 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     minY -= padY;
     maxY += padY;
 
+    // Override with user-defined axis ranges if set
+    if (props.xMin != null) minX = props.xMin!;
+    if (props.xMax != null) maxX = props.xMax!;
+    if (props.yMin != null) minY = props.yMin!;
+    if (props.yMax != null) maxY = props.yMax!;
+
+    // Guard against degenerate ranges after override
+    if (maxX <= minX) maxX = minX + 1;
+    if (maxY <= minY) maxY = minY + 1;
+
+    final bool showGrid = layers.any((l) => l.id == 'grid' && l.isVisible);
+
     // Reuse axis/grid drawing and other helpers from previous painter.
     // Keep colors per series and draw in order with same layer controls.
 
@@ -184,7 +196,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       for (int i = 0; i <= ticks; i++) {
         final xVal = minX + (maxX - minX) * (i / ticks);
         final screenX = marginLeft + plotWidth * (i / ticks);
-        if (props.showGrid) {
+        if (showGrid) {
           canvas.drawLine(Offset(screenX, size.height - marginBottom), Offset(screenX, marginTop), paintGrid);
         }
         canvas.drawLine(Offset(screenX, size.height - marginBottom), Offset(screenX, size.height - marginBottom + 5), paintAxis);
@@ -194,7 +206,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
         final yVal = minY + (maxY - minY) * (i / ticks);
         final screenY = marginTop + plotHeight - plotHeight * (i / ticks);
-        if (props.showGrid) {
+        if (showGrid) {
           canvas.drawLine(Offset(marginLeft, screenY), Offset(size.width - marginRight, screenY), paintGrid);
         }
         canvas.drawLine(Offset(marginLeft - 5, screenY), Offset(marginLeft, screenY), paintAxis);
@@ -316,6 +328,18 @@ class _ScientificPlotPainter extends CustomPainter {
     minY -= padY;
     maxY += padY;
 
+    // Override with user-defined axis ranges if set
+    if (props.xMin != null) minX = props.xMin!;
+    if (props.xMax != null) maxX = props.xMax!;
+    if (props.yMin != null) minY = props.yMin!;
+    if (props.yMax != null) maxY = props.yMax!;
+
+    // Guard against degenerate ranges after override
+    if (maxX <= minX) maxX = minX + 1;
+    if (maxY <= minY) maxY = minY + 1;
+
+    final bool showGrid = layers.any((l) => l.id == 'grid' && l.isVisible);
+
     final paintAxis = Paint()
       ..color = PrimeTheme.textSecondary
       ..strokeWidth = 1.5;
@@ -380,7 +404,7 @@ class _ScientificPlotPainter extends CustomPainter {
         final xVal = minX + (maxX - minX) * (i / ticks);
         final screenX = marginLeft + plotWidth * (i / ticks);
         
-        if (props.showGrid) {
+        if (showGrid) {
           canvas.drawLine(
             Offset(screenX, size.height - marginBottom),
             Offset(screenX, marginTop),
@@ -405,7 +429,7 @@ class _ScientificPlotPainter extends CustomPainter {
         final yVal = minY + (maxY - minY) * (i / ticks);
         final screenY = marginTop + plotHeight - plotHeight * (i / ticks);
         
-        if (props.showGrid) {
+        if (showGrid) {
           canvas.drawLine(
             Offset(marginLeft, screenY),
             Offset(size.width - marginRight, screenY),

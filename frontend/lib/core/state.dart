@@ -174,6 +174,7 @@ class ProjectState {
 
     // Initialize layers. Scatter starts visible (empty table has 0 rows ≤ 10).
     layers.value = [
+      LayerItem(id: 'grid', name: 'Grid', iconData: Icons.grid_on),
       LayerItem(id: 'axis', name: 'Axis', iconData: Icons.straighten),
       LayerItem(id: 'scatter_a', name: 'Data Series A (Scatter)', iconData: Icons.scatter_plot),
       LayerItem(id: 'line_a', name: 'Data Series B (Line)', iconData: Icons.timeline),
