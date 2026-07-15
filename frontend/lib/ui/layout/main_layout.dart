@@ -67,12 +67,16 @@ class _MainLayoutState extends State<MainLayout> {
                           }
                         }
                         findFolder(root);
+                        String? graphId;
                         if (targetFolder != null) {
-                          ProjectState.instance.addProjectNodeWrapper(targetFolder!.id, 'Graph', NodeType.plot);
+                          graphId = ProjectState.instance.addProjectNodeAndReturnId(targetFolder!.id, 'Graph', NodeType.plot);
                         } else {
                           // Auto-create folder first
                           final folderId = ProjectState.instance.addProjectNodeAndReturnId('root_1', 'Folder', NodeType.folder);
-                          ProjectState.instance.addProjectNodeWrapper(folderId, 'Graph', NodeType.plot);
+                          graphId = ProjectState.instance.addProjectNodeAndReturnId(folderId, 'Graph', NodeType.plot);
+                        }
+                        if (graphId != null && graphId.isNotEmpty) {
+                          ProjectState.instance.selectProjectNode(graphId);
                         }
                       }
                       break;

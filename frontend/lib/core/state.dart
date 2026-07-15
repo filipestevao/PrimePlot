@@ -447,6 +447,9 @@ class ProjectState {
         }
         final scatterVisible = applyScatterRule(rowCount: BigInt.from(maxRows));
         _setScatterVisible(scatterVisible);
+      } else {
+        // Clear stale table from previous graph
+        activeTable.value = null;
       }
     } catch (e) {
       // Keep previous state on error

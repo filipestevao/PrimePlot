@@ -139,7 +139,12 @@ class _DataTablePanelState extends State<DataTablePanel> {
             valueListenable: ProjectState.instance.activeTable,
             builder: (context, tableData, child) {
               if (tableData == null) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: Text(
+                    'No table selected.',
+                    style: TextStyle(color: PrimeTheme.textSecondary),
+                  ),
+                );
               }
 
               final int rowCount = tableData.columns.isNotEmpty
