@@ -149,8 +149,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
     final xRange = maxX - minX;
     final yRange = maxY - minY;
-    final padX = xRange == 0 ? 10.0 : xRange * 0.1;
-    final padY = yRange == 0 ? 10.0 : yRange * 0.1;
+    final padX = xRange == 0 ? 10.0 : 0.0;
+    final padY = yRange == 0 ? 10.0 : 0.0;
     minX -= padX;
     maxX += padX;
     minY -= padY;

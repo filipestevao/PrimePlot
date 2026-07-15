@@ -5,8 +5,73 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 
-class PropertyInspector extends StatelessWidget {
+class PropertyInspector extends StatefulWidget {
   const PropertyInspector({super.key});
+  @override
+  State<PropertyInspector> createState() => _PropertyInspectorState();
+}
+
+class _PropertyInspectorState extends State<PropertyInspector> {
+  final _xMinCtrl = TextEditingController();
+  final _xMaxCtrl = TextEditingController();
+  final _yMinCtrl = TextEditingController();
+  final _yMaxCtrl = TextEditingController();
+  final _xMinFocus = FocusNode();
+  final _xMaxFocus = FocusNode();
+  final _yMinFocus = FocusNode();
+  final _yMaxFocus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _syncCtrlsFromProps();
+    ProjectState.instance.plotProperties.addListener(_onPropsChanged);
+    _xMinFocus.addListener(() => _onFocusChange(_xMinFocus, _xMinCtrl, (v) => _commit(_xMinCtrl, v, (p, n) => p.copyWith(xMin: () => n))));
+    _xMaxFocus.addListener(() => _onFocusChange(_xMaxFocus, _xMaxCtrl, (v) => _commit(_xMaxCtrl, v, (p, n) => p.copyWith(xMax: () => n))));
+    _yMinFocus.addListener(() => _onFocusChange(_yMinFocus, _yMinCtrl, (v) => _commit(_yMinCtrl, v, (p, n) => p.copyWith(yMin: () => n))));
+    _yMaxFocus.addListener(() => _onFocusChange(_yMaxFocus, _yMaxCtrl, (v) => _commit(_yMaxCtrl, v, (p, n) => p.copyWith(yMax: () => n))));
+  }
+
+  @override
+  void dispose() {
+    ProjectState.instance.plotProperties.removeListener(_onPropsChanged);
+    _xMinCtrl.dispose();
+    _xMaxCtrl.dispose();
+    _yMinCtrl.dispose();
+    _yMaxCtrl.dispose();
+    _xMinFocus.dispose();
+    _xMaxFocus.dispose();
+    _yMinFocus.dispose();
+    _yMaxFocus.dispose();
+    super.dispose();
+  }
+
+  void _syncCtrlsFromProps() {
+    final p = ProjectState.instance.plotProperties.value;
+    _xMinCtrl.text = p.xMin?.toString() ?? '';
+    _xMaxCtrl.text = p.xMax?.toString() ?? '';
+    _yMinCtrl.text = p.yMin?.toString() ?? '';
+    _yMaxCtrl.text = p.yMax?.toString() ?? '';
+  }
+
+  void _onPropsChanged() {
+    if (!_xMinFocus.hasFocus) _xMinCtrl.text = ProjectState.instance.plotProperties.value.xMin?.toString() ?? '';
+    if (!_xMaxFocus.hasFocus) _xMaxCtrl.text = ProjectState.instance.plotProperties.value.xMax?.toString() ?? '';
+    if (!_yMinFocus.hasFocus) _yMinCtrl.text = ProjectState.instance.plotProperties.value.yMin?.toString() ?? '';
+    if (!_yMaxFocus.hasFocus) _yMaxCtrl.text = ProjectState.instance.plotProperties.value.yMax?.toString() ?? '';
+  }
+
+  void _onFocusChange(FocusNode fn, TextEditingController ctrl, void Function(double?) setter) {
+    if (!fn.hasFocus) {
+      setter(ctrl.text.trim().isEmpty ? null : double.tryParse(ctrl.text));
+    }
+  }
+
+  void _commit(TextEditingController ctrl, double? val, PlotProperties Function(PlotProperties, double?) update) {
+    final props = ProjectState.instance.plotProperties.value;
+    ProjectState.instance.updatePlotProperties(update(props, val));
+    ctrl.text = val?.toString() ?? '';
+  }
 
   void _showColorPicker(BuildContext context, PlotProperties props) {
     final colors = [
@@ -66,18 +131,14 @@ class PropertyInspector extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildAxisRangeProperty(
                       'X-Axis',
-                      props.xMin,
-                      props.xMax,
-                      (minVal) => ProjectState.instance.updatePlotProperties(props.copyWith(xMin: () => minVal)),
-                      (maxVal) => ProjectState.instance.updatePlotProperties(props.copyWith(xMax: () => maxVal)),
+                      _xMinCtrl, _xMinFocus,
+                      _xMaxCtrl, _xMaxFocus,
                     ),
                     const SizedBox(height: 16),
                     _buildAxisRangeProperty(
                       'Y-Axis',
-                      props.yMin,
-                      props.yMax,
-                      (minVal) => ProjectState.instance.updatePlotProperties(props.copyWith(yMin: () => minVal)),
-                      (maxVal) => ProjectState.instance.updatePlotProperties(props.copyWith(yMax: () => maxVal)),
+                      _yMinCtrl, _yMinFocus,
+                      _yMaxCtrl, _yMaxFocus,
                     ),
                     const SizedBox(height: 24),
                     
@@ -194,10 +255,8 @@ class PropertyInspector extends StatelessWidget {
 
   Widget _buildAxisRangeProperty(
     String label,
-    double? minVal,
-    double? maxVal,
-    ValueChanged<double?> onMinChanged,
-    ValueChanged<double?> onMaxChanged,
+    TextEditingController minCtrl, FocusNode minFocus,
+    TextEditingController maxCtrl, FocusNode maxFocus,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,39 +265,26 @@ class PropertyInspector extends StatelessWidget {
         const SizedBox(height: 6),
         Row(
           children: [
-            Expanded(child: _buildNumberField(minVal, onMinChanged)),
+            Expanded(child: _buildNumberField(minCtrl, minFocus)),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.0),
               child: Text('-', style: TextStyle(color: PrimeTheme.textSecondary)),
             ),
-            Expanded(child: _buildNumberField(maxVal, onMaxChanged)),
+            Expanded(child: _buildNumberField(maxCtrl, maxFocus)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildNumberField(double? value, ValueChanged<double?> onChanged) {
-    final controller = TextEditingController(text: value != null ? value.toString() : '');
-    // Ensure cursor stays at end when updating
-    controller.selection = TextSelection.collapsed(offset: controller.text.length);
-
+  Widget _buildNumberField(TextEditingController controller, FocusNode focusNode) {
     return SizedBox(
       height: 32,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
         keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-        onChanged: (val) {
-          if (val.trim().isEmpty) {
-            onChanged(null);
-          } else {
-            final parsed = double.tryParse(val);
-            if (parsed != null) {
-              onChanged(parsed);
-            }
-          }
-        },
         decoration: InputDecoration(
           hintText: 'Auto',
           hintStyle: TextStyle(fontSize: 12, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
