@@ -380,7 +380,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                       ReorderableDragStartListener(
                         index: index,
                         child: MouseRegion(
-                          cursor: SystemMouseCursors.grab,
+                          cursor: SystemMouseCursors.move,
                           child: Icon(Icons.drag_handle,
                               size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
                         ),
@@ -566,7 +566,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           ReorderableDragStartListener(
             index: index,
             child: MouseRegion(
-              cursor: SystemMouseCursors.grab,
+              cursor: SystemMouseCursors.move,
               child: Icon(Icons.drag_handle,
                   size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
             ),
