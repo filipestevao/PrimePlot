@@ -8,6 +8,8 @@ pub enum NodeType {
     Folder,
     Dataset,
     Plot,
+    Function,
+    Shape,
 }
 
 #[derive(Clone, Debug)]
@@ -24,6 +26,8 @@ impl From<EngineNodeType> for NodeType {
             EngineNodeType::Folder => NodeType::Folder,
             EngineNodeType::Dataset => NodeType::Dataset,
             EngineNodeType::Plot => NodeType::Plot,
+            EngineNodeType::Function => NodeType::Function,
+            EngineNodeType::Shape => NodeType::Shape,
         }
     }
 }
@@ -85,12 +89,16 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
         NodeType::Folder => EngineNodeType::Folder,
         NodeType::Dataset => EngineNodeType::Dataset,
         NodeType::Plot => EngineNodeType::Plot,
+        NodeType::Function => EngineNodeType::Function,
+        NodeType::Shape => EngineNodeType::Shape,
     };
     
     let prefix = match node_type {
         NodeType::Folder => "folder",
         NodeType::Dataset => "table",
         NodeType::Plot => "graph",
+        NodeType::Function => "function",
+        NodeType::Shape => "shape",
     };
     
     let new_id = generate_id(prefix);

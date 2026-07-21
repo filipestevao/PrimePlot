@@ -8,6 +8,8 @@ pub enum NodeType {
     Folder,
     Dataset,
     Plot,
+    Function,
+    Shape,
 }
 
 #[derive(Clone, Debug)]
