@@ -97,7 +97,7 @@ DTODataTable getTable({required String tableId}) =>
 List<DTODataTable> getTablesForGraph({required String graphId}) =>
     RustLib.instance.api.crateApiProjectGetTablesForGraph(graphId: graphId);
 
-enum NodeType { folder, dataset, plot }
+enum NodeType { folder, dataset, plot, function, shape }
 
 class ProjectNode {
   final String id;

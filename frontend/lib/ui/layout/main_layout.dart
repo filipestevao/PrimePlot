@@ -35,6 +35,7 @@ class _MainLayoutState extends State<MainLayout> {
   void initState() {
     super.initState();
     ProjectState.instance.loadInitialData();
+    ProjectState.instance.selectedProjectNodeId.addListener(_onSelectionChanged);
     
     // Left Vertical Split
     _leftController = MultiSplitViewController(
@@ -81,6 +82,8 @@ class _MainLayoutState extends State<MainLayout> {
                       }
                       break;
                     case _ExplorerAction.addTable:
+                    case _ExplorerAction.addFunction:
+                    case _ExplorerAction.addShape:
                       final root = ProjectState.instance.projectTree.value;
                       if (root != null) {
                         // Find first graph (inside any folder or at root)
@@ -96,13 +99,25 @@ class _MainLayoutState extends State<MainLayout> {
                           }
                         }
                         findGraph(root);
+                        
+                        final nodeType = action == _ExplorerAction.addTable 
+                            ? NodeType.dataset 
+                            : action == _ExplorerAction.addFunction 
+                                ? NodeType.function 
+                                : NodeType.shape;
+                        final defaultName = action == _ExplorerAction.addTable 
+                            ? 'Table' 
+                            : action == _ExplorerAction.addFunction 
+                                ? 'Function' 
+                                : 'Shape';
+                                
                         if (targetGraph != null) {
-                          ProjectState.instance.addProjectNodeWrapper(targetGraph!.id, 'Table', NodeType.dataset);
+                          ProjectState.instance.addProjectNodeWrapper(targetGraph!.id, defaultName, nodeType);
                         } else {
-                          // Auto-create folder → graph → table
+                          // Auto-create folder → graph → item
                           final folderId = ProjectState.instance.addProjectNodeAndReturnId('root_1', 'Folder', NodeType.folder);
                           final graphId = ProjectState.instance.addProjectNodeAndReturnId(folderId, 'Graph', NodeType.plot);
-                          ProjectState.instance.addProjectNodeWrapper(graphId, 'Table', NodeType.dataset);
+                          ProjectState.instance.addProjectNodeWrapper(graphId, defaultName, nodeType);
                         }
                       }
                       break;
@@ -113,6 +128,8 @@ class _MainLayoutState extends State<MainLayout> {
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<_ExplorerAction>>[
                 const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addTable, child: Text('Add Table', style: TextStyle(color: PrimeTheme.textPrimary))),
+                const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addFunction, child: Text('Add Function', style: TextStyle(color: PrimeTheme.textPrimary))),
+                const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addShape, child: Text('Add Shape', style: TextStyle(color: PrimeTheme.textPrimary))),
                 const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addGraph, child: Text('Add Graph', style: TextStyle(color: PrimeTheme.textPrimary))),
                 const PopupMenuItem<_ExplorerAction>(value: _ExplorerAction.addFolder, child: Text('Add Folder', style: TextStyle(color: PrimeTheme.textPrimary))),
               ],
@@ -133,11 +150,6 @@ class _MainLayoutState extends State<MainLayout> {
           icon: Icons.tune,
           child: PropertyInspector(),
         )),
-        Area(flex: 2, builder: (context, area) => const PanelContainer(
-          title: 'Layer Stack',
-          icon: Icons.layers,
-          child: LayerStack(),
-        )),
       ],
     );
 
@@ -152,8 +164,19 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   List<Area> _buildCenterAreas() {
-    return [
-      Area(flex: _isDataPanelCollapsed ? 1 : 3, builder: (context, area) => ValueListenableBuilder<String>(
+    bool isTableSelected = false;
+    final root = ProjectState.instance.projectTree.value;
+    final selectedId = ProjectState.instance.selectedProjectNodeId.value;
+    
+    if (root != null && selectedId != null) {
+      final node = ProjectState.instance.findNodeById(root, selectedId);
+      if (node != null && node.nodeType == NodeType.dataset) {
+        isTableSelected = true;
+      }
+    }
+
+    final areas = <Area>[
+      Area(flex: _isDataPanelCollapsed || !isTableSelected ? 1 : 3, builder: (context, area) => ValueListenableBuilder<String>(
         valueListenable: ProjectState.instance.graphName,
         builder: (context, graphName, child) {
           return PanelContainer(
@@ -163,16 +186,29 @@ class _MainLayoutState extends State<MainLayout> {
           );
         }
       )),
-      Area(
-        flex: _isDataPanelCollapsed ? null : 2,
-        size: _isDataPanelCollapsed ? 46 : null,
-        min: _isDataPanelCollapsed ? 46 : null,
-        builder: (context, area) => CollapsibleDataPanel(
-          isCollapsed: _isDataPanelCollapsed,
-          onToggle: _toggleDataPanel,
-        ),
-      ),
     ];
+
+    if (isTableSelected) {
+      areas.add(
+        Area(
+          flex: _isDataPanelCollapsed ? null : 2,
+          size: _isDataPanelCollapsed ? 46 : null,
+          min: _isDataPanelCollapsed ? 46 : null,
+          builder: (context, area) => CollapsibleDataPanel(
+            isCollapsed: _isDataPanelCollapsed,
+            onToggle: _toggleDataPanel,
+          ),
+        ),
+      );
+    }
+    
+    return areas;
+  }
+
+  void _onSelectionChanged() {
+    setState(() {
+      _centerController.areas = _buildCenterAreas();
+    });
   }
 
   void _toggleDataPanel() {
@@ -180,6 +216,12 @@ class _MainLayoutState extends State<MainLayout> {
       _isDataPanelCollapsed = !_isDataPanelCollapsed;
       _centerController.areas = _buildCenterAreas();
     });
+  }
+
+  @override
+  void dispose() {
+    ProjectState.instance.selectedProjectNodeId.removeListener(_onSelectionChanged);
+    super.dispose();
   }
 
   @override
@@ -389,4 +431,4 @@ class _MainLayoutState extends State<MainLayout> {
 }
 
 /// Actions for the Project Explorer "Add Item" popup menu.
-enum _ExplorerAction { addGraph, addTable, addFolder }
+enum _ExplorerAction { addGraph, addTable, addFunction, addShape, addFolder }

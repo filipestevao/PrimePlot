@@ -145,7 +145,7 @@ class ProjectState {
     final selectedId = selectedProjectNodeId.value;
     if (root == null || selectedId == null) return null;
     
-    final node = _findNodeById(root, selectedId);
+    final node = findNodeById(root, selectedId);
     if (node == null) return null;
     
     if (node.nodeType == NodeType.plot) return node.id;
@@ -227,7 +227,7 @@ class ProjectState {
     final newTree = addEmptyTable(parentId: parentId, name: 'Table', rowCount: BigInt.from(10), colCount: BigInt.from(2));
     projectTree.value = newTree;
     final root = projectTree.value;
-    final parent = _findNodeById(root, parentId);
+    final parent = findNodeById(root, parentId);
     if (parent != null && parent.children.isNotEmpty) {
       final newNode = parent.children.last;
       selectProjectNode(newNode.id);
@@ -316,7 +316,7 @@ class ProjectState {
     final newTree = addProjectNode(parentId: parentId, name: name, nodeType: type);
     projectTree.value = newTree;
     // New node is the last child of parent with the matching type
-    final parent = _findNodeById(newTree, parentId);
+    final parent = findNodeById(newTree, parentId);
     if (parent != null) {
       for (int i = parent.children.length - 1; i >= 0; i--) {
         if (parent.children[i].nodeType == type) return parent.children[i].id;
@@ -335,7 +335,7 @@ class ProjectState {
 
     // Attempt to resolve node type from current project tree and fetch tables
     final root = projectTree.value;
-    ProjectNode? node = _findNodeById(root, nodeId);
+    ProjectNode? node = findNodeById(root, nodeId);
     if (node != null) {
       // Switch plot properties context
       String? plotId;
@@ -375,11 +375,11 @@ class ProjectState {
     }
   }
 
-  ProjectNode? _findNodeById(ProjectNode? node, String id) {
+  ProjectNode? findNodeById(ProjectNode? node, String id) {
     if (node == null) return null;
     if (node.id == id) return node;
     for (var child in node.children) {
-      final found = _findNodeById(child, id);
+      final found = findNodeById(child, id);
       if (found != null) return found;
     }
     return null;
@@ -398,7 +398,7 @@ class ProjectState {
     if (root == null) return null;
 
     if (selectedId != null) {
-      final selectedNode = _findNodeById(root, selectedId);
+      final selectedNode = findNodeById(root, selectedId);
       if (selectedNode != null) {
         if (selectedNode.nodeType == NodeType.plot) return selectedNode.id;
         // If selected is a dataset, try to find its parent graph
@@ -470,7 +470,7 @@ class ProjectState {
     // Refresh chart + selection directly (mirrors handlePaste pattern)
     selectedProjectNodeId.value = parentId;
     final root = projectTree.value;
-    final graph = root != null ? _findNodeById(root, parentId) : null;
+    final graph = root != null ? findNodeById(root, parentId) : null;
     if (graph != null) {
       graphName.value = graph.name;
     }
@@ -528,7 +528,7 @@ class ProjectState {
       }
       
       // If the selected node is a graph, we should refresh its tables because one of its children might have been deleted
-      final stillSelected = _findNodeById(newTree, selectedProjectNodeId.value ?? '');
+      final stillSelected = findNodeById(newTree, selectedProjectNodeId.value ?? '');
       if (stillSelected != null && stillSelected.nodeType == NodeType.plot) {
          fetchTablesForGraph(stillSelected.id);
       }

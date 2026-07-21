@@ -117,7 +117,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     // Identify what item is just above our drop position
     final prevNode = flatNodes[newIndex];
 
-    if (draggedItem.node.nodeType == NodeType.dataset) {
+    if (draggedItem.node.nodeType == NodeType.dataset || draggedItem.node.nodeType == NodeType.function || draggedItem.node.nodeType == NodeType.shape) {
       // Must go into a plot (chart)
       if (prevNode.node.nodeType == NodeType.plot) {
         // Drop onto a plot: place inside the plot if it's not collapsed
@@ -125,11 +125,11 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           targetParentId = prevNode.node.id;
         } else {
           // It's collapsed, so maybe the user meant to drop it into the plot's parent? 
-          // But datasets can ONLY be in plots. If plot is collapsed, we still put it in this plot.
+          // But datasets/functions/shapes can ONLY be in plots. If plot is collapsed, we still put it in this plot.
           targetParentId = prevNode.node.id;
         }
-      } else if (prevNode.node.nodeType == NodeType.dataset) {
-        // Drop onto another dataset: put it in the same parent plot
+      } else if (prevNode.node.nodeType == NodeType.dataset || prevNode.node.nodeType == NodeType.function || prevNode.node.nodeType == NodeType.shape) {
+        // Drop onto another dataset/function/shape: put it in the same parent plot
         targetParentId = prevNode.parentId;
       } else {
         // Invalid (dropped onto folder or root directly)
@@ -145,7 +145,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         }
       } else if (prevNode.node.nodeType == NodeType.plot) {
         targetParentId = prevNode.parentId;
-      } else if (prevNode.node.nodeType == NodeType.dataset) {
+      } else if (prevNode.node.nodeType == NodeType.dataset || prevNode.node.nodeType == NodeType.function || prevNode.node.nodeType == NodeType.shape) {
         final plotId = prevNode.parentId;
         final plotNode = flatNodes.firstWhere((n) => n.node.id == plotId);
         targetParentId = plotNode.parentId;
@@ -252,6 +252,16 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
         return Container(
           key: ValueKey(flatNode.node.id),
           child: _buildTableRow(flatNode, index),
+        );
+      case NodeType.function:
+        return Container(
+          key: ValueKey(flatNode.node.id),
+          child: _buildFunctionNode(flatNode, index),
+        );
+      case NodeType.shape:
+        return Container(
+          key: ValueKey(flatNode.node.id),
+          child: _buildShapeNode(flatNode, index),
         );
     }
   }
@@ -390,6 +400,108 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                         icon: Icons.check,
                         color: Colors.greenAccent,
                         onPressed: () => _finishEditing(table.id),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Function and Shape nodes
+  // ---------------------------------------------------------------------------
+
+  Widget _buildFunctionNode(_FlatNode flatNode, int index) {
+    return _buildChildItemNode(flatNode, index, Icons.functions, Colors.purpleAccent);
+  }
+
+  Widget _buildShapeNode(_FlatNode flatNode, int index) {
+    return _buildChildItemNode(flatNode, index, Icons.category, Colors.orangeAccent);
+  }
+
+  Widget _buildChildItemNode(_FlatNode flatNode, int index, IconData iconData, Color iconColor) {
+    final item = flatNode.node;
+    final isEditing = _editingNodeId == item.id;
+    final isSelected = _isSelected(item.id);
+    final double leftPad = 12.0 + flatNode.indent * 16.0 + 16.0;
+
+    return Material(
+      color: isSelected
+          ? PrimeTheme.primaryAccent.withValues(alpha: 0.15)
+          : Colors.transparent,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: InkWell(
+          onTap: () => ProjectState.instance.selectProjectNode(item.id),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 32),
+            padding: EdgeInsets.only(left: leftPad, right: 16),
+            child: Row(
+              children: [
+                Icon(
+                  iconData,
+                  size: 16,
+                  color: isSelected ? PrimeTheme.primaryAccent : iconColor,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: isEditing
+                      ? SizedBox(
+                          height: 20,
+                          child: TextField(
+                            controller: _editController,
+                            autofocus: true,
+                            style: const TextStyle(
+                                fontSize: 13, color: PrimeTheme.primaryAccent),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding:
+                                  EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: (_) => _finishEditing(item.id),
+                          ),
+                        )
+                      : Text(
+                          item.name,
+                          style: const TextStyle(
+                              fontSize: 13, color: PrimeTheme.textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isEditing) ...[
+                      Builder(
+                        builder: (ctx) => InkWell(
+                          onTap: () => _showNodeMenu(ctx, item),
+                          borderRadius: BorderRadius.circular(4),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.move,
+                          child: Icon(Icons.drag_handle,
+                              size: 20, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
+                        ),
+                      ),
+                    ] else ...[
+                      _miniIconButton(
+                        icon: Icons.check,
+                        color: Colors.greenAccent,
+                        onPressed: () => _finishEditing(item.id),
                       ),
                     ],
                   ],
