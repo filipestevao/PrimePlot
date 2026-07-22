@@ -2,6 +2,7 @@
 // This program is licensed under the GPLv3. See LICENSE for details.
 
 import 'package:flutter/material.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
@@ -683,6 +684,17 @@ Widget _buildSwitchProperty(String label, bool value, ValueChanged<bool> onChang
   );
 }
 
+final Map<ColorSwatch<Object>, String> _customSwatches = <ColorSwatch<Object>, String>{
+  ColorTools.createPrimarySwatch(const Color(0xFF00C3FF)): 'Cyan',
+  ColorTools.createPrimarySwatch(const Color(0xFFFF5252)): 'Red',
+  ColorTools.createPrimarySwatch(const Color(0xFF69F0AE)): 'Green',
+  ColorTools.createPrimarySwatch(const Color(0xFFFFD740)): 'Yellow',
+  ColorTools.createPrimarySwatch(const Color(0xFFE040FB)): 'Purple',
+  ColorTools.createPrimarySwatch(const Color(0xFFFFFFFF)): 'White',
+  ColorTools.createPrimarySwatch(const Color(0xFF90A4AE)): 'Grey',
+  ColorTools.createPrimarySwatch(const Color(0xFFFF6E40)): 'Orange',
+};
+
 Widget _buildColorPropertyHex(BuildContext context, String label, String hexColor, ValueChanged<String> onChanged) {
   Color color = Colors.white;
   try {
@@ -695,35 +707,47 @@ Widget _buildColorPropertyHex(BuildContext context, String label, String hexColo
     children: [
       Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
       InkWell(
-        onTap: () {
-          // simple color picker mock - extending this is for future stages
-          final colors = ['#00C3FF', '#FF5252', '#69F0AE', '#FFD740', '#E040FB', '#FFFFFF'];
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              backgroundColor: PrimeTheme.panelBackground,
-              title: const Text('Select Color', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 14)),
-              content: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: colors.map((c) => InkWell(
-                  onTap: () {
-                    onChanged(c);
-                    Navigator.pop(ctx);
-                  },
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Color(int.parse(c.replaceFirst('#', '0xFF'))),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: hexColor == c ? Colors.white : Colors.transparent, width: 2),
-                    ),
-                  ),
-                )).toList(),
-              ),
+        onTap: () async {
+          final Color picked = await showColorPickerDialog(
+            context,
+            color,
+            title: Text('Select $label',
+                style: const TextStyle(color: PrimeTheme.textPrimary, fontSize: 16)),
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            spacing: 5,
+            runSpacing: 5,
+            enableOpacity: true,
+            wheelDiameter: 180,
+            showColorCode: true,
+            colorCodeReadOnly: false,
+            pickersEnabled: const <ColorPickerType, bool>{
+              ColorPickerType.primary: true,
+              ColorPickerType.accent: true,
+              ColorPickerType.custom: false,
+              ColorPickerType.wheel: true,
+              ColorPickerType.both: false,
+              ColorPickerType.bw: false,
+            },
+            customColorSwatchesAndNames: _customSwatches,
+            actionButtons: const ColorPickerActionButtons(
+              okButton: false,
+              closeButton: false,
+            ),
+            constraints: const BoxConstraints(
+              minHeight: 460,
+              minWidth: 420,
+              maxWidth: 420,
             ),
           );
+          if (picked.toARGB32() != color.toARGB32()) {
+            final int argb = picked.toARGB32();
+            final String hexStr = (argb & 0xFF000000) == 0xFF000000
+                ? '#${(argb & 0x00FFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}'
+                : '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+            onChanged(hexStr);
+          }
         },
         child: Container(
           width: 24,

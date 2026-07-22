@@ -45,6 +45,7 @@ dependencies:
   multi_split_view: ^3.6.1
   desktop_drop: ^0.4.4
   screen_retriever: ^0.2.2
+  flex_color_picker: ^3.8.0
 
 dev_dependencies:
   flutter_test:
