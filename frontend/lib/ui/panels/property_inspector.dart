@@ -51,6 +51,67 @@ class _PropertyInspectorState extends State<PropertyInspector> {
 }
 
 // -----------------------------------------------------------------------------
+// Persistent Text Field (preserves IME composition across rebuilds)
+// -----------------------------------------------------------------------------
+class _PersistentTextField extends StatefulWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  final int? maxLines;
+  const _PersistentTextField({
+    required this.value,
+    required this.onChanged,
+    this.maxLines,
+  });
+  @override
+  State<_PersistentTextField> createState() => _PersistentTextFieldState();
+}
+
+class _PersistentTextFieldState extends State<_PersistentTextField> {
+  late TextEditingController _ctrl;
+  late FocusNode _focus;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.value);
+    _focus = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(_PersistentTextField old) {
+    super.didUpdateWidget(old);
+    if (!_focus.hasFocus && _ctrl.text != widget.value) {
+      _ctrl.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _ctrl,
+      focusNode: _focus,
+      maxLines: widget.maxLines,
+      style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+      decoration: InputDecoration(
+        border: const OutlineInputBorder(),
+        contentPadding: widget.maxLines != null
+            ? const EdgeInsets.all(8)
+            : const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        isDense: widget.maxLines != null,
+      ),
+      onChanged: widget.onChanged,
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Folder Inspector
 // -----------------------------------------------------------------------------
 class _FolderInspector extends StatelessWidget {
@@ -68,16 +129,9 @@ class _FolderInspector extends StatelessWidget {
           children: [
             _buildSectionHeader('Information'),
             const SizedBox(height: 12),
-            TextField(
-              controller: TextEditingController(text: props.information)
-                ..selection = TextSelection.collapsed(offset: props.information.length),
-              style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+            _PersistentTextField(
+              value: props.information,
               maxLines: null,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.all(8),
-                isDense: true,
-              ),
               onChanged: (val) {
                 ProjectState.instance.updateFolderProperties(
                     nodeId, FolderProperties(information: val));
@@ -108,15 +162,9 @@ class _FunctionInspector extends StatelessWidget {
           children: [
             _buildSectionHeader('Equation'),
             const SizedBox(height: 12),
-            TextField(
-              controller: TextEditingController(text: props.equation)
-                ..selection = TextSelection.collapsed(offset: props.equation.length),
-              style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.all(8),
-                isDense: true,
-              ),
+            _PersistentTextField(
+              value: props.equation,
+              maxLines: null,
               onChanged: (val) {
                 ProjectState.instance.updateFunctionProperties(
                     nodeId, FunctionProperties(equation: val));
@@ -615,15 +663,7 @@ Widget _buildTextProperty(String label, String value, ValueChanged<String> onCha
       const SizedBox(height: 6),
       SizedBox(
         height: 28,
-        child: TextField(
-          controller: TextEditingController(text: value)..selection = TextSelection.collapsed(offset: value.length),
-          style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-          ),
-          onChanged: onChanged,
-        ),
+        child: _PersistentTextField(value: value, onChanged: onChanged),
       ),
     ],
   );
