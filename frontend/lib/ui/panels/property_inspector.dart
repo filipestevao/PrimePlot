@@ -165,9 +165,142 @@ class _ShapeInspector extends StatelessWidget {
 // -----------------------------------------------------------------------------
 // Graph Inspector
 // -----------------------------------------------------------------------------
-class _GraphInspector extends StatelessWidget {
+class _GraphInspector extends StatefulWidget {
   final String nodeId;
   const _GraphInspector({required this.nodeId});
+  @override
+  State<_GraphInspector> createState() => _GraphInspectorState();
+}
+
+class _GraphInspectorState extends State<_GraphInspector> {
+  final _xMinCtrl = TextEditingController();
+  final _xMaxCtrl = TextEditingController();
+  final _yMinCtrl = TextEditingController();
+  final _yMaxCtrl = TextEditingController();
+  final _xMinFocus = FocusNode();
+  final _xMaxFocus = FocusNode();
+  final _yMinFocus = FocusNode();
+  final _yMaxFocus = FocusNode();
+  GraphProperties? _props;
+
+  @override
+  void initState() {
+    super.initState();
+    _xMinFocus.addListener(_onXMinFocusChange);
+    _xMaxFocus.addListener(_onXMaxFocusChange);
+    _yMinFocus.addListener(_onYMinFocusChange);
+    _yMaxFocus.addListener(_onYMaxFocusChange);
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_xMinCtrl, _xMaxCtrl, _yMinCtrl, _yMaxCtrl]) { c.dispose(); }
+    for (final f in [_xMinFocus, _xMaxFocus, _yMinFocus, _yMaxFocus]) { f.dispose(); }
+    super.dispose();
+  }
+
+  static String _fmt(double? v) {
+    if (v == null) return '';
+    if (v == v.truncateToDouble()) return v.toInt().toString();
+    return v.toString();
+  }
+
+  double? _parse(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return null;
+    return double.tryParse(t);
+  }
+
+  void _onXMinFocusChange() {
+    if (_xMinFocus.hasFocus) return;
+    final p = _props;
+    if (p == null) return;
+    final v = _parse(_xMinCtrl.text);
+    if (_xMinCtrl.text.trim().isNotEmpty && v == null) {
+      _xMinCtrl.text = _fmt(p.xMin);
+      return;
+    }
+    if (v == p.xMin) return;
+    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
+      xMin: v, xMax: p.xMax, yMin: p.yMin, yMax: p.yMax,
+      xVisible: p.xVisible, yVisible: p.yVisible,
+      xScale: p.xScale, yScale: p.yScale,
+      xLabel: p.xLabel, yLabel: p.yLabel,
+      aspectRatio: p.aspectRatio,
+      showGrid: p.showGrid, showLegend: p.showLegend,
+      legendPosition: p.legendPosition,
+    ));
+  }
+
+  void _onXMaxFocusChange() {
+    if (_xMaxFocus.hasFocus) return;
+    final p = _props;
+    if (p == null) return;
+    final v = _parse(_xMaxCtrl.text);
+    if (_xMaxCtrl.text.trim().isNotEmpty && v == null) {
+      _xMaxCtrl.text = _fmt(p.xMax);
+      return;
+    }
+    if (v == p.xMax) return;
+    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
+      xMin: p.xMin, xMax: v, yMin: p.yMin, yMax: p.yMax,
+      xVisible: p.xVisible, yVisible: p.yVisible,
+      xScale: p.xScale, yScale: p.yScale,
+      xLabel: p.xLabel, yLabel: p.yLabel,
+      aspectRatio: p.aspectRatio,
+      showGrid: p.showGrid, showLegend: p.showLegend,
+      legendPosition: p.legendPosition,
+    ));
+  }
+
+  void _onYMinFocusChange() {
+    if (_yMinFocus.hasFocus) return;
+    final p = _props;
+    if (p == null) return;
+    final v = _parse(_yMinCtrl.text);
+    if (_yMinCtrl.text.trim().isNotEmpty && v == null) {
+      _yMinCtrl.text = _fmt(p.yMin);
+      return;
+    }
+    if (v == p.yMin) return;
+    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
+      xMin: p.xMin, xMax: p.xMax, yMin: v, yMax: p.yMax,
+      xVisible: p.xVisible, yVisible: p.yVisible,
+      xScale: p.xScale, yScale: p.yScale,
+      xLabel: p.xLabel, yLabel: p.yLabel,
+      aspectRatio: p.aspectRatio,
+      showGrid: p.showGrid, showLegend: p.showLegend,
+      legendPosition: p.legendPosition,
+    ));
+  }
+
+  void _onYMaxFocusChange() {
+    if (_yMaxFocus.hasFocus) return;
+    final p = _props;
+    if (p == null) return;
+    final v = _parse(_yMaxCtrl.text);
+    if (_yMaxCtrl.text.trim().isNotEmpty && v == null) {
+      _yMaxCtrl.text = _fmt(p.yMax);
+      return;
+    }
+    if (v == p.yMax) return;
+    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
+      xMin: p.xMin, xMax: p.xMax, yMin: p.yMin, yMax: v,
+      xVisible: p.xVisible, yVisible: p.yVisible,
+      xScale: p.xScale, yScale: p.yScale,
+      xLabel: p.xLabel, yLabel: p.yLabel,
+      aspectRatio: p.aspectRatio,
+      showGrid: p.showGrid, showLegend: p.showLegend,
+      legendPosition: p.legendPosition,
+    ));
+  }
+
+  void _syncFromProps(GraphProperties p) {
+    if (!_xMinFocus.hasFocus && _xMinCtrl.text != _fmt(p.xMin)) _xMinCtrl.text = _fmt(p.xMin);
+    if (!_xMaxFocus.hasFocus && _xMaxCtrl.text != _fmt(p.xMax)) _xMaxCtrl.text = _fmt(p.xMax);
+    if (!_yMinFocus.hasFocus && _yMinCtrl.text != _fmt(p.yMin)) _yMinCtrl.text = _fmt(p.yMin);
+    if (!_yMaxFocus.hasFocus && _yMaxCtrl.text != _fmt(p.yMax)) _yMaxCtrl.text = _fmt(p.yMax);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,66 +308,26 @@ class _GraphInspector extends StatelessWidget {
       valueListenable: ProjectState.instance.activeGraphProps,
       builder: (context, props, child) {
         if (props == null) return const SizedBox.shrink();
+        _props = props;
+        _syncFromProps(props);
         return ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
             _buildSectionHeader('Axes Range'),
             const SizedBox(height: 12),
             _buildAxisRangeProperty(
-              'X-Axis',
-              props.xMin,
-              props.xMax,
-              (min, max) {
-                ProjectState.instance.updateGraphProperties(
-                    nodeId,
-                    GraphProperties(
-                        xMin: min,
-                        xMax: max,
-                        yMin: props.yMin,
-                        yMax: props.yMax,
-                        xVisible: props.xVisible,
-                        yVisible: props.yVisible,
-                        xScale: props.xScale,
-                        yScale: props.yScale,
-                        xLabel: props.xLabel,
-                        yLabel: props.yLabel,
-                        aspectRatio: props.aspectRatio,
-                        showGrid: props.showGrid,
-                        showLegend: props.showLegend,
-                        legendPosition: props.legendPosition));
-              },
+              'X-Axis', _xMinCtrl, _xMaxCtrl, _xMinFocus, _xMaxFocus,
             ),
             const SizedBox(height: 12),
             _buildAxisRangeProperty(
-              'Y-Axis',
-              props.yMin,
-              props.yMax,
-              (min, max) {
-                ProjectState.instance.updateGraphProperties(
-                    nodeId,
-                    GraphProperties(
-                        xMin: props.xMin,
-                        xMax: props.xMax,
-                        yMin: min,
-                        yMax: max,
-                        xVisible: props.xVisible,
-                        yVisible: props.yVisible,
-                        xScale: props.xScale,
-                        yScale: props.yScale,
-                        xLabel: props.xLabel,
-                        yLabel: props.yLabel,
-                        aspectRatio: props.aspectRatio,
-                        showGrid: props.showGrid,
-                        showLegend: props.showLegend,
-                        legendPosition: props.legendPosition));
-              },
+              'Y-Axis', _yMinCtrl, _yMaxCtrl, _yMinFocus, _yMaxFocus,
             ),
             const SizedBox(height: 24),
             _buildSectionHeader('Labels'),
             const SizedBox(height: 12),
             _buildTextProperty('X-Axis Label', props.xLabel, (val) {
               ProjectState.instance.updateGraphProperties(
-                  nodeId, GraphProperties(
+                  widget.nodeId, GraphProperties(
                         xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
                         xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
                         xLabel: val, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
@@ -243,7 +336,7 @@ class _GraphInspector extends StatelessWidget {
             const SizedBox(height: 12),
             _buildTextProperty('Y-Axis Label', props.yLabel, (val) {
               ProjectState.instance.updateGraphProperties(
-                  nodeId, GraphProperties(
+                  widget.nodeId, GraphProperties(
                         xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
                         xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
                         xLabel: props.xLabel, yLabel: val, aspectRatio: props.aspectRatio,
@@ -258,7 +351,7 @@ class _GraphInspector extends StatelessWidget {
               {null: 'Free', 1.0: '1:1', 1.5: '3:2', 1.3333: '4:3', 1.7777: '16:9'},
               (val) {
                 ProjectState.instance.updateGraphProperties(
-                  nodeId, GraphProperties(
+                  widget.nodeId, GraphProperties(
                         xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
                         xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
                         xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: val,
@@ -268,7 +361,7 @@ class _GraphInspector extends StatelessWidget {
             const SizedBox(height: 12),
             _buildSwitchProperty('Show Grid', props.showGrid, (val) {
               ProjectState.instance.updateGraphProperties(
-                  nodeId, GraphProperties(
+                  widget.nodeId, GraphProperties(
                         xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
                         xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
                         xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
@@ -281,7 +374,38 @@ class _GraphInspector extends StatelessWidget {
   }
 
   Widget _buildAxisRangeProperty(
-      String label, double? minVal, double? maxVal, Function(double?, double?) onChanged) {
+    String label,
+    TextEditingController minCtrl,
+    TextEditingController maxCtrl,
+    FocusNode minFocus,
+    FocusNode maxFocus,
+  ) {
+    Widget field(TextEditingController ctrl, FocusNode focus) {
+      return SizedBox(
+        height: 28,
+        child: TextField(
+          controller: ctrl,
+          focusNode: focus,
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
+          style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: 'Auto',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.1),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(4),
+              borderSide: BorderSide.none,
+            ),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -289,64 +413,12 @@ class _GraphInspector extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(
-              child: Container(
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: TextField(
-                  controller: TextEditingController(text: minVal?.toString() ?? '')
-                    ..selection = TextSelection.collapsed(offset: (minVal?.toString() ?? '').length),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Auto',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
-                  ),
-                  onChanged: (val) {
-                    final d = val.trim().isEmpty ? null : double.tryParse(val);
-                    onChanged(d, maxVal);
-                  },
-                ),
-              ),
-            ),
+            Expanded(child: field(minCtrl, minFocus)),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.0),
               child: Text('-', style: TextStyle(color: PrimeTheme.textSecondary)),
             ),
-            Expanded(
-              child: Container(
-                height: 28,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: TextField(
-                  controller: TextEditingController(text: maxVal?.toString() ?? '')
-                    ..selection = TextSelection.collapsed(offset: (maxVal?.toString() ?? '').length),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Auto',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
-                  ),
-                  onChanged: (val) {
-                    final d = val.trim().isEmpty ? null : double.tryParse(val);
-                    onChanged(minVal, d);
-                  },
-                ),
-              ),
-            ),
+            Expanded(child: field(maxCtrl, maxFocus)),
           ],
         ),
       ],
