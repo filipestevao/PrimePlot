@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../src/rust/api/data.dart';
+import '../src/rust/api/project.dart';
 import '../src/rust/api/properties.dart';
 
 class LayerItem {
