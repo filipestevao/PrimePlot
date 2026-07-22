@@ -7,38 +7,6 @@ import '../src/rust/api/data.dart';
 import '../src/rust/api/project.dart';
 import '../src/rust/api/properties.dart';
 
-class LayerItem {
-  final String id;
-  final String name;
-  final IconData iconData;
-  final bool isVisible;
-  final bool isSelected;
-
-  LayerItem({
-    required this.id,
-    required this.name,
-    required this.iconData,
-    this.isVisible = true,
-    this.isSelected = false,
-  });
-
-  LayerItem copyWith({
-    String? id,
-    String? name,
-    IconData? iconData,
-    bool? isVisible,
-    bool? isSelected,
-  }) {
-    return LayerItem(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      iconData: iconData ?? this.iconData,
-      isVisible: isVisible ?? this.isVisible,
-      isSelected: isSelected ?? this.isSelected,
-    );
-  }
-}
-
 /// A lightweight, globally accessible state manager.
 class ProjectState {
   static final ProjectState instance = ProjectState._internal();
@@ -60,19 +28,20 @@ class ProjectState {
   // Panel titles (legacy for current layout)
   final ValueNotifier<String> tableName = ValueNotifier('Table');
   final ValueNotifier<String> graphName = ValueNotifier('Graph');
-  
+
   // Dynamic project tree state
   final ValueNotifier<ProjectNode?> projectTree = ValueNotifier(null);
   final ValueNotifier<String?> selectedProjectNodeId = ValueNotifier(null);
 
-  // Layer Stack State
-  final ValueNotifier<List<LayerItem>> layers = ValueNotifier([]);
-
   // Active Properties State
-  final ValueNotifier<FolderProperties?> activeFolderProps = ValueNotifier(null);
+  final ValueNotifier<FolderProperties?> activeFolderProps = ValueNotifier(
+    null,
+  );
   final ValueNotifier<GraphProperties?> activeGraphProps = ValueNotifier(null);
   final ValueNotifier<TableProperties?> activeTableProps = ValueNotifier(null);
-  final ValueNotifier<FunctionProperties?> activeFunctionProps = ValueNotifier(null);
+  final ValueNotifier<FunctionProperties?> activeFunctionProps = ValueNotifier(
+    null,
+  );
   final ValueNotifier<ShapeProperties?> activeShapeProps = ValueNotifier(null);
 
   void updateFolderProperties(String nodeId, FolderProperties newProps) {
@@ -116,10 +85,10 @@ class ProjectState {
     final root = projectTree.value;
     final selectedId = selectedProjectNodeId.value;
     if (root == null || selectedId == null) return null;
-    
+
     final node = findNodeById(root, selectedId);
     if (node == null) return null;
-    
+
     if (node.nodeType == NodeType.plot) return node.id;
     if (node.nodeType == NodeType.dataset) {
       final parent = _findParentById(root, selectedId);
@@ -129,7 +98,7 @@ class ProjectState {
     }
     return null;
   }
-  
+
   ProjectNode? _findParentById(ProjectNode root, String targetId) {
     for (final c in root.children) {
       if (c.id == targetId) return root;
@@ -143,17 +112,6 @@ class ProjectState {
     // Start with an empty table – Rust is the single source of truth.
     activeTable.value = getEmptyTableData();
     projectTree.value = getProjectTree();
-
-    // Initialize layers. Scatter starts visible (empty table has 0 rows ≤ 10).
-    layers.value = [
-      LayerItem(id: 'grid', name: 'Grid', iconData: Icons.grid_on),
-      LayerItem(id: 'axis', name: 'Axis', iconData: Icons.straighten),
-      LayerItem(id: 'scatter_a', name: 'Scatter', iconData: Icons.scatter_plot),
-      LayerItem(id: 'line_a', name: 'Line', iconData: Icons.timeline),
-      LayerItem(id: 'fit_a', name: 'Linear Fit A', iconData: Icons.show_chart),
-      LayerItem(id: 'annotation', name: 'Annotation 1 (Arrow)', iconData: Icons.north_east),
-      LayerItem(id: 'legend', name: 'Legend', iconData: Icons.list, isVisible: false),
-    ];
   }
 
   /// Parses a raw clipboard string via Rust and updates all dependent state.
@@ -165,12 +123,6 @@ class ProjectState {
     if (displayName != null) {
       renameProjectNodeWrapper('table_1', displayName);
     }
-
-    final rowCount = parsed.columns.isNotEmpty
-        ? parsed.columns.first.data.length
-        : 0;
-    final scatterVisible = applyScatterRule(rowCount: BigInt.from(rowCount));
-    _setScatterVisible(scatterVisible);
   }
 
   /// Creates a new blank 10-row × 2-column table in the active graph.
@@ -179,24 +131,29 @@ class ProjectState {
     if (parentId == null) return;
 
     final active = activeTable.value;
-    final isEmptyTable = active != null &&
-        active.columns.every((c) => c.data.isEmpty);
-
-    if (isEmptyTable) {
-      final newColumns = active!.columns.map((col) => DTODataColumn(
-        name: col.name,
-        role: col.role,
-        data: Float64List.fromList(List.generate(10, (_) => double.nan)),
-      )).toList();
+    if (active != null && active.columns.every((c) => c.data.isEmpty)) {
+      final newColumns = active.columns
+          .map(
+            (col) => DTODataColumn(
+              name: col.name,
+              role: col.role,
+              data: Float64List.fromList(List.generate(10, (_) => double.nan)),
+            ),
+          )
+          .toList();
       saveTable(tableId: active.id, columns: newColumns);
       final updated = getTable(tableId: active.id);
       activeTable.value = updated;
       tableDisplayName.value = updated.name;
-      _setScatterVisible(true);
       return;
     }
 
-    final newTree = addEmptyTable(parentId: parentId, name: 'Table', rowCount: BigInt.from(10), colCount: BigInt.from(2));
+    final newTree = addEmptyTable(
+      parentId: parentId,
+      name: 'Table',
+      rowCount: BigInt.from(10),
+      colCount: BigInt.from(2),
+    );
     projectTree.value = newTree;
     final root = projectTree.value;
     final parent = findNodeById(root, parentId);
@@ -204,59 +161,25 @@ class ProjectState {
       final newNode = parent.children.last;
       selectProjectNode(newNode.id);
     }
-    _setScatterVisible(true);
   }
 
   /// Clears all data rows, keeping the column schema, resetting to an empty table.
   void clearTableData() {
     final active = activeTable.value;
     if (active == null) return;
-    final newColumns = active.columns.map((col) => DTODataColumn(
-      name: col.name,
-      role: col.role,
-      data: Float64List(0),
-    )).toList();
+    final newColumns = active.columns
+        .map(
+          (col) => DTODataColumn(
+            name: col.name,
+            role: col.role,
+            data: Float64List(0),
+          ),
+        )
+        .toList();
     saveTable(tableId: active.id, columns: newColumns);
     final updated = getTable(tableId: active.id);
     activeTable.value = updated;
     tableDisplayName.value = updated.name;
-    _setScatterVisible(true);
-  }
-
-  void _setScatterVisible(bool visible) {
-    final currentLayers = List<LayerItem>.from(layers.value);
-    final idx = currentLayers.indexWhere((l) => l.id == 'scatter_a');
-    if (idx != -1) {
-      currentLayers[idx] = currentLayers[idx].copyWith(isVisible: visible);
-      layers.value = currentLayers;
-    }
-  }
-
-  void toggleLayerVisibility(String id) {
-    final currentLayers = List<LayerItem>.from(layers.value);
-    final index = currentLayers.indexWhere((l) => l.id == id);
-    if (index != -1) {
-      currentLayers[index] = currentLayers[index].copyWith(isVisible: !currentLayers[index].isVisible);
-      layers.value = currentLayers;
-    }
-  }
-
-  void selectLayer(String id) {
-    final currentLayers = List<LayerItem>.from(layers.value);
-    for (int i = 0; i < currentLayers.length; i++) {
-      currentLayers[i] = currentLayers[i].copyWith(isSelected: currentLayers[i].id == id);
-    }
-    layers.value = currentLayers;
-  }
-
-  void reorderLayers(int oldIndex, int newIndex) {
-    final currentLayers = List<LayerItem>.from(layers.value);
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
-    final item = currentLayers.removeAt(oldIndex);
-    currentLayers.insert(newIndex, item);
-    layers.value = currentLayers;
   }
 
   void updateTable(DTODataTable newTable) {
@@ -279,13 +202,25 @@ class ProjectState {
   }
 
   void addProjectNodeWrapper(String parentId, String name, NodeType type) {
-    final newTree = addProjectNode(parentId: parentId, name: name, nodeType: type);
+    final newTree = addProjectNode(
+      parentId: parentId,
+      name: name,
+      nodeType: type,
+    );
     projectTree.value = newTree;
   }
 
   /// Adds a project node and returns its generated ID.
-  String addProjectNodeAndReturnId(String parentId, String name, NodeType type) {
-    final newTree = addProjectNode(parentId: parentId, name: name, nodeType: type);
+  String addProjectNodeAndReturnId(
+    String parentId,
+    String name,
+    NodeType type,
+  ) {
+    final newTree = addProjectNode(
+      parentId: parentId,
+      name: name,
+      nodeType: type,
+    );
     projectTree.value = newTree;
     // New node is the last child of parent with the matching type
     final parent = findNodeById(newTree, parentId);
@@ -309,11 +244,12 @@ class ProjectState {
     final root = projectTree.value;
     ProjectNode? node = findNodeById(root, nodeId);
     if (node != null) {
-      // Switch plot properties context
       String? plotId;
       if (node.nodeType == NodeType.plot) {
         plotId = node.id;
-      } else if (node.nodeType == NodeType.dataset) {
+      } else if (node.nodeType == NodeType.dataset ||
+          node.nodeType == NodeType.function ||
+          node.nodeType == NodeType.shape) {
         if (root != null) {
           final parent = _findParentById(root, node.id);
           if (parent != null && parent.nodeType == NodeType.plot) {
@@ -321,7 +257,7 @@ class ProjectState {
           }
         }
       }
-      if (plotId != null) {
+
       // Refresh active properties based on node type
       if (node.nodeType == NodeType.folder) {
         activeFolderProps.value = getFolderProperties(nodeId: nodeId);
@@ -337,8 +273,7 @@ class ProjectState {
 
       // Ensure graph properties are also loaded if a child of a graph is selected
       if (plotId != null && node.nodeType != NodeType.plot) {
-         activeGraphProps.value = getGraphProperties(nodeId: plotId);
-      }
+        activeGraphProps.value = getGraphProperties(nodeId: plotId);
       }
 
       if (node.nodeType == NodeType.plot) {
@@ -350,10 +285,6 @@ class ProjectState {
         try {
           final table = getTable(tableId: nodeId);
           activeTable.value = table;
-          // Set scatter visibility according to table row count (Rust rule)
-          final rowCount = table.columns.isNotEmpty ? table.columns.first.data.length : 0;
-          final scatterVisible = applyScatterRule(rowCount: BigInt.from(rowCount));
-          _setScatterVisible(scatterVisible);
           // Clear multi-table view so canvas shows single table
           activeTables.value = [];
         } catch (e) {
@@ -374,7 +305,11 @@ class ProjectState {
   }
 
   void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {
-    final newTree = reorderProjectChildren(parentId: parentId, oldIndex: BigInt.from(oldIndex), newIndex: BigInt.from(newIndex));
+    final newTree = reorderProjectChildren(
+      parentId: parentId,
+      oldIndex: BigInt.from(oldIndex),
+      newIndex: BigInt.from(newIndex),
+    );
     projectTree.value = newTree;
   }
 
@@ -391,7 +326,9 @@ class ProjectState {
         if (selectedNode.nodeType == NodeType.plot) return selectedNode.id;
         // If selected is a dataset, try to find its parent graph
         final parent = _findParentOfNode(root, selectedId);
-        if (parent != null && parent.nodeType == NodeType.plot) return parent.id;
+        if (parent != null && parent.nodeType == NodeType.plot) {
+          return parent.id;
+        }
       }
     }
 
@@ -426,15 +363,6 @@ class ProjectState {
       if (tables.isNotEmpty) {
         activeTable.value = tables.first;
         tableDisplayName.value = tables.first.name;
-        // Determine scatter visibility based on plotted graph point count.
-        // Use max row count across tables (plotted graph size).
-        int maxRows = 0;
-        for (final t in tables) {
-          final rows = t.columns.isNotEmpty ? t.columns.first.data.length : 0;
-          if (rows > maxRows) maxRows = rows;
-        }
-        final scatterVisible = applyScatterRule(rowCount: BigInt.from(maxRows));
-        _setScatterVisible(scatterVisible);
       } else {
         // Clear stale table from previous graph
         activeTable.value = null;
@@ -450,11 +378,15 @@ class ProjectState {
       debugPrint("No valid graph found to import data into.");
       return;
     }
-    
+
     // Perform insertion
-    final newTree = addTableFromRaw(parentId: parentId, raw: raw, displayName: displayName);
+    final newTree = addTableFromRaw(
+      parentId: parentId,
+      raw: raw,
+      displayName: displayName,
+    );
     projectTree.value = newTree;
-    
+
     // Refresh chart + selection directly (mirrors handlePaste pattern)
     selectedProjectNodeId.value = parentId;
     final root = projectTree.value;
@@ -468,24 +400,23 @@ class ProjectState {
   /// Handles paste operations by either updating an existing selected table
   /// or creating a new table node within the currently active graph.
   void handlePaste(String rawText, {String? displayName}) {
-    final selectedNodeId = selectedProjectNodeId.value;
     final root = projectTree.value;
 
     // 1. If an active table exists, update it.
     if (activeTable.value != null) {
       final tableId = activeTable.value!.id;
       updateTableFromRaw(tableId: tableId, raw: rawText);
-      
+
       // If a displayName is provided (e.g., "Pasted Table"), rename the node.
       if (displayName != null) {
         renameProjectNodeWrapper(tableId, displayName);
       }
-      
+
       // Refresh the table data
       final updatedTable = getTable(tableId: tableId);
       activeTable.value = updatedTable;
       tableDisplayName.value = updatedTable.name;
-      
+
       final parentGraph = _findParentOfNode(root!, tableId);
       if (parentGraph != null) {
         fetchTablesForGraph(parentGraph.id);
@@ -498,12 +429,9 @@ class ProjectState {
   }
 
   void deleteProjectNodeWrapper(String nodeId) {
-    final rootBefore = projectTree.value;
-    final parentBefore = rootBefore != null ? _findParentOfNode(rootBefore, nodeId) : null;
-
     final newTree = deleteProjectNode(nodeId: nodeId);
     projectTree.value = newTree;
-    
+
     // Clean up active selections if deleted
     if (selectedProjectNodeId.value == nodeId) {
       selectedProjectNodeId.value = null;
@@ -512,13 +440,16 @@ class ProjectState {
     } else {
       // If we deleted a table that was currently the activeTable
       if (activeTable.value?.id == nodeId) {
-         activeTable.value = getEmptyTableData();
+        activeTable.value = getEmptyTableData();
       }
-      
+
       // If the selected node is a graph, we should refresh its tables because one of its children might have been deleted
-      final stillSelected = findNodeById(newTree, selectedProjectNodeId.value ?? '');
+      final stillSelected = findNodeById(
+        newTree,
+        selectedProjectNodeId.value ?? '',
+      );
       if (stillSelected != null && stillSelected.nodeType == NodeType.plot) {
-         fetchTablesForGraph(stillSelected.id);
+        fetchTablesForGraph(stillSelected.id);
       }
     }
   }
