@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/latex_symbols.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
 import '../../src/rust/api/data.dart';
@@ -87,119 +88,236 @@ class PlotCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<DTODataTable>>(
-      valueListenable: ProjectState.instance.activeTables,
-      builder: (context, tables, child) {
-        DTODataTable? primaryTable;
-        if (tables.isEmpty) {
-          primaryTable = ProjectState.instance.activeTable.value;
-        } else {
-          primaryTable = tables.firstWhere(
-            (t) => t.columns.length >= 2 && t.columns.first.data.isNotEmpty,
-            orElse: () => tables.first,
-          );
-        }
-
-        final hasData = tables.isNotEmpty
-            ? tables.any(
+    return ValueListenableBuilder<int>(
+      valueListenable: ProjectState.instance.refreshCanvas,
+      builder: (context, _, _) {
+        return ValueListenableBuilder<List<DTODataTable>>(
+          valueListenable: ProjectState.instance.activeTables,
+          builder: (context, tables, child) {
+            DTODataTable? primaryTable;
+            if (tables.isEmpty) {
+              primaryTable = ProjectState.instance.activeTable.value;
+            } else {
+              primaryTable = tables.firstWhere(
                 (t) => t.columns.length >= 2 && t.columns.first.data.isNotEmpty,
-              )
-            : primaryTable != null &&
-                  primaryTable.columns.length >= 2 &&
-                  primaryTable.columns.first.data.isNotEmpty;
+                orElse: () => tables.first,
+              );
+            }
 
-        if (primaryTable == null || !hasData) {
-          return const Center(
-            child: Text(
-              'No data available to plot.',
-              style: TextStyle(color: PrimeTheme.textSecondary),
-            ),
-          );
-        }
+            final hasData = tables.isNotEmpty
+                ? tables.any(
+                    (t) => t.columns.length >= 2 && t.columns.first.data.isNotEmpty,
+                  )
+                : primaryTable != null &&
+                      primaryTable.columns.length >= 2 &&
+                      primaryTable.columns.first.data.isNotEmpty;
 
-        return ValueListenableBuilder<GraphProperties?>(
-          valueListenable: ProjectState.instance.activeGraphProps,
-          builder: (context, graphProps, child) {
-            return ValueListenableBuilder<TableProperties?>(
-              valueListenable: ProjectState.instance.activeTableProps,
-              builder: (context, _, child) {
-                final seriesX = <List<double>>[];
-                final seriesY = <List<double>>[];
-                final tableProps = <TableProperties>[];
-                final tableNames = <String>[];
-                final toPlot = tables.isNotEmpty ? tables : [primaryTable!];
+            if (primaryTable == null || !hasData) {
+              return const Center(
+                child: Text(
+                  'No data available to plot.',
+                  style: TextStyle(color: PrimeTheme.textSecondary),
+                ),
+              );
+            }
 
-                for (final tableData in toPlot) {
-                  DTODataColumn? xCol;
-                  DTODataColumn? yCol;
-                  for (final col in tableData.columns) {
-                    if (col.role == DTOColumnRole.x && xCol == null) xCol = col;
-                    if (col.role == DTOColumnRole.y && yCol == null) yCol = col;
-                  }
-                  xCol ??= tableData.columns[0];
-                  yCol ??= tableData.columns.length > 1
-                      ? tableData.columns[1]
-                      : tableData.columns[0];
+            return ValueListenableBuilder<GraphProperties?>(
+              valueListenable: ProjectState.instance.activeGraphProps,
+              builder: (context, graphProps, child) {
+                return ValueListenableBuilder<TableProperties?>(
+                  valueListenable: ProjectState.instance.activeTableProps,
+                  builder: (context, _, child) {
+                    final seriesX = <List<double>>[];
+                    final seriesY = <List<double>>[];
+                    final tableProps = <TableProperties>[];
+                    final tableNames = <String>[];
+                    final toPlot = tables.isNotEmpty ? tables : [primaryTable!];
 
-                  final xClean = <double>[];
-                  final yClean = <double>[];
-                  final len = math.min(xCol.data.length, yCol.data.length);
-                  for (var i = 0; i < len; i++) {
-                    if (!xCol.data[i].isNaN && !yCol.data[i].isNaN) {
-                      xClean.add(xCol.data[i]);
-                      yClean.add(yCol.data[i]);
+                    for (final tableData in toPlot) {
+                      DTODataColumn? xCol;
+                      DTODataColumn? yCol;
+                      for (final col in tableData.columns) {
+                        if (col.role == DTOColumnRole.x && xCol == null) xCol = col;
+                        if (col.role == DTOColumnRole.y && yCol == null) yCol = col;
+                      }
+                      xCol ??= tableData.columns[0];
+                      yCol ??= tableData.columns.length > 1
+                          ? tableData.columns[1]
+                          : tableData.columns[0];
+
+                      final xClean = <double>[];
+                      final yClean = <double>[];
+                      final len = math.min(xCol.data.length, yCol.data.length);
+                      for (var i = 0; i < len; i++) {
+                        if (!xCol.data[i].isNaN && !yCol.data[i].isNaN) {
+                          xClean.add(xCol.data[i]);
+                          yClean.add(yCol.data[i]);
+                        }
+                      }
+
+                      seriesX.add(xClean);
+                      seriesY.add(yClean);
+                      tableNames.add(tableData.name);
+
+                      try {
+                        tableProps.add(getTableProperties(nodeId: tableData.id));
+                      } catch (_) {
+                        tableProps.add(
+                          TableProperties(
+                            legendDisplayName: tableData.name,
+                            lineStyle: 'Full',
+                            lineThickness: 2.5,
+                            lineVisible: true,
+                            markerType: 'Circle',
+                            markerVisible: true,
+                            lineColor: '#00C3FF',
+                            markerColor: '#FFFFFF',
+                          ),
+                        );
+                      }
                     }
-                  }
 
-                  seriesX.add(xClean);
-                  seriesY.add(yClean);
-                  tableNames.add(tableData.name);
+                    final tableIds = toPlot.map((t) => t.id).toList();
+                    final latexFields = <String>{};
+                    final nodeId = ProjectState.instance.selectedProjectNodeId.value;
+                    if (nodeId != null && graphProps != null) {
+                      final s = ProjectState.instance;
+                      if (s.getLatexMode(nodeId, 'xLabel')) latexFields.add('xLabel');
+                      if (s.getLatexMode(nodeId, 'yLabel')) latexFields.add('yLabel');
+                      for (final tid in tableIds) {
+                        if (s.getLatexMode(tid, 'legendDisplayName')) {
+                          latexFields.add('legendDisplayName_$tid');
+                        }
+                      }
+                    }
+                    final hasLatexLabels = latexFields.contains('xLabel') || latexFields.contains('yLabel');
 
-                  try {
-                    tableProps.add(getTableProperties(nodeId: tableData.id));
-                  } catch (_) {
-                    tableProps.add(
-                      TableProperties(
-                        legendDisplayName: tableData.name,
-                        lineStyle: 'Full',
-                        lineThickness: 2.5,
-                        lineVisible: true,
-                        markerType: 'Circle',
-                        markerVisible: true,
-                        lineColor: '#00C3FF',
-                        markerColor: '#FFFFFF',
-                      ),
-                    );
-                  }
-                }
+                    Widget baseCanvas;
+                    if (hasLatexLabels && graphProps != null) {
+                      final gp = graphProps;
+                      baseCanvas = LayoutBuilder(
+                        builder: (context, constraints) {
+                          final size = Size(constraints.maxWidth, constraints.maxHeight);
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              CustomPaint(
+                                painter: _MultiSeriesPlotPainter(
+                                  xSeries: seriesX,
+                                  ySeries: seriesY,
+                                  graphProps: gp,
+                                  tableProps: tableProps,
+                                  tableNames: tableNames,
+                                  latexFields: latexFields,
+                                  tableIds: tableIds,
+                                ),
+                                child: Container(),
+                              ),
+                              ..._buildLatexOverlays(gp, size, latexFields),
+                            ],
+                          );
+                        },
+                      );
+                    } else {
+                      baseCanvas = CustomPaint(
+                        painter: _MultiSeriesPlotPainter(
+                          xSeries: seriesX,
+                          ySeries: seriesY,
+                          graphProps: graphProps,
+                          tableProps: tableProps,
+                          tableNames: tableNames,
+                          latexFields: latexFields,
+                          tableIds: tableIds,
+                        ),
+                        child: Container(),
+                      );
+                    }
 
-                Widget canvas = CustomPaint(
-                  painter: _MultiSeriesPlotPainter(
-                    xSeries: seriesX,
-                    ySeries: seriesY,
-                    graphProps: graphProps,
-                    tableProps: tableProps,
-                    tableNames: tableNames,
-                  ),
-                  child: Container(),
+                    Widget canvas = baseCanvas;
+
+                    if (graphProps?.aspectRatio != null) {
+                      canvas = Center(
+                        child: AspectRatio(
+                          aspectRatio: graphProps!.aspectRatio!,
+                          child: canvas,
+                        ),
+                      );
+                    }
+
+                    return ClipRRect(child: canvas);
+                  },
                 );
-
-                if (graphProps?.aspectRatio != null) {
-                  canvas = Center(
-                    child: AspectRatio(
-                      aspectRatio: graphProps!.aspectRatio!,
-                      child: canvas,
-                    ),
-                  );
-                }
-
-                return ClipRRect(child: canvas);
               },
             );
           },
         );
       },
     );
+  }
+
+  List<Widget> _buildLatexOverlays(
+    GraphProperties graphProps,
+    Size size,
+    Set<String> latexFields,
+  ) {
+    const marginLeft = 60.0;
+    const marginBottom = 44.0;
+    const marginTop = 24.0;
+    const marginRight = 24.0;
+
+    const labelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.bold,
+      color: PrimeTheme.textPrimary,
+    );
+
+    final overlays = <Widget>[];
+
+    if (latexFields.contains('xLabel')) {
+      overlays.add(
+        Positioned(
+          left: marginLeft,
+          right: marginRight,
+          bottom: 20,
+          child: Center(
+            child: RichText(
+              text: TextSpan(
+                children: buildLatexSpans(
+                  graphProps.xLabel,
+                  style: labelStyle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (latexFields.contains('yLabel')) {
+      overlays.add(
+        Positioned(
+          left: 0,
+          width: marginLeft,
+          top: marginTop,
+          bottom: marginBottom,
+          child: Center(
+            child: Transform.rotate(
+              angle: -math.pi / 2,
+              child: RichText(
+                text: TextSpan(
+                  children: buildLatexSpans(
+                    graphProps.yLabel,
+                    style: labelStyle,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return overlays;
   }
 }
 
@@ -209,6 +327,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   final GraphProperties? graphProps;
   final List<TableProperties> tableProps;
   final List<String> tableNames;
+  final Set<String> latexFields;
+  final List<String> tableIds;
 
   _MultiSeriesPlotPainter({
     required this.xSeries,
@@ -216,6 +336,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     required this.graphProps,
     required this.tableProps,
     required this.tableNames,
+    this.latexFields = const {},
+    this.tableIds = const [],
   });
 
   @override
@@ -370,7 +492,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         );
       }
 
-      if (showXAxis) {
+      if (showXAxis && !latexFields.contains('xLabel')) {
         final title = TextPainter(
           text: TextSpan(
             text: graphProps?.xLabel ?? 'X',
@@ -392,7 +514,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         );
       }
 
-      if (showYAxis) {
+      if (showYAxis && !latexFields.contains('yLabel')) {
         final title = TextPainter(
           text: TextSpan(
             text: graphProps?.yLabel ?? 'Y',
@@ -617,9 +739,13 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       final tableName = i < tableNames.length
           ? tableNames[i]
           : 'Series ${i + 1}';
+      var entryName = rawName.isEmpty || rawName == 'Series' ? tableName : rawName;
+      if (i < tableIds.length && latexFields.contains('legendDisplayName_${tableIds[i]}')) {
+        entryName = substituteSymbols(entryName);
+      }
       entries.add(
         _LegendEntry(
-          name: rawName.isEmpty || rawName == 'Series' ? tableName : rawName,
+          name: entryName,
           lineColor: _parseColor(props.lineColor, const Color(0xFF00C3FF)),
           markerColor: _parseColor(props.markerColor, Colors.white),
           lineStyle: props.lineStyle,
@@ -734,6 +860,12 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       for (var i = 0; i < xs.length; i++) {
         if (xs[i] != oxs[i] || ys[i] != oys[i]) return true;
       }
+    }
+    if (latexFields.length != oldDelegate.latexFields.length) return true;
+    if (!latexFields.containsAll(oldDelegate.latexFields)) return true;
+    if (tableIds.length != oldDelegate.tableIds.length) return true;
+    for (var i = 0; i < tableIds.length; i++) {
+      if (tableIds[i] != oldDelegate.tableIds[i]) return true;
     }
     return false;
   }

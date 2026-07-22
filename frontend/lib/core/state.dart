@@ -44,6 +44,20 @@ class ProjectState {
   );
   final ValueNotifier<ShapeProperties?> activeShapeProps = ValueNotifier(null);
 
+  final ValueNotifier<int> refreshCanvas = ValueNotifier(0);
+
+  final Map<String, bool> latexMode = {};
+
+  bool getLatexMode(String nodeId, String field) {
+    return latexMode['${nodeId}_$field'] ?? false;
+  }
+
+  void toggleLatexMode(String nodeId, String field) {
+    final key = '${nodeId}_$field';
+    latexMode[key] = !(latexMode[key] ?? false);
+    refreshCanvas.value++;
+  }
+
   void updateFolderProperties(String nodeId, FolderProperties newProps) {
     setFolderProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {

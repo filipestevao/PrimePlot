@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
+import '../components/latex_text_field.dart';
 
 class PropertyInspector extends StatefulWidget {
   const PropertyInspector({super.key});
@@ -420,7 +421,7 @@ class _GraphInspectorState extends State<_GraphInspector> {
             const SizedBox(height: 24),
             _buildSectionHeader('Labels'),
             const SizedBox(height: 12),
-            _buildTextProperty('X-Axis Label', props.xLabel, (val) {
+            _buildLatexProperty('X-Axis Label', 'xLabel', props.xLabel, (val) {
               ProjectState.instance.updateGraphProperties(
                   widget.nodeId, GraphProperties(
                         xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
@@ -429,7 +430,7 @@ class _GraphInspectorState extends State<_GraphInspector> {
                         showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
             }),
             const SizedBox(height: 12),
-            _buildTextProperty('Y-Axis Label', props.yLabel, (val) {
+            _buildLatexProperty('Y-Axis Label', 'yLabel', props.yLabel, (val) {
               ProjectState.instance.updateGraphProperties(
                   widget.nodeId, GraphProperties(
                         xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
@@ -557,7 +558,7 @@ class _TableInspector extends StatelessWidget {
           children: [
             _buildSectionHeader('Legend'),
             const SizedBox(height: 12),
-            _buildTextProperty('Display Name', props.legendDisplayName, (val) {
+            _buildLatexProperty('Display Name', 'legendDisplayName', props.legendDisplayName, (val) {
               ProjectState.instance.updateTableProperties(
                   nodeId, TableProperties(
                         legendDisplayName: val, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
@@ -655,17 +656,18 @@ Widget _buildSectionHeader(String title) {
   );
 }
 
-Widget _buildTextProperty(String label, String value, ValueChanged<String> onChanged) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-      const SizedBox(height: 6),
-      SizedBox(
-        height: 28,
-        child: _PersistentTextField(value: value, onChanged: onChanged),
-      ),
-    ],
+Widget _buildLatexProperty(String label, String field, String value, ValueChanged<String> onChanged) {
+  final state = ProjectState.instance;
+  final nodeId = state.selectedProjectNodeId.value;
+  final useLatex = nodeId != null && state.getLatexMode(nodeId, field);
+  return LatexTextField(
+    label: label,
+    value: value,
+    onChanged: onChanged,
+    useLatex: useLatex,
+    onLatexToggle: () {
+      if (nodeId != null) state.toggleLatexMode(nodeId, field);
+    },
   );
 }
 
@@ -717,7 +719,7 @@ Widget _buildSwitchProperty(String label, bool value, ValueChanged<bool> onChang
         child: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: PrimeTheme.primaryAccent,
+          activeTrackColor: PrimeTheme.primaryAccent,
         ),
       ),
     ],
