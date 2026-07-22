@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
+import '../../src/rust/api/project.dart';
+import '../../src/rust/api/properties.dart';
 
 class PropertyInspector extends StatefulWidget {
   const PropertyInspector({super.key});
@@ -12,367 +14,607 @@ class PropertyInspector extends StatefulWidget {
 }
 
 class _PropertyInspectorState extends State<PropertyInspector> {
-  final _xMinCtrl = TextEditingController();
-  final _xMaxCtrl = TextEditingController();
-  final _yMinCtrl = TextEditingController();
-  final _yMaxCtrl = TextEditingController();
-  final _xMinFocus = FocusNode();
-  final _xMaxFocus = FocusNode();
-  final _yMinFocus = FocusNode();
-  final _yMaxFocus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _syncCtrlsFromProps();
-    ProjectState.instance.plotProperties.addListener(_onPropsChanged);
-    _xMinFocus.addListener(() => _onFocusChange(_xMinFocus, _xMinCtrl, (v) => _commit(_xMinCtrl, v, (p, n) => p.copyWith(xMin: () => n))));
-    _xMaxFocus.addListener(() => _onFocusChange(_xMaxFocus, _xMaxCtrl, (v) => _commit(_xMaxCtrl, v, (p, n) => p.copyWith(xMax: () => n))));
-    _yMinFocus.addListener(() => _onFocusChange(_yMinFocus, _yMinCtrl, (v) => _commit(_yMinCtrl, v, (p, n) => p.copyWith(yMin: () => n))));
-    _yMaxFocus.addListener(() => _onFocusChange(_yMaxFocus, _yMaxCtrl, (v) => _commit(_yMaxCtrl, v, (p, n) => p.copyWith(yMax: () => n))));
-  }
-
-  @override
-  void dispose() {
-    ProjectState.instance.plotProperties.removeListener(_onPropsChanged);
-    _xMinCtrl.dispose();
-    _xMaxCtrl.dispose();
-    _yMinCtrl.dispose();
-    _yMaxCtrl.dispose();
-    _xMinFocus.dispose();
-    _xMaxFocus.dispose();
-    _yMinFocus.dispose();
-    _yMaxFocus.dispose();
-    super.dispose();
-  }
-
-  void _syncCtrlsFromProps() {
-    final p = ProjectState.instance.plotProperties.value;
-    _xMinCtrl.text = p.xMin?.toString() ?? '';
-    _xMaxCtrl.text = p.xMax?.toString() ?? '';
-    _yMinCtrl.text = p.yMin?.toString() ?? '';
-    _yMaxCtrl.text = p.yMax?.toString() ?? '';
-  }
-
-  void _onPropsChanged() {
-    if (!_xMinFocus.hasFocus) _xMinCtrl.text = ProjectState.instance.plotProperties.value.xMin?.toString() ?? '';
-    if (!_xMaxFocus.hasFocus) _xMaxCtrl.text = ProjectState.instance.plotProperties.value.xMax?.toString() ?? '';
-    if (!_yMinFocus.hasFocus) _yMinCtrl.text = ProjectState.instance.plotProperties.value.yMin?.toString() ?? '';
-    if (!_yMaxFocus.hasFocus) _yMaxCtrl.text = ProjectState.instance.plotProperties.value.yMax?.toString() ?? '';
-  }
-
-  void _onFocusChange(FocusNode fn, TextEditingController ctrl, void Function(double?) setter) {
-    if (!fn.hasFocus) {
-      setter(ctrl.text.trim().isEmpty ? null : double.tryParse(ctrl.text));
-    }
-  }
-
-  void _commit(TextEditingController ctrl, double? val, PlotProperties Function(PlotProperties, double?) update) {
-    final props = ProjectState.instance.plotProperties.value;
-    ProjectState.instance.updatePlotProperties(update(props, val));
-    ctrl.text = val?.toString() ?? '';
-  }
-
-  void _showColorPicker(BuildContext context, PlotProperties props) {
-    final colors = [
-      PrimeTheme.primaryAccent,
-      Colors.redAccent,
-      Colors.greenAccent,
-      Colors.amber,
-      Colors.purpleAccent,
-      Colors.pinkAccent,
-      Colors.tealAccent,
-      Colors.white,
-    ];
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: PrimeTheme.panelBackground,
-        title: const Text('Select Line Color', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 14)),
-        content: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: colors.map((c) => InkWell(
-            onTap: () {
-              ProjectState.instance.updatePlotProperties(props.copyWith(lineColor: c));
-              Navigator.pop(ctx);
-            },
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: c,
-                shape: BoxShape.circle,
-                border: Border.all(color: props.lineColor == c ? Colors.white : Colors.transparent, width: 2),
-              ),
-            ),
-          )).toList(),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
       color: PrimeTheme.panelBackground,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: ValueListenableBuilder<PlotProperties>(
-              valueListenable: ProjectState.instance.plotProperties,
-              builder: (context, props, child) {
-                return ListView(
-                  padding: const EdgeInsets.all(16.0),
-                  children: [
-                    _buildSectionHeader('Axes'),
-                    const SizedBox(height: 12),
-                    _buildAxisRangeProperty(
-                      'X-Axis',
-                      _xMinCtrl, _xMinFocus,
-                      _xMaxCtrl, _xMaxFocus,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildAxisRangeProperty(
-                      'Y-Axis',
-                      _yMinCtrl, _yMinFocus,
-                      _yMaxCtrl, _yMaxFocus,
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    _buildSectionHeader('Labels'),
-                    const SizedBox(height: 12),
-                    _buildTextProperty('X-Axis Label', props.xAxisLabel, (val) {
-                      ProjectState.instance.updatePlotProperties(props.copyWith(xAxisLabel: val));
-                    }),
-                    const SizedBox(height: 16),
-                    _buildTextProperty('Y-Axis Label', props.yAxisLabel, (val) {
-                      ProjectState.instance.updatePlotProperties(props.copyWith(yAxisLabel: val));
-                    }),
-                    const SizedBox(height: 24),
+      child: ValueListenableBuilder<String?>(
+        valueListenable: ProjectState.instance.selectedProjectNodeId,
+        builder: (context, selectedId, child) {
+          if (selectedId == null) {
+            return const Center(
+                child: Text('No selection',
+                    style: TextStyle(color: PrimeTheme.textSecondary)));
+          }
+          final root = ProjectState.instance.projectTree.value;
+          if (root == null) return const SizedBox.shrink();
+          final node = ProjectState.instance.findNodeById(root, selectedId);
+          if (node == null) return const SizedBox.shrink();
 
-                    _buildSectionHeader('Aspect Ratio'),
-                    const SizedBox(height: 12),
-                    _buildDropdownProperty(
-                      'Aspect Ratio',
-                      props.aspectRatio,
-                      {
-                        null: 'Free',
-                        1.0: '1:1',
-                        1.5: '3:2',
-                        1.3333: '4:3',
-                        1.7777: '16:9',
-                      },
-                      (val) {
-                        ProjectState.instance.updatePlotProperties(props.copyWith(aspectRatio: () => val));
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    _buildSectionHeader('Appearance'),
-                    const SizedBox(height: 12),
-                    _buildColorProperty(context, 'Line Color', props),
-                    const SizedBox(height: 16),
-                    _buildSliderProperty(context, 'Thickness', props.lineThickness, 1.0, 10.0, (val) {
-                      ProjectState.instance.updatePlotProperties(props.copyWith(lineThickness: val));
-                    }),
-                  ],
-                );
-              }
-            ),
-          ),
-        ],
+          switch (node.nodeType) {
+            case NodeType.folder:
+              return _FolderInspector(nodeId: selectedId);
+            case NodeType.plot:
+              return _GraphInspector(nodeId: selectedId);
+            case NodeType.dataset:
+              return _TableInspector(nodeId: selectedId);
+            case NodeType.function:
+              return _FunctionInspector(nodeId: selectedId);
+            case NodeType.shape:
+              return _ShapeInspector(nodeId: selectedId);
+          }
+        },
       ),
     );
   }
+}
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        color: PrimeTheme.textSecondary,
-        letterSpacing: 0.5,
-      ),
-    );
-  }
+// -----------------------------------------------------------------------------
+// Folder Inspector
+// -----------------------------------------------------------------------------
+class _FolderInspector extends StatelessWidget {
+  final String nodeId;
+  const _FolderInspector({required this.nodeId});
 
-  Widget _buildColorProperty(BuildContext context, String label, PlotProperties props) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-        InkWell(
-          onTap: () => _showColorPicker(context, props),
-          child: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: props.lineColor,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: PrimeTheme.borderSide),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSliderProperty(BuildContext context, String label, double value, double min, double max, ValueChanged<double> onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<FolderProperties?>(
+      valueListenable: ProjectState.instance.activeFolderProps,
+      builder: (context, props, child) {
+        if (props == null) return const SizedBox.shrink();
+        return ListView(
+          padding: const EdgeInsets.all(16.0),
           children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-            Text(value.toStringAsFixed(1), style: const TextStyle(fontSize: 12, color: PrimeTheme.textSecondary)),
+            _buildSectionHeader('Information'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: TextEditingController(text: props.information)
+                ..selection = TextSelection.collapsed(offset: props.information.length),
+              style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+              maxLines: null,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(8),
+                isDense: true,
+              ),
+              onChanged: (val) {
+                ProjectState.instance.updateFolderProperties(
+                    nodeId, FolderProperties(information: val));
+              },
+            ),
           ],
-        ),
-        const SizedBox(height: 4),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 2,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-            activeTrackColor: PrimeTheme.primaryAccent,
-            inactiveTrackColor: PrimeTheme.borderSide,
-            thumbColor: Colors.white,
-          ),
-          child: Slider(
-            value: value,
-            min: min,
-            max: max,
-            onChanged: onChanged,
-          ),
-        ),
-      ],
+        );
+      },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Function Inspector
+// -----------------------------------------------------------------------------
+class _FunctionInspector extends StatelessWidget {
+  final String nodeId;
+  const _FunctionInspector({required this.nodeId});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<FunctionProperties?>(
+      valueListenable: ProjectState.instance.activeFunctionProps,
+      builder: (context, props, child) {
+        if (props == null) return const SizedBox.shrink();
+        return ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            _buildSectionHeader('Equation'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: TextEditingController(text: props.equation)
+                ..selection = TextSelection.collapsed(offset: props.equation.length),
+              style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(8),
+                isDense: true,
+              ),
+              onChanged: (val) {
+                ProjectState.instance.updateFunctionProperties(
+                    nodeId, FunctionProperties(equation: val));
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Shape Inspector
+// -----------------------------------------------------------------------------
+class _ShapeInspector extends StatelessWidget {
+  final String nodeId;
+  const _ShapeInspector({required this.nodeId});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ShapeProperties?>(
+      valueListenable: ProjectState.instance.activeShapeProps,
+      builder: (context, props, child) {
+        if (props == null) return const SizedBox.shrink();
+        return ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            _buildSectionHeader('Shape'),
+            const SizedBox(height: 12),
+            _buildDropdownProperty(
+              'Type',
+              props.shapeType,
+              {'Rectangle': 'Rectangle', 'Ellipse': 'Ellipse', 'Line': 'Line'},
+              (val) {
+                ProjectState.instance.updateShapeProperties(
+                    nodeId, ShapeProperties(shapeType: val));
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Graph Inspector
+// -----------------------------------------------------------------------------
+class _GraphInspector extends StatelessWidget {
+  final String nodeId;
+  const _GraphInspector({required this.nodeId});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<GraphProperties?>(
+      valueListenable: ProjectState.instance.activeGraphProps,
+      builder: (context, props, child) {
+        if (props == null) return const SizedBox.shrink();
+        return ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            _buildSectionHeader('Axes Range'),
+            const SizedBox(height: 12),
+            _buildAxisRangeProperty(
+              'X-Axis',
+              props.xMin,
+              props.xMax,
+              (min, max) {
+                ProjectState.instance.updateGraphProperties(
+                    nodeId,
+                    GraphProperties(
+                        xMin: min,
+                        xMax: max,
+                        yMin: props.yMin,
+                        yMax: props.yMax,
+                        xVisible: props.xVisible,
+                        yVisible: props.yVisible,
+                        xScale: props.xScale,
+                        yScale: props.yScale,
+                        xLabel: props.xLabel,
+                        yLabel: props.yLabel,
+                        aspectRatio: props.aspectRatio,
+                        showGrid: props.showGrid,
+                        showLegend: props.showLegend,
+                        legendPosition: props.legendPosition));
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildAxisRangeProperty(
+              'Y-Axis',
+              props.yMin,
+              props.yMax,
+              (min, max) {
+                ProjectState.instance.updateGraphProperties(
+                    nodeId,
+                    GraphProperties(
+                        xMin: props.xMin,
+                        xMax: props.xMax,
+                        yMin: min,
+                        yMax: max,
+                        xVisible: props.xVisible,
+                        yVisible: props.yVisible,
+                        xScale: props.xScale,
+                        yScale: props.yScale,
+                        xLabel: props.xLabel,
+                        yLabel: props.yLabel,
+                        aspectRatio: props.aspectRatio,
+                        showGrid: props.showGrid,
+                        showLegend: props.showLegend,
+                        legendPosition: props.legendPosition));
+              },
+            ),
+            const SizedBox(height: 24),
+            _buildSectionHeader('Labels'),
+            const SizedBox(height: 12),
+            _buildTextProperty('X-Axis Label', props.xLabel, (val) {
+              ProjectState.instance.updateGraphProperties(
+                  nodeId, GraphProperties(
+                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
+                        xLabel: val, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
+            }),
+            const SizedBox(height: 12),
+            _buildTextProperty('Y-Axis Label', props.yLabel, (val) {
+              ProjectState.instance.updateGraphProperties(
+                  nodeId, GraphProperties(
+                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
+                        xLabel: props.xLabel, yLabel: val, aspectRatio: props.aspectRatio,
+                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
+            }),
+            const SizedBox(height: 24),
+            _buildSectionHeader('Settings'),
+            const SizedBox(height: 12),
+            _buildDropdownProperty(
+              'Aspect Ratio',
+              props.aspectRatio,
+              {null: 'Free', 1.0: '1:1', 1.5: '3:2', 1.3333: '4:3', 1.7777: '16:9'},
+              (val) {
+                ProjectState.instance.updateGraphProperties(
+                  nodeId, GraphProperties(
+                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
+                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: val,
+                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildSwitchProperty('Show Grid', props.showGrid, (val) {
+              ProjectState.instance.updateGraphProperties(
+                  nodeId, GraphProperties(
+                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
+                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                        showGrid: val, showLegend: props.showLegend, legendPosition: props.legendPosition));
+            }),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildAxisRangeProperty(
-    String label,
-    TextEditingController minCtrl, FocusNode minFocus,
-    TextEditingController maxCtrl, FocusNode maxFocus,
-  ) {
+      String label, double? minVal, double? maxVal, Function(double?, double?) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(child: _buildNumberField(minCtrl, minFocus)),
+            Expanded(
+              child: Container(
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: TextField(
+                  controller: TextEditingController(text: minVal?.toString() ?? '')
+                    ..selection = TextSelection.collapsed(offset: (minVal?.toString() ?? '').length),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'Auto',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  onChanged: (val) {
+                    final d = val.trim().isEmpty ? null : double.tryParse(val);
+                    onChanged(d, maxVal);
+                  },
+                ),
+              ),
+            ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.0),
               child: Text('-', style: TextStyle(color: PrimeTheme.textSecondary)),
             ),
-            Expanded(child: _buildNumberField(maxCtrl, maxFocus)),
+            Expanded(
+              child: Container(
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: TextField(
+                  controller: TextEditingController(text: maxVal?.toString() ?? '')
+                    ..selection = TextSelection.collapsed(offset: (maxVal?.toString() ?? '').length),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'Auto',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  onChanged: (val) {
+                    final d = val.trim().isEmpty ? null : double.tryParse(val);
+                    onChanged(minVal, d);
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ],
     );
   }
+}
 
-  Widget _buildNumberField(TextEditingController controller, FocusNode focusNode) {
-    return SizedBox(
-      height: 32,
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-        decoration: InputDecoration(
-          hintText: 'Auto',
-          hintStyle: TextStyle(fontSize: 12, color: PrimeTheme.textSecondary.withValues(alpha: 0.5)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-          filled: true,
-          fillColor: PrimeTheme.backgroundDark.withValues(alpha: 0.5),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: PrimeTheme.borderSide),
+// -----------------------------------------------------------------------------
+// Table Inspector
+// -----------------------------------------------------------------------------
+class _TableInspector extends StatelessWidget {
+  final String nodeId;
+  const _TableInspector({required this.nodeId});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TableProperties?>(
+      valueListenable: ProjectState.instance.activeTableProps,
+      builder: (context, props, child) {
+        if (props == null) return const SizedBox.shrink();
+        return ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            _buildSectionHeader('Legend'),
+            const SizedBox(height: 12),
+            _buildTextProperty('Display Name', props.legendDisplayName, (val) {
+              ProjectState.instance.updateTableProperties(
+                  nodeId, TableProperties(
+                        legendDisplayName: val, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
+                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
+                        lineColor: props.lineColor, markerColor: props.markerColor));
+            }),
+            const SizedBox(height: 24),
+            _buildSectionHeader('Appearance'),
+            const SizedBox(height: 12),
+            _buildDropdownProperty(
+              'Line Style',
+              props.lineStyle,
+              {'Full': 'Full', 'Dashed': 'Dashed', 'Dotted': 'Dotted'},
+              (val) {
+                ProjectState.instance.updateTableProperties(
+                  nodeId, TableProperties(
+                        legendDisplayName: props.legendDisplayName, lineStyle: val, lineThickness: props.lineThickness,
+                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
+                        lineColor: props.lineColor, markerColor: props.markerColor));
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildColorPropertyHex(context, 'Line Color', props.lineColor, (c) {
+                ProjectState.instance.updateTableProperties(
+                  nodeId, TableProperties(
+                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
+                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
+                        lineColor: c, markerColor: props.markerColor));
+            }),
+            const SizedBox(height: 16),
+            _buildSliderProperty(context, 'Line Thickness', props.lineThickness, 1.0, 10.0, (val) {
+                ProjectState.instance.updateTableProperties(
+                  nodeId, TableProperties(
+                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: val,
+                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
+                        lineColor: props.lineColor, markerColor: props.markerColor));
+            }),
+            const SizedBox(height: 24),
+            _buildDropdownProperty(
+              'Marker Type',
+              props.markerType,
+              {'Circle': 'Circle', 'Square': 'Square', 'Triangle': 'Triangle', 'None': 'None'},
+              (val) {
+                ProjectState.instance.updateTableProperties(
+                  nodeId, TableProperties(
+                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
+                        lineVisible: props.lineVisible, markerType: val, markerVisible: props.markerVisible,
+                        lineColor: props.lineColor, markerColor: props.markerColor));
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildColorPropertyHex(context, 'Marker Color', props.markerColor, (c) {
+                ProjectState.instance.updateTableProperties(
+                  nodeId, TableProperties(
+                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
+                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
+                        lineColor: props.lineColor, markerColor: c));
+            }),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Common Builders
+// -----------------------------------------------------------------------------
+
+Widget _buildSectionHeader(String title) {
+  return Text(
+    title.toUpperCase(),
+    style: const TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      color: PrimeTheme.textSecondary,
+      letterSpacing: 0.5,
+    ),
+  );
+}
+
+Widget _buildTextProperty(String label, String value, ValueChanged<String> onChanged) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
+      const SizedBox(height: 6),
+      SizedBox(
+        height: 28,
+        child: TextField(
+          controller: TextEditingController(text: value)..selection = TextSelection.collapsed(offset: value.length),
+          style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: PrimeTheme.borderSide),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: PrimeTheme.primaryAccent),
+          onChanged: onChanged,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildDropdownProperty<T>(
+    String label, T value, Map<T, String> options, ValueChanged<T> onChanged) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
+      Container(
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: PrimeTheme.backgroundDark,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: PrimeTheme.borderSide),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<T>(
+            value: value,
+            dropdownColor: PrimeTheme.backgroundDark,
+            icon: const Icon(Icons.arrow_drop_down, color: PrimeTheme.textSecondary, size: 16),
+            style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+            onChanged: (v) {
+              if (v != null || options.containsKey(null)) {
+                onChanged(v as T);
+              }
+            },
+            items: options.entries.map((e) {
+              return DropdownMenuItem<T>(
+                value: e.key,
+                child: Text(e.value),
+              );
+            }).toList(),
           ),
         ),
       ),
-    );
-  }
+    ],
+  );
+}
 
-  Widget _buildTextProperty(String label, String value, ValueChanged<String> onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 32,
-          child: TextField(
-            controller: TextEditingController(text: value)..selection = TextSelection.collapsed(offset: value.length),
-            style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-            onChanged: onChanged,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-              filled: true,
-              fillColor: PrimeTheme.backgroundDark,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: const BorderSide(color: PrimeTheme.borderSide),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: const BorderSide(color: PrimeTheme.borderSide),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: const BorderSide(color: PrimeTheme.primaryAccent),
+Widget _buildSwitchProperty(String label, bool value, ValueChanged<bool> onChanged) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
+      SizedBox(
+        height: 24,
+        child: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: PrimeTheme.primaryAccent,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildColorPropertyHex(BuildContext context, String label, String hexColor, ValueChanged<String> onChanged) {
+  Color color = Colors.white;
+  try {
+    color = Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
+  } catch (e) {
+    // fallback
+  }
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
+      InkWell(
+        onTap: () {
+          // simple color picker mock - extending this is for future stages
+          final colors = ['#00C3FF', '#FF5252', '#69F0AE', '#FFD740', '#E040FB', '#FFFFFF'];
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: PrimeTheme.panelBackground,
+              title: const Text('Select Color', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 14)),
+              content: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: colors.map((c) => InkWell(
+                  onTap: () {
+                    onChanged(c);
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Color(int.parse(c.replaceFirst('#', '0xFF'))),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: hexColor == c ? Colors.white : Colors.transparent, width: 2),
+                    ),
+                  ),
+                )).toList(),
               ),
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDropdownProperty(String label, double? value, Map<double?, String> options, ValueChanged<double?> onChanged) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-        Container(
-          height: 30, // Increased height
-          padding: const EdgeInsets.symmetric(horizontal: 12), // Increased padding
+          );
+        },
+        child: Container(
+          width: 24,
+          height: 24,
           decoration: BoxDecoration(
-            color: PrimeTheme.backgroundDark,
+            color: color,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: PrimeTheme.borderSide),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<double?>(
-              value: value,
-              icon: const Icon(Icons.arrow_drop_down, size: 18, color: PrimeTheme.textSecondary), // Slightly larger icon
-              dropdownColor: PrimeTheme.backgroundDark,
-              style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-              onChanged: onChanged,
-              items: options.entries.map((entry) {
-                return DropdownMenuItem<double?>(
-                  value: entry.key,
-                  child: Text(entry.value),
-                );
-              }).toList(),
-            ),
-          ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
+Widget _buildSliderProperty(BuildContext context, String label, double value, double min, double max, ValueChanged<double> onChanged) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
+          Text(value.toStringAsFixed(1), style: const TextStyle(fontSize: 12, color: PrimeTheme.textSecondary)),
+        ],
+      ),
+      const SizedBox(height: 4),
+      SliderTheme(
+        data: SliderTheme.of(context).copyWith(
+          trackHeight: 2,
+          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+          overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+          activeTrackColor: PrimeTheme.primaryAccent,
+          inactiveTrackColor: PrimeTheme.borderSide,
+          thumbColor: Colors.white,
+        ),
+        child: Slider(
+          value: value,
+          min: min,
+          max: max,
+          onChanged: onChanged,
+        ),
+      ),
+    ],
+  );
 }

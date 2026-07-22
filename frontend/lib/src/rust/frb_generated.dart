@@ -5,6 +5,7 @@
 
 import 'api/data.dart';
 import 'api/project.dart';
+import 'api/properties.dart';
 import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -68,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1814600171;
+  int get rustContentHash => 1788347686;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -103,7 +104,23 @@ abstract class RustLibApi extends BaseApi {
 
   ProjectNode crateApiProjectDeleteProjectNode({required String nodeId});
 
+  Future<FolderProperties> crateApiPropertiesFolderPropertiesDefault();
+
+  Future<FunctionProperties> crateApiPropertiesFunctionPropertiesDefault();
+
   DTODataTable crateApiDataGetEmptyTableData();
+
+  FolderProperties crateApiPropertiesGetFolderProperties({
+    required String nodeId,
+  });
+
+  FunctionProperties crateApiPropertiesGetFunctionProperties({
+    required String nodeId,
+  });
+
+  GraphProperties crateApiPropertiesGetGraphProperties({
+    required String nodeId,
+  });
 
   DTODataTable crateApiDataGetInitialTableData();
 
@@ -116,11 +133,21 @@ abstract class RustLibApi extends BaseApi {
 
   ProjectNode crateApiProjectGetProjectTree();
 
+  ShapeProperties crateApiPropertiesGetShapeProperties({
+    required String nodeId,
+  });
+
   DTODataTable crateApiProjectGetTable({required String tableId});
+
+  TableProperties crateApiPropertiesGetTableProperties({
+    required String nodeId,
+  });
 
   List<DTODataTable> crateApiProjectGetTablesForGraph({
     required String graphId,
   });
+
+  Future<GraphProperties> crateApiPropertiesGraphPropertiesDefault();
 
   String crateApiSimpleGreet({required String name});
 
@@ -148,6 +175,35 @@ abstract class RustLibApi extends BaseApi {
     required String tableId,
     required List<DTODataColumn> columns,
   });
+
+  void crateApiPropertiesSetFolderProperties({
+    required String nodeId,
+    required FolderProperties props,
+  });
+
+  void crateApiPropertiesSetFunctionProperties({
+    required String nodeId,
+    required FunctionProperties props,
+  });
+
+  void crateApiPropertiesSetGraphProperties({
+    required String nodeId,
+    required GraphProperties props,
+  });
+
+  void crateApiPropertiesSetShapeProperties({
+    required String nodeId,
+    required ShapeProperties props,
+  });
+
+  void crateApiPropertiesSetTableProperties({
+    required String nodeId,
+    required TableProperties props,
+  });
+
+  Future<ShapeProperties> crateApiPropertiesShapePropertiesDefault();
+
+  Future<TableProperties> crateApiPropertiesTablePropertiesDefault();
 
   void crateApiProjectUpdateTableFromRaw({
     required String tableId,
@@ -314,12 +370,69 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<FolderProperties> crateApiPropertiesFolderPropertiesDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_folder_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesFolderPropertiesDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesFolderPropertiesDefaultConstMeta =>
+      const TaskConstMeta(debugName: "folder_properties_default", argNames: []);
+
+  @override
+  Future<FunctionProperties> crateApiPropertiesFunctionPropertiesDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_function_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesFunctionPropertiesDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesFunctionPropertiesDefaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "function_properties_default",
+        argNames: [],
+      );
+
+  @override
   DTODataTable crateApiDataGetEmptyTableData() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -336,12 +449,96 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_empty_table_data", argNames: []);
 
   @override
+  FolderProperties crateApiPropertiesGetFolderProperties({
+    required String nodeId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_folder_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesGetFolderPropertiesConstMeta,
+        argValues: [nodeId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesGetFolderPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_folder_properties",
+        argNames: ["nodeId"],
+      );
+
+  @override
+  FunctionProperties crateApiPropertiesGetFunctionProperties({
+    required String nodeId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_function_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesGetFunctionPropertiesConstMeta,
+        argValues: [nodeId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesGetFunctionPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_function_properties",
+        argNames: ["nodeId"],
+      );
+
+  @override
+  GraphProperties crateApiPropertiesGetGraphProperties({
+    required String nodeId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_graph_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesGetGraphPropertiesConstMeta,
+        argValues: [nodeId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesGetGraphPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_graph_properties",
+        argNames: ["nodeId"],
+      );
+
+  @override
   DTODataTable crateApiDataGetInitialTableData() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -364,7 +561,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_usize(numPoints, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_point_2_d,
@@ -394,7 +591,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_usize(rowCount, serializer);
           sse_encode_usize(colCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -419,7 +616,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -436,13 +633,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_project_tree", argNames: []);
 
   @override
+  ShapeProperties crateApiPropertiesGetShapeProperties({
+    required String nodeId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_shape_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesGetShapePropertiesConstMeta,
+        argValues: [nodeId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesGetShapePropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_shape_properties",
+        argNames: ["nodeId"],
+      );
+
+  @override
   DTODataTable crateApiProjectGetTable({required String tableId}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(tableId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -459,6 +684,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_table", argNames: ["tableId"]);
 
   @override
+  TableProperties crateApiPropertiesGetTableProperties({
+    required String nodeId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_table_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesGetTablePropertiesConstMeta,
+        argValues: [nodeId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesGetTablePropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_table_properties",
+        argNames: ["nodeId"],
+      );
+
+  @override
   List<DTODataTable> crateApiProjectGetTablesForGraph({
     required String graphId,
   }) {
@@ -467,7 +720,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(graphId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_dto_data_table,
@@ -487,13 +740,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<GraphProperties> crateApiPropertiesGraphPropertiesDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_graph_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesGraphPropertiesDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesGraphPropertiesDefaultConstMeta =>
+      const TaskConstMeta(debugName: "graph_properties_default", argNames: []);
+
+  @override
   String crateApiSimpleGreet({required String name}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -518,7 +798,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 22,
             port: port_,
           );
         },
@@ -547,7 +827,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_String(newParentId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -573,7 +853,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(raw, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -603,7 +883,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_String(newName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -635,7 +915,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(parentId, serializer);
           sse_encode_usize(oldIndex, serializer);
           sse_encode_usize(newIndex, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -665,7 +945,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(tableId, serializer);
           sse_encode_list_dto_data_column(columns, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -684,6 +964,210 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  void crateApiPropertiesSetFolderProperties({
+    required String nodeId,
+    required FolderProperties props,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          sse_encode_box_autoadd_folder_properties(props, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesSetFolderPropertiesConstMeta,
+        argValues: [nodeId, props],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesSetFolderPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_folder_properties",
+        argNames: ["nodeId", "props"],
+      );
+
+  @override
+  void crateApiPropertiesSetFunctionProperties({
+    required String nodeId,
+    required FunctionProperties props,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          sse_encode_box_autoadd_function_properties(props, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesSetFunctionPropertiesConstMeta,
+        argValues: [nodeId, props],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesSetFunctionPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_function_properties",
+        argNames: ["nodeId", "props"],
+      );
+
+  @override
+  void crateApiPropertiesSetGraphProperties({
+    required String nodeId,
+    required GraphProperties props,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          sse_encode_box_autoadd_graph_properties(props, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesSetGraphPropertiesConstMeta,
+        argValues: [nodeId, props],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesSetGraphPropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_graph_properties",
+        argNames: ["nodeId", "props"],
+      );
+
+  @override
+  void crateApiPropertiesSetShapeProperties({
+    required String nodeId,
+    required ShapeProperties props,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          sse_encode_box_autoadd_shape_properties(props, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesSetShapePropertiesConstMeta,
+        argValues: [nodeId, props],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesSetShapePropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_shape_properties",
+        argNames: ["nodeId", "props"],
+      );
+
+  @override
+  void crateApiPropertiesSetTableProperties({
+    required String nodeId,
+    required TableProperties props,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(nodeId, serializer);
+          sse_encode_box_autoadd_table_properties(props, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesSetTablePropertiesConstMeta,
+        argValues: [nodeId, props],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesSetTablePropertiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_table_properties",
+        argNames: ["nodeId", "props"],
+      );
+
+  @override
+  Future<ShapeProperties> crateApiPropertiesShapePropertiesDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 33,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_shape_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesShapePropertiesDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesShapePropertiesDefaultConstMeta =>
+      const TaskConstMeta(debugName: "shape_properties_default", argNames: []);
+
+  @override
+  Future<TableProperties> crateApiPropertiesTablePropertiesDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 34,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_table_properties,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPropertiesTablePropertiesDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPropertiesTablePropertiesDefaultConstMeta =>
+      const TaskConstMeta(debugName: "table_properties_default", argNames: []);
+
+  @override
   void crateApiProjectUpdateTableFromRaw({
     required String tableId,
     required String raw,
@@ -694,7 +1178,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(tableId, serializer);
           sse_encode_String(raw, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -723,6 +1207,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  FolderProperties dco_decode_box_autoadd_folder_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_folder_properties(raw);
+  }
+
+  @protected
+  FunctionProperties dco_decode_box_autoadd_function_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_function_properties(raw);
+  }
+
+  @protected
+  GraphProperties dco_decode_box_autoadd_graph_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_graph_properties(raw);
+  }
+
+  @protected
+  ShapeProperties dco_decode_box_autoadd_shape_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_shape_properties(raw);
+  }
+
+  @protected
+  TableProperties dco_decode_box_autoadd_table_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_table_properties(raw);
   }
 
   @protected
@@ -761,6 +1281,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  FolderProperties dco_decode_folder_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return FolderProperties(information: dco_decode_String(arr[0]));
+  }
+
+  @protected
+  FunctionProperties dco_decode_function_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return FunctionProperties(equation: dco_decode_String(arr[0]));
+  }
+
+  @protected
+  GraphProperties dco_decode_graph_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    return GraphProperties(
+      xMin: dco_decode_opt_box_autoadd_f_64(arr[0]),
+      xMax: dco_decode_opt_box_autoadd_f_64(arr[1]),
+      yMin: dco_decode_opt_box_autoadd_f_64(arr[2]),
+      yMax: dco_decode_opt_box_autoadd_f_64(arr[3]),
+      xVisible: dco_decode_bool(arr[4]),
+      yVisible: dco_decode_bool(arr[5]),
+      xScale: dco_decode_String(arr[6]),
+      yScale: dco_decode_String(arr[7]),
+      xLabel: dco_decode_String(arr[8]),
+      yLabel: dco_decode_String(arr[9]),
+      aspectRatio: dco_decode_opt_box_autoadd_f_64(arr[10]),
+      showGrid: dco_decode_bool(arr[11]),
+      showLegend: dco_decode_bool(arr[12]),
+      legendPosition: dco_decode_String(arr[13]),
+    );
   }
 
   @protected
@@ -812,6 +1374,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
   Point2D dco_decode_point_2_d(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -831,6 +1399,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       name: dco_decode_String(arr[1]),
       nodeType: dco_decode_node_type(arr[2]),
       children: dco_decode_list_project_node(arr[3]),
+    );
+  }
+
+  @protected
+  ShapeProperties dco_decode_shape_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return ShapeProperties(shapeType: dco_decode_String(arr[0]));
+  }
+
+  @protected
+  TableProperties dco_decode_table_properties(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return TableProperties(
+      legendDisplayName: dco_decode_String(arr[0]),
+      lineStyle: dco_decode_String(arr[1]),
+      lineThickness: dco_decode_f_64(arr[2]),
+      lineVisible: dco_decode_bool(arr[3]),
+      markerType: dco_decode_String(arr[4]),
+      markerVisible: dco_decode_bool(arr[5]),
+      lineColor: dco_decode_String(arr[6]),
+      markerColor: dco_decode_String(arr[7]),
     );
   }
 
@@ -866,6 +1461,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  FolderProperties sse_decode_box_autoadd_folder_properties(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_folder_properties(deserializer));
+  }
+
+  @protected
+  FunctionProperties sse_decode_box_autoadd_function_properties(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_function_properties(deserializer));
+  }
+
+  @protected
+  GraphProperties sse_decode_box_autoadd_graph_properties(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_graph_properties(deserializer));
+  }
+
+  @protected
+  ShapeProperties sse_decode_box_autoadd_shape_properties(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_shape_properties(deserializer));
+  }
+
+  @protected
+  TableProperties sse_decode_box_autoadd_table_properties(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_table_properties(deserializer));
+  }
+
+  @protected
   DTOColumnRole sse_decode_dto_column_role(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -894,6 +1535,57 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  FolderProperties sse_decode_folder_properties(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_information = sse_decode_String(deserializer);
+    return FolderProperties(information: var_information);
+  }
+
+  @protected
+  FunctionProperties sse_decode_function_properties(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_equation = sse_decode_String(deserializer);
+    return FunctionProperties(equation: var_equation);
+  }
+
+  @protected
+  GraphProperties sse_decode_graph_properties(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_xMin = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_xMax = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_yMin = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_yMax = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_xVisible = sse_decode_bool(deserializer);
+    var var_yVisible = sse_decode_bool(deserializer);
+    var var_xScale = sse_decode_String(deserializer);
+    var var_yScale = sse_decode_String(deserializer);
+    var var_xLabel = sse_decode_String(deserializer);
+    var var_yLabel = sse_decode_String(deserializer);
+    var var_aspectRatio = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_showGrid = sse_decode_bool(deserializer);
+    var var_showLegend = sse_decode_bool(deserializer);
+    var var_legendPosition = sse_decode_String(deserializer);
+    return GraphProperties(
+      xMin: var_xMin,
+      xMax: var_xMax,
+      yMin: var_yMin,
+      yMax: var_yMax,
+      xVisible: var_xVisible,
+      yVisible: var_yVisible,
+      xScale: var_xScale,
+      yScale: var_yScale,
+      xLabel: var_xLabel,
+      yLabel: var_yLabel,
+      aspectRatio: var_aspectRatio,
+      showGrid: var_showGrid,
+      showLegend: var_showLegend,
+      legendPosition: var_legendPosition,
+    );
   }
 
   @protected
@@ -976,6 +1668,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   Point2D sse_decode_point_2_d(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_x = sse_decode_f_64(deserializer);
@@ -995,6 +1698,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       name: var_name,
       nodeType: var_nodeType,
       children: var_children,
+    );
+  }
+
+  @protected
+  ShapeProperties sse_decode_shape_properties(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_shapeType = sse_decode_String(deserializer);
+    return ShapeProperties(shapeType: var_shapeType);
+  }
+
+  @protected
+  TableProperties sse_decode_table_properties(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_legendDisplayName = sse_decode_String(deserializer);
+    var var_lineStyle = sse_decode_String(deserializer);
+    var var_lineThickness = sse_decode_f_64(deserializer);
+    var var_lineVisible = sse_decode_bool(deserializer);
+    var var_markerType = sse_decode_String(deserializer);
+    var var_markerVisible = sse_decode_bool(deserializer);
+    var var_lineColor = sse_decode_String(deserializer);
+    var var_markerColor = sse_decode_String(deserializer);
+    return TableProperties(
+      legendDisplayName: var_legendDisplayName,
+      lineStyle: var_lineStyle,
+      lineThickness: var_lineThickness,
+      lineVisible: var_lineVisible,
+      markerType: var_markerType,
+      markerVisible: var_markerVisible,
+      lineColor: var_lineColor,
+      markerColor: var_markerColor,
     );
   }
 
@@ -1025,6 +1758,57 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_folder_properties(
+    FolderProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_folder_properties(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_function_properties(
+    FunctionProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_function_properties(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_graph_properties(
+    GraphProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_graph_properties(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_shape_properties(
+    ShapeProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_shape_properties(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_table_properties(
+    TableProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_table_properties(self, serializer);
   }
 
   @protected
@@ -1059,6 +1843,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_folder_properties(
+    FolderProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.information, serializer);
+  }
+
+  @protected
+  void sse_encode_function_properties(
+    FunctionProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.equation, serializer);
+  }
+
+  @protected
+  void sse_encode_graph_properties(
+    GraphProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_box_autoadd_f_64(self.xMin, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.xMax, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.yMin, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.yMax, serializer);
+    sse_encode_bool(self.xVisible, serializer);
+    sse_encode_bool(self.yVisible, serializer);
+    sse_encode_String(self.xScale, serializer);
+    sse_encode_String(self.yScale, serializer);
+    sse_encode_String(self.xLabel, serializer);
+    sse_encode_String(self.yLabel, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.aspectRatio, serializer);
+    sse_encode_bool(self.showGrid, serializer);
+    sse_encode_bool(self.showLegend, serializer);
+    sse_encode_String(self.legendPosition, serializer);
   }
 
   @protected
@@ -1139,6 +1963,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_point_2_d(Point2D self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_64(self.x, serializer);
@@ -1152,6 +1986,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.name, serializer);
     sse_encode_node_type(self.nodeType, serializer);
     sse_encode_list_project_node(self.children, serializer);
+  }
+
+  @protected
+  void sse_encode_shape_properties(
+    ShapeProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.shapeType, serializer);
+  }
+
+  @protected
+  void sse_encode_table_properties(
+    TableProperties self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.legendDisplayName, serializer);
+    sse_encode_String(self.lineStyle, serializer);
+    sse_encode_f_64(self.lineThickness, serializer);
+    sse_encode_bool(self.lineVisible, serializer);
+    sse_encode_String(self.markerType, serializer);
+    sse_encode_bool(self.markerVisible, serializer);
+    sse_encode_String(self.lineColor, serializer);
+    sse_encode_String(self.markerColor, serializer);
   }
 
   @protected

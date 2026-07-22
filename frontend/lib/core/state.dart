@@ -4,7 +4,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../src/rust/api/data.dart';
-import '../src/rust/api/project.dart';
+import '../src/rust/api/properties.dart';
 
 class LayerItem {
   final String id;
@@ -38,58 +38,6 @@ class LayerItem {
   }
 }
 
-class PlotProperties {
-  final Color lineColor;
-  final double lineThickness;
-  final bool showGrid;
-  final String xAxisLabel;
-  final String yAxisLabel;
-  final double? aspectRatio;
-  final double? xMin;
-  final double? xMax;
-  final double? yMin;
-  final double? yMax;
-
-  const PlotProperties({
-    required this.lineColor,
-    required this.lineThickness,
-    required this.showGrid,
-    required this.xAxisLabel,
-    required this.yAxisLabel,
-    this.aspectRatio,
-    this.xMin,
-    this.xMax,
-    this.yMin,
-    this.yMax,
-  });
-
-  PlotProperties copyWith({
-    Color? lineColor,
-    double? lineThickness,
-    bool? showGrid,
-    String? xAxisLabel,
-    String? yAxisLabel,
-    double? Function()? aspectRatio,
-    double? Function()? xMin,
-    double? Function()? xMax,
-    double? Function()? yMin,
-    double? Function()? yMax,
-  }) {
-    return PlotProperties(
-      lineColor: lineColor ?? this.lineColor,
-      lineThickness: lineThickness ?? this.lineThickness,
-      showGrid: showGrid ?? this.showGrid,
-      xAxisLabel: xAxisLabel ?? this.xAxisLabel,
-      yAxisLabel: yAxisLabel ?? this.yAxisLabel,
-      aspectRatio: aspectRatio != null ? aspectRatio() : this.aspectRatio,
-      xMin: xMin != null ? xMin() : this.xMin,
-      xMax: xMax != null ? xMax() : this.xMax,
-      yMin: yMin != null ? yMin() : this.yMin,
-      yMax: yMax != null ? yMax() : this.yMax,
-    );
-  }
-}
-
 /// A lightweight, globally accessible state manager.
 class ProjectState {
   static final ProjectState instance = ProjectState._internal();
@@ -119,24 +67,47 @@ class ProjectState {
   // Layer Stack State
   final ValueNotifier<List<LayerItem>> layers = ValueNotifier([]);
 
-  // Plot Properties State
-  final Map<String, PlotProperties> _graphProperties = {};
-  
-  static const PlotProperties _defaultPlotProperties = PlotProperties(
-    lineColor: Color(0xFF00C3FF), // PrimeTheme.primaryAccent roughly
-    lineThickness: 2.5,
-    showGrid: true,
-    xAxisLabel: 'X',
-    yAxisLabel: 'Y',
-  );
+  // Active Properties State
+  final ValueNotifier<FolderProperties?> activeFolderProps = ValueNotifier(null);
+  final ValueNotifier<GraphProperties?> activeGraphProps = ValueNotifier(null);
+  final ValueNotifier<TableProperties?> activeTableProps = ValueNotifier(null);
+  final ValueNotifier<FunctionProperties?> activeFunctionProps = ValueNotifier(null);
+  final ValueNotifier<ShapeProperties?> activeShapeProps = ValueNotifier(null);
 
-  final ValueNotifier<PlotProperties> plotProperties = ValueNotifier(_defaultPlotProperties);
+  void updateFolderProperties(String nodeId, FolderProperties newProps) {
+    setFolderProperties(nodeId: nodeId, props: newProps);
+    if (selectedProjectNodeId.value == nodeId) {
+      activeFolderProps.value = newProps;
+    }
+  }
 
-  void updatePlotProperties(PlotProperties newProps) {
-    plotProperties.value = newProps;
+  void updateGraphProperties(String nodeId, GraphProperties newProps) {
+    setGraphProperties(nodeId: nodeId, props: newProps);
+    // If it's the active plot, update the notifier
     final activePlotId = _getActivePlotId();
-    if (activePlotId != null) {
-      _graphProperties[activePlotId] = newProps;
+    if (activePlotId == nodeId) {
+      activeGraphProps.value = newProps;
+    }
+  }
+
+  void updateTableProperties(String nodeId, TableProperties newProps) {
+    setTableProperties(nodeId: nodeId, props: newProps);
+    if (selectedProjectNodeId.value == nodeId) {
+      activeTableProps.value = newProps;
+    }
+  }
+
+  void updateFunctionProperties(String nodeId, FunctionProperties newProps) {
+    setFunctionProperties(nodeId: nodeId, props: newProps);
+    if (selectedProjectNodeId.value == nodeId) {
+      activeFunctionProps.value = newProps;
+    }
+  }
+
+  void updateShapeProperties(String nodeId, ShapeProperties newProps) {
+    setShapeProperties(nodeId: nodeId, props: newProps);
+    if (selectedProjectNodeId.value == nodeId) {
+      activeShapeProps.value = newProps;
     }
   }
 
@@ -350,7 +321,23 @@ class ProjectState {
         }
       }
       if (plotId != null) {
-        plotProperties.value = _graphProperties[plotId] ?? _defaultPlotProperties;
+      // Refresh active properties based on node type
+      if (node.nodeType == NodeType.folder) {
+        activeFolderProps.value = getFolderProperties(nodeId: nodeId);
+      } else if (node.nodeType == NodeType.plot) {
+        activeGraphProps.value = getGraphProperties(nodeId: nodeId);
+      } else if (node.nodeType == NodeType.dataset) {
+        activeTableProps.value = getTableProperties(nodeId: nodeId);
+      } else if (node.nodeType == NodeType.function) {
+        activeFunctionProps.value = getFunctionProperties(nodeId: nodeId);
+      } else if (node.nodeType == NodeType.shape) {
+        activeShapeProps.value = getShapeProperties(nodeId: nodeId);
+      }
+
+      // Ensure graph properties are also loaded if a child of a graph is selected
+      if (plotId != null && node.nodeType != NodeType.plot) {
+         activeGraphProps.value = getGraphProperties(nodeId: plotId);
+      }
       }
 
       if (node.nodeType == NodeType.plot) {
