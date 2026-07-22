@@ -313,14 +313,60 @@ class _GraphInspectorState extends State<_GraphInspector> {
         return ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            _buildSectionHeader('Axes Range'),
+            _buildSectionHeader('Axes'),
             const SizedBox(height: 12),
             _buildAxisRangeProperty(
               'X-Axis', _xMinCtrl, _xMaxCtrl, _xMinFocus, _xMaxFocus,
             ),
+            const SizedBox(height: 8),
+            _buildSwitchProperty('X-Axis Visible', props.xVisible, (val) {
+              ProjectState.instance.updateGraphProperties(
+                widget.nodeId, GraphProperties(
+                      xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                      xVisible: val, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
+                      xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                      showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
+            }),
+            const SizedBox(height: 8),
+            _buildDropdownProperty(
+              'X-Axis Scale',
+              props.xScale,
+              {'Linear': 'Linear', 'Log': 'Log', 'Sqrt': 'Sqrt'},
+              (val) {
+                ProjectState.instance.updateGraphProperties(
+                  widget.nodeId, GraphProperties(
+                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: val, yScale: props.yScale,
+                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
+              },
+            ),
             const SizedBox(height: 12),
             _buildAxisRangeProperty(
               'Y-Axis', _yMinCtrl, _yMaxCtrl, _yMinFocus, _yMaxFocus,
+            ),
+            const SizedBox(height: 8),
+            _buildSwitchProperty('Y-Axis Visible', props.yVisible, (val) {
+              ProjectState.instance.updateGraphProperties(
+                widget.nodeId, GraphProperties(
+                      xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                      xVisible: props.xVisible, yVisible: val, xScale: props.xScale, yScale: props.yScale,
+                      xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                      showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
+            }),
+            const SizedBox(height: 8),
+            _buildDropdownProperty(
+              'Y-Axis Scale',
+              props.yScale,
+              {'Linear': 'Linear', 'Log': 'Log', 'Sqrt': 'Sqrt'},
+              (val) {
+                ProjectState.instance.updateGraphProperties(
+                  widget.nodeId, GraphProperties(
+                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: val,
+                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
+              },
             ),
             const SizedBox(height: 24),
             _buildSectionHeader('Labels'),
@@ -367,6 +413,31 @@ class _GraphInspectorState extends State<_GraphInspector> {
                         xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
                         showGrid: val, showLegend: props.showLegend, legendPosition: props.legendPosition));
             }),
+            const SizedBox(height: 24),
+            _buildSectionHeader('Legend'),
+            const SizedBox(height: 12),
+            _buildSwitchProperty('Show Legend', props.showLegend, (val) {
+              ProjectState.instance.updateGraphProperties(
+                widget.nodeId, GraphProperties(
+                      xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                      xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
+                      xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                      showGrid: props.showGrid, showLegend: val, legendPosition: props.legendPosition));
+            }),
+            const SizedBox(height: 12),
+            _buildDropdownProperty(
+              'Position',
+              props.legendPosition,
+              {'Top Left': 'Top Left', 'Top Right': 'Top Right', 'Bottom Left': 'Bottom Left', 'Bottom Right': 'Bottom Right'},
+              (val) {
+                ProjectState.instance.updateGraphProperties(
+                  widget.nodeId, GraphProperties(
+                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
+                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
+                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
+                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: val));
+              },
+            ),
           ],
         );
       },
@@ -390,17 +461,10 @@ class _GraphInspectorState extends State<_GraphInspector> {
           textAlignVertical: TextAlignVertical.center,
           style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'Auto',
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.1),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(4),
-              borderSide: BorderSide.none,
-            ),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
           ),
         ),
       );
@@ -457,7 +521,7 @@ class _TableInspector extends StatelessWidget {
             _buildDropdownProperty(
               'Line Style',
               props.lineStyle,
-              {'Full': 'Full', 'Dashed': 'Dashed', 'Dotted': 'Dotted'},
+              {'Full': 'Full', 'Dashed': 'Dashed', 'Dotted': 'Dotted', 'Dash-Dot': 'Dash-Dot'},
               (val) {
                 ProjectState.instance.updateTableProperties(
                   nodeId, TableProperties(
@@ -466,6 +530,14 @@ class _TableInspector extends StatelessWidget {
                         lineColor: props.lineColor, markerColor: props.markerColor));
               },
             ),
+            const SizedBox(height: 8),
+            _buildSwitchProperty('Line Visible', props.lineVisible, (val) {
+              ProjectState.instance.updateTableProperties(
+                nodeId, TableProperties(
+                      legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
+                      lineVisible: val, markerType: props.markerType, markerVisible: props.markerVisible,
+                      lineColor: props.lineColor, markerColor: props.markerColor));
+            }),
             const SizedBox(height: 12),
             _buildColorPropertyHex(context, 'Line Color', props.lineColor, (c) {
                 ProjectState.instance.updateTableProperties(
@@ -486,7 +558,7 @@ class _TableInspector extends StatelessWidget {
             _buildDropdownProperty(
               'Marker Type',
               props.markerType,
-              {'Circle': 'Circle', 'Square': 'Square', 'Triangle': 'Triangle', 'None': 'None'},
+              {'Circle': 'Circle', 'Square': 'Square', 'Cross': 'Cross', 'X': 'X', 'Triangle up': 'Triangle up', 'Triangle down': 'Triangle down'},
               (val) {
                 ProjectState.instance.updateTableProperties(
                   nodeId, TableProperties(
@@ -495,6 +567,14 @@ class _TableInspector extends StatelessWidget {
                         lineColor: props.lineColor, markerColor: props.markerColor));
               },
             ),
+            const SizedBox(height: 8),
+            _buildSwitchProperty('Marker Visible', props.markerVisible, (val) {
+              ProjectState.instance.updateTableProperties(
+                nodeId, TableProperties(
+                      legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
+                      lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: val,
+                      lineColor: props.lineColor, markerColor: props.markerColor));
+            }),
             const SizedBox(height: 12),
             _buildColorPropertyHex(context, 'Marker Color', props.markerColor, (c) {
                 ProjectState.instance.updateTableProperties(
