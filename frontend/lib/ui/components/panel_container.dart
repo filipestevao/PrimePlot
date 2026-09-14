@@ -54,8 +54,9 @@ class PanelContainer extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                if (actions != null) ...actions!,
-                if (actions == null) ...[
+                if (actions != null)
+                  ...?actions
+                else ...[
                   const Icon(Icons.more_horiz, size: 16, color: PrimeTheme.textSecondary),
                 ],
               ],

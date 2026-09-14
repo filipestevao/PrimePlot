@@ -12,13 +12,11 @@ class _FlatNode {
   final ProjectNode node;
   final int indent;
   final String parentId;
-  final bool isRoot;
 
   _FlatNode({
     required this.node,
     required this.indent,
     required this.parentId,
-    this.isRoot = false,
   });
 }
 
@@ -106,8 +104,6 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     if (oldIndex == newIndex) return;
 
     final draggedItem = flatNodes[oldIndex];
-    if (draggedItem.isRoot) return; // Cannot reorder root
-
     String targetParentId = '';
     
     // Fallback: the node above the drop index. 
@@ -231,12 +227,6 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   }
 
   Widget _dispatchFlatNode(_FlatNode flatNode, int index) {
-    if (flatNode.isRoot) {
-      return Container(
-        key: ValueKey(flatNode.node.id),
-        child: _buildRootNode(flatNode.node, index),
-      );
-    }
     switch (flatNode.node.nodeType) {
       case NodeType.plot:
         return Container(
@@ -264,24 +254,6 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           child: _buildShapeNode(flatNode, index),
         );
     }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Root node
-  // ---------------------------------------------------------------------------
-
-  Widget _buildRootNode(ProjectNode root, int index) {
-    return _styledTile(
-      indent: 0,
-      icon: Icons.folder,
-      iconColor: const Color(0xFFFFC107), // amber
-      label: root.name,
-      isEditing: false,
-      node: root,
-      isRoot: true,
-      hasChildren: root.children.isNotEmpty,
-      index: index,
-    );
   }
 
   // ---------------------------------------------------------------------------
@@ -606,7 +578,6 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     required ProjectNode node,
     required bool hasChildren,
     required int index,
-    bool isRoot = false,
   }) {
     final double leftPad = 12.0 + indent * 16.0;
     final isExpanded = !_expandedNodes.contains(node.id);
@@ -634,7 +605,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             overflow: TextOverflow.ellipsis,
           );
 
-    final expandToggle = (!isRoot && hasChildren)
+    final expandToggle = hasChildren
         ? Material(
             color: Colors.transparent,
             child: InkWell(
@@ -713,7 +684,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                 Icon(icon, size: 16, color: isSelected ? PrimeTheme.primaryAccent : iconColor),
                 const SizedBox(width: 16),
                 Expanded(child: titleWidget),
-                if (trailingWidget != null) trailingWidget,
+                trailingWidget,
               ],
             ),
           ),

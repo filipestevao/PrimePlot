@@ -69,7 +69,7 @@ class CustomTitleBar extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Type command or search... (Ctrl + F)',
-                    style: TextStyle(fontSize: 12, color: PrimeTheme.textSecondary.withOpacity(0.7)),
+                    style: TextStyle(fontSize: 12, color: PrimeTheme.textSecondary.withValues(alpha: 0.7)),
                   ),
                 ),
                 Icon(Icons.search, size: 16, color: PrimeTheme.textSecondary),
@@ -109,7 +109,7 @@ class WindowButtons extends StatelessWidget {
             windowManager.maximize();
           }
         }),
-        _buildButton(Icons.close, () => exit(0), hoverColor: Colors.red.withOpacity(0.8)),
+        _buildButton(Icons.close, () => exit(0), hoverColor: Colors.red.withValues(alpha: 0.8)),
         const SizedBox(width: 4),
       ],
     );

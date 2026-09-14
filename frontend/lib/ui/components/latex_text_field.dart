@@ -3,8 +3,10 @@
 
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import 'prime_text_field.dart';
 
-class LatexTextField extends StatefulWidget {
+/// A desktop text field featuring an integrated, glowing LaTeX formatting badge.
+class LatexTextField extends StatelessWidget {
   final String label;
   final String value;
   final ValueChanged<String> onChanged;
@@ -12,6 +14,7 @@ class LatexTextField extends StatefulWidget {
   final VoidCallback onLatexToggle;
   final int? maxLines;
   final String? tooltip;
+  final bool showLabelAbove;
 
   const LatexTextField({
     super.key,
@@ -22,104 +25,74 @@ class LatexTextField extends StatefulWidget {
     required this.onLatexToggle,
     this.maxLines = 1,
     this.tooltip,
+    this.showLabelAbove = false,
   });
 
   @override
-  State<LatexTextField> createState() => _LatexTextFieldState();
-}
-
-class _LatexTextFieldState extends State<LatexTextField> {
-  late TextEditingController _ctrl;
-  late FocusNode _focus;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = TextEditingController(text: widget.value);
-    _focus = FocusNode();
-  }
-
-  @override
-  void didUpdateWidget(LatexTextField old) {
-    super.didUpdateWidget(old);
-    if (!_focus.hasFocus && _ctrl.text != widget.value) {
-      _ctrl.text = widget.value;
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final singleLine = widget.maxLines == null || widget.maxLines == 1;
-    final enabled = widget.useLatex;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              widget.label,
-              style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-            ),
-            const Spacer(),
-            Tooltip(
-              message: widget.tooltip ??
-                  (enabled ? 'Disable LaTeX formatting' : 'Enable LaTeX formatting'),
-              child: InkWell(
-                onTap: widget.onLatexToggle,
-                borderRadius: BorderRadius.circular(3),
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: enabled ? PrimeTheme.primaryAccent : Colors.transparent,
-                    borderRadius: BorderRadius.circular(3),
-                    border: Border.all(
-                      color: enabled
-                          ? PrimeTheme.primaryAccent
-                          : PrimeTheme.textSecondary.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      r'$$',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: enabled ? Colors.white : PrimeTheme.textSecondary,
-                        fontWeight: FontWeight.bold,
+    final suffixBadge = Tooltip(
+      message: useLatex ? 'LaTeX enabled (click to disable)' : 'Click to enable LaTeX formatting',
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onLatexToggle,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: useLatex ? PrimeTheme.primaryAccent : Colors.transparent,
+              borderRadius: BorderRadius.circular(3),
+              border: Border.all(
+                color: useLatex
+                    ? PrimeTheme.primaryAccent
+                    : PrimeTheme.textSecondary.withValues(alpha: 0.4),
+                width: 1.0,
+              ),
+              boxShadow: useLatex
+                  ? [
+                      BoxShadow(
+                        color: PrimeTheme.primaryAccent.withValues(alpha: 0.4),
+                        blurRadius: 4,
                       ),
-                    ),
-                  ),
-                ),
+                    ]
+                  : null,
+            ),
+            child: Text(
+              r'$',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: useLatex ? Colors.white : PrimeTheme.textSecondary,
+                fontFamily: 'monospace',
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: singleLine ? 28 : null,
-          child: TextField(
-            controller: _ctrl,
-            focusNode: _focus,
-            maxLines: widget.maxLines,
-            style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              contentPadding: singleLine
-                  ? const EdgeInsets.symmetric(horizontal: 8, vertical: 0)
-                  : const EdgeInsets.all(8),
-              isDense: singleLine,
-            ),
-            onChanged: widget.onChanged,
           ),
         ),
-      ],
+      ),
     );
+
+    final inputField = PrimeTextField(
+      value: value,
+      onChanged: onChanged,
+      maxLines: maxLines,
+      suffix: suffixBadge,
+      hintText: useLatex ? r'e.g. \alpha + \beta_0' : 'Enter text...',
+    );
+
+    if (showLabelAbove) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11.5, color: PrimeTheme.textSecondary),
+          ),
+          const SizedBox(height: 4),
+          inputField,
+        ],
+      );
+    }
+
+    return inputField;
   }
 }

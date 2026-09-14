@@ -2,12 +2,78 @@
 // This program is licensed under the GPLv3. See LICENSE for details.
 
 import 'package:flutter/material.dart';
-import 'package:flex_color_picker/flex_color_picker.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
 import '../components/latex_text_field.dart';
+import '../components/prime_color_picker.dart';
+import '../components/prime_number_field.dart';
+import '../components/prime_select.dart';
+import '../components/prime_switch.dart';
+import '../components/prime_text_field.dart';
+import '../components/property_row.dart';
+import '../components/property_section.dart';
+
+extension GraphPropertiesExt on GraphProperties {
+  GraphProperties copyWith({
+    double? Function()? xMin,
+    double? Function()? xMax,
+    double? Function()? yMin,
+    double? Function()? yMax,
+    bool? xVisible,
+    bool? yVisible,
+    String? xScale,
+    String? yScale,
+    String? xLabel,
+    String? yLabel,
+    double? Function()? aspectRatio,
+    bool? showGrid,
+    bool? showLegend,
+    String? legendPosition,
+  }) {
+    return GraphProperties(
+      xMin: xMin != null ? xMin() : this.xMin,
+      xMax: xMax != null ? xMax() : this.xMax,
+      yMin: yMin != null ? yMin() : this.yMin,
+      yMax: yMax != null ? yMax() : this.yMax,
+      xVisible: xVisible ?? this.xVisible,
+      yVisible: yVisible ?? this.yVisible,
+      xScale: xScale ?? this.xScale,
+      yScale: yScale ?? this.yScale,
+      xLabel: xLabel ?? this.xLabel,
+      yLabel: yLabel ?? this.yLabel,
+      aspectRatio: aspectRatio != null ? aspectRatio() : this.aspectRatio,
+      showGrid: showGrid ?? this.showGrid,
+      showLegend: showLegend ?? this.showLegend,
+      legendPosition: legendPosition ?? this.legendPosition,
+    );
+  }
+}
+
+extension TablePropertiesExt on TableProperties {
+  TableProperties copyWith({
+    String? legendDisplayName,
+    String? lineStyle,
+    double? lineThickness,
+    bool? lineVisible,
+    String? markerType,
+    bool? markerVisible,
+    String? lineColor,
+    String? markerColor,
+  }) {
+    return TableProperties(
+      legendDisplayName: legendDisplayName ?? this.legendDisplayName,
+      lineStyle: lineStyle ?? this.lineStyle,
+      lineThickness: lineThickness ?? this.lineThickness,
+      lineVisible: lineVisible ?? this.lineVisible,
+      markerType: markerType ?? this.markerType,
+      markerVisible: markerVisible ?? this.markerVisible,
+      lineColor: lineColor ?? this.lineColor,
+      markerColor: markerColor ?? this.markerColor,
+    );
+  }
+}
 
 class PropertyInspector extends StatefulWidget {
   const PropertyInspector({super.key});
@@ -25,8 +91,11 @@ class _PropertyInspectorState extends State<PropertyInspector> {
         builder: (context, selectedId, child) {
           if (selectedId == null) {
             return const Center(
-                child: Text('No selection',
-                    style: TextStyle(color: PrimeTheme.textSecondary)));
+              child: Text(
+                'No selection',
+                style: TextStyle(color: PrimeTheme.textSecondary, fontSize: 12),
+              ),
+            );
           }
           final root = ProjectState.instance.projectTree.value;
           if (root == null) return const SizedBox.shrink();
@@ -52,67 +121,6 @@ class _PropertyInspectorState extends State<PropertyInspector> {
 }
 
 // -----------------------------------------------------------------------------
-// Persistent Text Field (preserves IME composition across rebuilds)
-// -----------------------------------------------------------------------------
-class _PersistentTextField extends StatefulWidget {
-  final String value;
-  final ValueChanged<String> onChanged;
-  final int? maxLines;
-  const _PersistentTextField({
-    required this.value,
-    required this.onChanged,
-    this.maxLines,
-  });
-  @override
-  State<_PersistentTextField> createState() => _PersistentTextFieldState();
-}
-
-class _PersistentTextFieldState extends State<_PersistentTextField> {
-  late TextEditingController _ctrl;
-  late FocusNode _focus;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = TextEditingController(text: widget.value);
-    _focus = FocusNode();
-  }
-
-  @override
-  void didUpdateWidget(_PersistentTextField old) {
-    super.didUpdateWidget(old);
-    if (!_focus.hasFocus && _ctrl.text != widget.value) {
-      _ctrl.text = widget.value;
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: _ctrl,
-      focusNode: _focus,
-      maxLines: widget.maxLines,
-      style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-      decoration: InputDecoration(
-        border: const OutlineInputBorder(),
-        contentPadding: widget.maxLines != null
-            ? const EdgeInsets.all(8)
-            : const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-        isDense: widget.maxLines != null,
-      ),
-      onChanged: widget.onChanged,
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
 // Folder Inspector
 // -----------------------------------------------------------------------------
 class _FolderInspector extends StatelessWidget {
@@ -126,17 +134,27 @@ class _FolderInspector extends StatelessWidget {
       builder: (context, props, child) {
         if (props == null) return const SizedBox.shrink();
         return ListView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(10.0),
           children: [
-            _buildSectionHeader('Information'),
-            const SizedBox(height: 12),
-            _PersistentTextField(
-              value: props.information,
-              maxLines: null,
-              onChanged: (val) {
-                ProjectState.instance.updateFolderProperties(
-                    nodeId, FolderProperties(information: val));
-              },
+            PropertySection(
+              title: 'Folder Information',
+              icon: Icons.folder,
+              children: [
+                PropertyRow(
+                  label: 'Description',
+                  child: PrimeTextField(
+                    value: props.information,
+                    hintText: 'Notes or description...',
+                    maxLines: 4,
+                    onChanged: (val) {
+                      ProjectState.instance.updateFolderProperties(
+                        nodeId,
+                        FolderProperties(information: val),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -159,17 +177,26 @@ class _FunctionInspector extends StatelessWidget {
       builder: (context, props, child) {
         if (props == null) return const SizedBox.shrink();
         return ListView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(10.0),
           children: [
-            _buildSectionHeader('Equation'),
-            const SizedBox(height: 12),
-            _PersistentTextField(
-              value: props.equation,
-              maxLines: null,
-              onChanged: (val) {
-                ProjectState.instance.updateFunctionProperties(
-                    nodeId, FunctionProperties(equation: val));
-              },
+            PropertySection(
+              title: 'Function Definition',
+              icon: Icons.functions,
+              children: [
+                PropertyRow(
+                  label: 'Equation',
+                  child: PrimeTextField(
+                    value: props.equation,
+                    hintText: 'f(x) = sin(x)',
+                    onChanged: (val) {
+                      ProjectState.instance.updateFunctionProperties(
+                        nodeId,
+                        FunctionProperties(equation: val),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -192,18 +219,30 @@ class _ShapeInspector extends StatelessWidget {
       builder: (context, props, child) {
         if (props == null) return const SizedBox.shrink();
         return ListView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(10.0),
           children: [
-            _buildSectionHeader('Shape'),
-            const SizedBox(height: 12),
-            _buildDropdownProperty(
-              'Type',
-              props.shapeType,
-              {'Rectangle': 'Rectangle', 'Ellipse': 'Ellipse', 'Line': 'Line'},
-              (val) {
-                ProjectState.instance.updateShapeProperties(
-                    nodeId, ShapeProperties(shapeType: val));
-              },
+            PropertySection(
+              title: 'Shape Settings',
+              icon: Icons.category,
+              children: [
+                PropertyRow(
+                  label: 'Shape Type',
+                  child: PrimeSelect<String>(
+                    value: props.shapeType,
+                    options: const {
+                      'Rectangle': 'Rectangle',
+                      'Ellipse': 'Ellipse',
+                      'Line': 'Line',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateShapeProperties(
+                        nodeId,
+                        ShapeProperties(shapeType: val),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -215,142 +254,9 @@ class _ShapeInspector extends StatelessWidget {
 // -----------------------------------------------------------------------------
 // Graph Inspector
 // -----------------------------------------------------------------------------
-class _GraphInspector extends StatefulWidget {
+class _GraphInspector extends StatelessWidget {
   final String nodeId;
   const _GraphInspector({required this.nodeId});
-  @override
-  State<_GraphInspector> createState() => _GraphInspectorState();
-}
-
-class _GraphInspectorState extends State<_GraphInspector> {
-  final _xMinCtrl = TextEditingController();
-  final _xMaxCtrl = TextEditingController();
-  final _yMinCtrl = TextEditingController();
-  final _yMaxCtrl = TextEditingController();
-  final _xMinFocus = FocusNode();
-  final _xMaxFocus = FocusNode();
-  final _yMinFocus = FocusNode();
-  final _yMaxFocus = FocusNode();
-  GraphProperties? _props;
-
-  @override
-  void initState() {
-    super.initState();
-    _xMinFocus.addListener(_onXMinFocusChange);
-    _xMaxFocus.addListener(_onXMaxFocusChange);
-    _yMinFocus.addListener(_onYMinFocusChange);
-    _yMaxFocus.addListener(_onYMaxFocusChange);
-  }
-
-  @override
-  void dispose() {
-    for (final c in [_xMinCtrl, _xMaxCtrl, _yMinCtrl, _yMaxCtrl]) { c.dispose(); }
-    for (final f in [_xMinFocus, _xMaxFocus, _yMinFocus, _yMaxFocus]) { f.dispose(); }
-    super.dispose();
-  }
-
-  static String _fmt(double? v) {
-    if (v == null) return '';
-    if (v == v.truncateToDouble()) return v.toInt().toString();
-    return v.toString();
-  }
-
-  double? _parse(String s) {
-    final t = s.trim();
-    if (t.isEmpty) return null;
-    return double.tryParse(t);
-  }
-
-  void _onXMinFocusChange() {
-    if (_xMinFocus.hasFocus) return;
-    final p = _props;
-    if (p == null) return;
-    final v = _parse(_xMinCtrl.text);
-    if (_xMinCtrl.text.trim().isNotEmpty && v == null) {
-      _xMinCtrl.text = _fmt(p.xMin);
-      return;
-    }
-    if (v == p.xMin) return;
-    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
-      xMin: v, xMax: p.xMax, yMin: p.yMin, yMax: p.yMax,
-      xVisible: p.xVisible, yVisible: p.yVisible,
-      xScale: p.xScale, yScale: p.yScale,
-      xLabel: p.xLabel, yLabel: p.yLabel,
-      aspectRatio: p.aspectRatio,
-      showGrid: p.showGrid, showLegend: p.showLegend,
-      legendPosition: p.legendPosition,
-    ));
-  }
-
-  void _onXMaxFocusChange() {
-    if (_xMaxFocus.hasFocus) return;
-    final p = _props;
-    if (p == null) return;
-    final v = _parse(_xMaxCtrl.text);
-    if (_xMaxCtrl.text.trim().isNotEmpty && v == null) {
-      _xMaxCtrl.text = _fmt(p.xMax);
-      return;
-    }
-    if (v == p.xMax) return;
-    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
-      xMin: p.xMin, xMax: v, yMin: p.yMin, yMax: p.yMax,
-      xVisible: p.xVisible, yVisible: p.yVisible,
-      xScale: p.xScale, yScale: p.yScale,
-      xLabel: p.xLabel, yLabel: p.yLabel,
-      aspectRatio: p.aspectRatio,
-      showGrid: p.showGrid, showLegend: p.showLegend,
-      legendPosition: p.legendPosition,
-    ));
-  }
-
-  void _onYMinFocusChange() {
-    if (_yMinFocus.hasFocus) return;
-    final p = _props;
-    if (p == null) return;
-    final v = _parse(_yMinCtrl.text);
-    if (_yMinCtrl.text.trim().isNotEmpty && v == null) {
-      _yMinCtrl.text = _fmt(p.yMin);
-      return;
-    }
-    if (v == p.yMin) return;
-    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
-      xMin: p.xMin, xMax: p.xMax, yMin: v, yMax: p.yMax,
-      xVisible: p.xVisible, yVisible: p.yVisible,
-      xScale: p.xScale, yScale: p.yScale,
-      xLabel: p.xLabel, yLabel: p.yLabel,
-      aspectRatio: p.aspectRatio,
-      showGrid: p.showGrid, showLegend: p.showLegend,
-      legendPosition: p.legendPosition,
-    ));
-  }
-
-  void _onYMaxFocusChange() {
-    if (_yMaxFocus.hasFocus) return;
-    final p = _props;
-    if (p == null) return;
-    final v = _parse(_yMaxCtrl.text);
-    if (_yMaxCtrl.text.trim().isNotEmpty && v == null) {
-      _yMaxCtrl.text = _fmt(p.yMax);
-      return;
-    }
-    if (v == p.yMax) return;
-    ProjectState.instance.updateGraphProperties(widget.nodeId, GraphProperties(
-      xMin: p.xMin, xMax: p.xMax, yMin: p.yMin, yMax: v,
-      xVisible: p.xVisible, yVisible: p.yVisible,
-      xScale: p.xScale, yScale: p.yScale,
-      xLabel: p.xLabel, yLabel: p.yLabel,
-      aspectRatio: p.aspectRatio,
-      showGrid: p.showGrid, showLegend: p.showLegend,
-      legendPosition: p.legendPosition,
-    ));
-  }
-
-  void _syncFromProps(GraphProperties p) {
-    if (!_xMinFocus.hasFocus && _xMinCtrl.text != _fmt(p.xMin)) _xMinCtrl.text = _fmt(p.xMin);
-    if (!_xMaxFocus.hasFocus && _xMaxCtrl.text != _fmt(p.xMax)) _xMaxCtrl.text = _fmt(p.xMax);
-    if (!_yMinFocus.hasFocus && _yMinCtrl.text != _fmt(p.yMin)) _yMinCtrl.text = _fmt(p.yMin);
-    if (!_yMaxFocus.hasFocus && _yMaxCtrl.text != _fmt(p.yMax)) _yMaxCtrl.text = _fmt(p.yMax);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -358,135 +264,266 @@ class _GraphInspectorState extends State<_GraphInspector> {
       valueListenable: ProjectState.instance.activeGraphProps,
       builder: (context, props, child) {
         if (props == null) return const SizedBox.shrink();
-        _props = props;
-        _syncFromProps(props);
+
         return ListView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(10.0),
           children: [
-            _buildSectionHeader('Axes'),
-            const SizedBox(height: 12),
-            _buildAxisRangeProperty(
-              'X-Axis', _xMinCtrl, _xMaxCtrl, _xMinFocus, _xMaxFocus,
+            // Section 1: Axes & Scales
+            PropertySection(
+              title: 'Axes & Scales',
+              icon: Icons.stacked_line_chart,
+              children: [
+                PropertyRow(
+                  label: 'X Range',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: PrimeNumberField(
+                          value: props.xMin,
+                          prefixText: 'Min: ',
+                          allowAuto: true,
+                          onChanged: (val) {
+                            ProjectState.instance.updateGraphProperties(
+                              nodeId,
+                              props.copyWith(xMin: () => val),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: PrimeNumberField(
+                          value: props.xMax,
+                          prefixText: 'Max: ',
+                          allowAuto: true,
+                          onChanged: (val) {
+                            ProjectState.instance.updateGraphProperties(
+                              nodeId,
+                              props.copyWith(xMax: () => val),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PropertyRow(
+                  label: 'X Visible',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.xVisible,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(xVisible: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'X Scale',
+                  child: PrimeSelect<String>(
+                    value: props.xScale,
+                    options: const {
+                      'Linear': 'Linear',
+                      'Log': 'Logarithmic (Log10)',
+                      'Sqrt': 'Square Root (√x)',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(xScale: val),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Divider(height: 1, thickness: 0.5, color: PrimeTheme.borderSide),
+                const SizedBox(height: 6),
+                PropertyRow(
+                  label: 'Y Range',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: PrimeNumberField(
+                          value: props.yMin,
+                          prefixText: 'Min: ',
+                          allowAuto: true,
+                          onChanged: (val) {
+                            ProjectState.instance.updateGraphProperties(
+                              nodeId,
+                              props.copyWith(yMin: () => val),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: PrimeNumberField(
+                          value: props.yMax,
+                          prefixText: 'Max: ',
+                          allowAuto: true,
+                          onChanged: (val) {
+                            ProjectState.instance.updateGraphProperties(
+                              nodeId,
+                              props.copyWith(yMax: () => val),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Y Visible',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.yVisible,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(yVisible: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Y Scale',
+                  child: PrimeSelect<String>(
+                    value: props.yScale,
+                    options: const {
+                      'Linear': 'Linear',
+                      'Log': 'Logarithmic (Log10)',
+                      'Sqrt': 'Square Root (√y)',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(yScale: val),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            _buildSwitchProperty('X-Axis Visible', props.xVisible, (val) {
-              ProjectState.instance.updateGraphProperties(
-                widget.nodeId, GraphProperties(
-                      xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                      xVisible: val, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
-                      xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                      showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
-            }),
-            const SizedBox(height: 8),
-            _buildDropdownProperty(
-              'X-Axis Scale',
-              props.xScale,
-              {'Linear': 'Linear', 'Log': 'Log', 'Sqrt': 'Sqrt'},
-              (val) {
-                ProjectState.instance.updateGraphProperties(
-                  widget.nodeId, GraphProperties(
-                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: val, yScale: props.yScale,
-                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
-              },
+
+            // Section 2: Labels & Titles
+            PropertySection(
+              title: 'Labels & Titles',
+              icon: Icons.subtitles,
+              children: [
+                PropertyRow(
+                  label: 'X-Axis Label',
+                  child: _buildLatexField(
+                    'X-Axis Label',
+                    'xLabel',
+                    props.xLabel,
+                    (val) => ProjectState.instance.updateGraphProperties(
+                      nodeId,
+                      props.copyWith(xLabel: val),
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Y-Axis Label',
+                  child: _buildLatexField(
+                    'Y-Axis Label',
+                    'yLabel',
+                    props.yLabel,
+                    (val) => ProjectState.instance.updateGraphProperties(
+                      nodeId,
+                      props.copyWith(yLabel: val),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _buildAxisRangeProperty(
-              'Y-Axis', _yMinCtrl, _yMaxCtrl, _yMinFocus, _yMaxFocus,
+
+            // Section 3: Settings & Grid
+            PropertySection(
+              title: 'Viewport & Grid',
+              icon: Icons.grid_view,
+              children: [
+                PropertyRow(
+                  label: 'Show Grid',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.showGrid,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(showGrid: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Aspect Ratio',
+                  child: PrimeSelect<double?>(
+                    value: props.aspectRatio,
+                    options: {
+                      null: 'Free (Adaptive)',
+                      1.0: '1:1 (Square)',
+                      1.5: '3:2 (Standard)',
+                      1.3333: '4:3 (Classic)',
+                      1.7777: '16:9 (Widescreen)',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(aspectRatio: () => val),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            _buildSwitchProperty('Y-Axis Visible', props.yVisible, (val) {
-              ProjectState.instance.updateGraphProperties(
-                widget.nodeId, GraphProperties(
-                      xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                      xVisible: props.xVisible, yVisible: val, xScale: props.xScale, yScale: props.yScale,
-                      xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                      showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
-            }),
-            const SizedBox(height: 8),
-            _buildDropdownProperty(
-              'Y-Axis Scale',
-              props.yScale,
-              {'Linear': 'Linear', 'Log': 'Log', 'Sqrt': 'Sqrt'},
-              (val) {
-                ProjectState.instance.updateGraphProperties(
-                  widget.nodeId, GraphProperties(
-                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: val,
-                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
-              },
-            ),
-            const SizedBox(height: 24),
-            _buildSectionHeader('Labels'),
-            const SizedBox(height: 12),
-            _buildLatexProperty('X-Axis Label', 'xLabel', props.xLabel, (val) {
-              ProjectState.instance.updateGraphProperties(
-                  widget.nodeId, GraphProperties(
-                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
-                        xLabel: val, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
-            }),
-            const SizedBox(height: 12),
-            _buildLatexProperty('Y-Axis Label', 'yLabel', props.yLabel, (val) {
-              ProjectState.instance.updateGraphProperties(
-                  widget.nodeId, GraphProperties(
-                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
-                        xLabel: props.xLabel, yLabel: val, aspectRatio: props.aspectRatio,
-                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
-            }),
-            const SizedBox(height: 24),
-            _buildSectionHeader('Settings'),
-            const SizedBox(height: 12),
-            _buildDropdownProperty(
-              'Aspect Ratio',
-              props.aspectRatio,
-              {null: 'Free', 1.0: '1:1', 1.5: '3:2', 1.3333: '4:3', 1.7777: '16:9'},
-              (val) {
-                ProjectState.instance.updateGraphProperties(
-                  widget.nodeId, GraphProperties(
-                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
-                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: val,
-                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: props.legendPosition));
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildSwitchProperty('Show Grid', props.showGrid, (val) {
-              ProjectState.instance.updateGraphProperties(
-                  widget.nodeId, GraphProperties(
-                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
-                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                        showGrid: val, showLegend: props.showLegend, legendPosition: props.legendPosition));
-            }),
-            const SizedBox(height: 24),
-            _buildSectionHeader('Legend'),
-            const SizedBox(height: 12),
-            _buildSwitchProperty('Show Legend', props.showLegend, (val) {
-              ProjectState.instance.updateGraphProperties(
-                widget.nodeId, GraphProperties(
-                      xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                      xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
-                      xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                      showGrid: props.showGrid, showLegend: val, legendPosition: props.legendPosition));
-            }),
-            const SizedBox(height: 12),
-            _buildDropdownProperty(
-              'Position',
-              props.legendPosition,
-              {'Top Left': 'Top Left', 'Top Right': 'Top Right', 'Bottom Left': 'Bottom Left', 'Bottom Right': 'Bottom Right'},
-              (val) {
-                ProjectState.instance.updateGraphProperties(
-                  widget.nodeId, GraphProperties(
-                        xMin: props.xMin, xMax: props.xMax, yMin: props.yMin, yMax: props.yMax,
-                        xVisible: props.xVisible, yVisible: props.yVisible, xScale: props.xScale, yScale: props.yScale,
-                        xLabel: props.xLabel, yLabel: props.yLabel, aspectRatio: props.aspectRatio,
-                        showGrid: props.showGrid, showLegend: props.showLegend, legendPosition: val));
-              },
+
+            // Section 4: Legend
+            PropertySection(
+              title: 'Legend',
+              icon: Icons.legend_toggle,
+              children: [
+                PropertyRow(
+                  label: 'Show Legend',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.showLegend,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(showLegend: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Position',
+                  child: PrimeSelect<String>(
+                    value: props.legendPosition,
+                    options: const {
+                      'Top Left': 'Top Left',
+                      'Top Right': 'Top Right',
+                      'Bottom Left': 'Bottom Left',
+                      'Bottom Right': 'Bottom Right',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(legendPosition: val),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -494,54 +531,26 @@ class _GraphInspectorState extends State<_GraphInspector> {
     );
   }
 
-  Widget _buildAxisRangeProperty(
+  Widget _buildLatexField(
     String label,
-    TextEditingController minCtrl,
-    TextEditingController maxCtrl,
-    FocusNode minFocus,
-    FocusNode maxFocus,
+    String field,
+    String value,
+    ValueChanged<String> onChanged,
   ) {
-    Widget field(TextEditingController ctrl, FocusNode focus) {
-      return SizedBox(
-        height: 28,
-        child: TextField(
-          controller: ctrl,
-          focusNode: focus,
-          textAlign: TextAlign.center,
-          textAlignVertical: TextAlignVertical.center,
-          style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            hintText: 'Auto',
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: field(minCtrl, minFocus)),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text('-', style: TextStyle(color: PrimeTheme.textSecondary)),
-            ),
-            Expanded(child: field(maxCtrl, maxFocus)),
-          ],
-        ),
-      ],
+    final state = ProjectState.instance;
+    final useLatex = state.getLatexMode(nodeId, field);
+    return LatexTextField(
+      label: label,
+      value: value,
+      onChanged: onChanged,
+      useLatex: useLatex,
+      onLatexToggle: () => state.toggleLatexMode(nodeId, field),
     );
   }
 }
 
 // -----------------------------------------------------------------------------
-// Table Inspector
+// Table (Curve) Inspector
 // -----------------------------------------------------------------------------
 class _TableInspector extends StatelessWidget {
   final String nodeId;
@@ -553,286 +562,214 @@ class _TableInspector extends StatelessWidget {
       valueListenable: ProjectState.instance.activeTableProps,
       builder: (context, props, child) {
         if (props == null) return const SizedBox.shrink();
+
         return ListView(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(10.0),
           children: [
-            _buildSectionHeader('Legend'),
-            const SizedBox(height: 12),
-            _buildLatexProperty('Display Name', 'legendDisplayName', props.legendDisplayName, (val) {
-              ProjectState.instance.updateTableProperties(
-                  nodeId, TableProperties(
-                        legendDisplayName: val, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
-                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
-                        lineColor: props.lineColor, markerColor: props.markerColor));
-            }),
-            const SizedBox(height: 24),
-            _buildSectionHeader('Appearance'),
-            const SizedBox(height: 12),
-            _buildDropdownProperty(
-              'Line Style',
-              props.lineStyle,
-              {'Full': 'Full', 'Dashed': 'Dashed', 'Dotted': 'Dotted', 'Dash-Dot': 'Dash-Dot'},
-              (val) {
-                ProjectState.instance.updateTableProperties(
-                  nodeId, TableProperties(
-                        legendDisplayName: props.legendDisplayName, lineStyle: val, lineThickness: props.lineThickness,
-                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
-                        lineColor: props.lineColor, markerColor: props.markerColor));
-              },
+            // Section 1: Identification
+            PropertySection(
+              title: 'Identification',
+              icon: Icons.label,
+              children: [
+                PropertyRow(
+                  label: 'Display Name',
+                  child: _buildLatexField(
+                    'Display Name',
+                    'legendDisplayName',
+                    props.legendDisplayName,
+                    (val) => ProjectState.instance.updateTableProperties(
+                      nodeId,
+                      props.copyWith(legendDisplayName: val),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            _buildSwitchProperty('Line Visible', props.lineVisible, (val) {
-              ProjectState.instance.updateTableProperties(
-                nodeId, TableProperties(
-                      legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
-                      lineVisible: val, markerType: props.markerType, markerVisible: props.markerVisible,
-                      lineColor: props.lineColor, markerColor: props.markerColor));
-            }),
-            const SizedBox(height: 12),
-            _buildColorPropertyHex(context, 'Line Color', props.lineColor, (c) {
-                ProjectState.instance.updateTableProperties(
-                  nodeId, TableProperties(
-                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
-                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
-                        lineColor: c, markerColor: props.markerColor));
-            }),
-            const SizedBox(height: 16),
-            _buildSliderProperty(context, 'Line Thickness', props.lineThickness, 1.0, 10.0, (val) {
-                ProjectState.instance.updateTableProperties(
-                  nodeId, TableProperties(
-                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: val,
-                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
-                        lineColor: props.lineColor, markerColor: props.markerColor));
-            }),
-            const SizedBox(height: 24),
-            _buildDropdownProperty(
-              'Marker Type',
-              props.markerType,
-              {'Circle': 'Circle', 'Square': 'Square', 'Cross': 'Cross', 'X': 'X', 'Triangle up': 'Triangle up', 'Triangle down': 'Triangle down'},
-              (val) {
-                ProjectState.instance.updateTableProperties(
-                  nodeId, TableProperties(
-                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
-                        lineVisible: props.lineVisible, markerType: val, markerVisible: props.markerVisible,
-                        lineColor: props.lineColor, markerColor: props.markerColor));
-              },
+
+            // Section 2: Line Style
+            PropertySection(
+              title: 'Line Style',
+              icon: Icons.timeline,
+              children: [
+                PropertyRow(
+                  label: 'Line Visible',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.lineVisible,
+                      onChanged: (val) {
+                        ProjectState.instance.updateTableProperties(
+                          nodeId,
+                          props.copyWith(lineVisible: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Line Pattern',
+                  child: PrimeSelect<String>(
+                    value: props.lineStyle,
+                    options: const {
+                      'Full': 'Solid (Full)',
+                      'Dashed': 'Dashed (── ──)',
+                      'Dotted': 'Dotted (••••)',
+                      'Dash-Dot': 'Dash-Dot (── • ──)',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateTableProperties(
+                        nodeId,
+                        props.copyWith(lineStyle: val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Line Color',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeColorPicker(
+                      hexColor: props.lineColor,
+                      label: 'Line Color',
+                      onChanged: (c) {
+                        ProjectState.instance.updateTableProperties(
+                          nodeId,
+                          props.copyWith(lineColor: c),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Thickness',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                            activeTrackColor: PrimeTheme.primaryAccent,
+                            inactiveTrackColor: PrimeTheme.borderSide,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: props.lineThickness.clamp(0.5, 10.0),
+                            min: 0.5,
+                            max: 10.0,
+                            onChanged: (val) {
+                              ProjectState.instance.updateTableProperties(
+                                nodeId,
+                                props.copyWith(lineThickness: val),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 58,
+                        child: PrimeNumberField(
+                          value: props.lineThickness,
+                          step: 0.5,
+                          min: 0.5,
+                          max: 20.0,
+                          precision: 1,
+                          onChanged: (val) {
+                            if (val != null) {
+                              ProjectState.instance.updateTableProperties(
+                                nodeId,
+                                props.copyWith(lineThickness: val),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            _buildSwitchProperty('Marker Visible', props.markerVisible, (val) {
-              ProjectState.instance.updateTableProperties(
-                nodeId, TableProperties(
-                      legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
-                      lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: val,
-                      lineColor: props.lineColor, markerColor: props.markerColor));
-            }),
-            const SizedBox(height: 12),
-            _buildColorPropertyHex(context, 'Marker Color', props.markerColor, (c) {
-                ProjectState.instance.updateTableProperties(
-                  nodeId, TableProperties(
-                        legendDisplayName: props.legendDisplayName, lineStyle: props.lineStyle, lineThickness: props.lineThickness,
-                        lineVisible: props.lineVisible, markerType: props.markerType, markerVisible: props.markerVisible,
-                        lineColor: props.lineColor, markerColor: c));
-            }),
+
+            // Section 3: Markers
+            PropertySection(
+              title: 'Markers',
+              icon: Icons.scatter_plot,
+              children: [
+                PropertyRow(
+                  label: 'Marker Visible',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.markerVisible,
+                      onChanged: (val) {
+                        ProjectState.instance.updateTableProperties(
+                          nodeId,
+                          props.copyWith(markerVisible: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Marker Shape',
+                  child: PrimeSelect<String>(
+                    value: props.markerType,
+                    options: const {
+                      'Circle': 'Circle (●)',
+                      'Square': 'Square (■)',
+                      'Cross': 'Cross (+)',
+                      'X': 'X Marker (×)',
+                      'Triangle up': 'Triangle Up (▲)',
+                      'Triangle down': 'Triangle Down (▼)',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateTableProperties(
+                        nodeId,
+                        props.copyWith(markerType: val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Marker Color',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeColorPicker(
+                      hexColor: props.markerColor,
+                      label: 'Marker Color',
+                      onChanged: (c) {
+                        ProjectState.instance.updateTableProperties(
+                          nodeId,
+                          props.copyWith(markerColor: c),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         );
       },
     );
   }
-}
 
-// -----------------------------------------------------------------------------
-// Common Builders
-// -----------------------------------------------------------------------------
-
-Widget _buildSectionHeader(String title) {
-  return Text(
-    title.toUpperCase(),
-    style: const TextStyle(
-      fontSize: 10,
-      fontWeight: FontWeight.w600,
-      color: PrimeTheme.textSecondary,
-      letterSpacing: 0.5,
-    ),
-  );
-}
-
-Widget _buildLatexProperty(String label, String field, String value, ValueChanged<String> onChanged) {
-  final state = ProjectState.instance;
-  final nodeId = state.selectedProjectNodeId.value;
-  final useLatex = nodeId != null && state.getLatexMode(nodeId, field);
-  return LatexTextField(
-    label: label,
-    value: value,
-    onChanged: onChanged,
-    useLatex: useLatex,
-    onLatexToggle: () {
-      if (nodeId != null) state.toggleLatexMode(nodeId, field);
-    },
-  );
-}
-
-Widget _buildDropdownProperty<T>(
-    String label, T value, Map<T, String> options, ValueChanged<T> onChanged) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-      Container(
-        height: 28,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: PrimeTheme.backgroundDark,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: PrimeTheme.borderSide),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<T>(
-            value: value,
-            dropdownColor: PrimeTheme.backgroundDark,
-            icon: const Icon(Icons.arrow_drop_down, color: PrimeTheme.textSecondary, size: 16),
-            style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
-            onChanged: (v) {
-              if (v != null || options.containsKey(null)) {
-                onChanged(v as T);
-              }
-            },
-            items: options.entries.map((e) {
-              return DropdownMenuItem<T>(
-                value: e.key,
-                child: Text(e.value),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-Widget _buildSwitchProperty(String label, bool value, ValueChanged<bool> onChanged) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-      SizedBox(
-        height: 24,
-        child: Switch(
-          value: value,
-          onChanged: onChanged,
-          activeTrackColor: PrimeTheme.primaryAccent,
-        ),
-      ),
-    ],
-  );
-}
-
-final Map<ColorSwatch<Object>, String> _customSwatches = <ColorSwatch<Object>, String>{
-  ColorTools.createPrimarySwatch(const Color(0xFF00C3FF)): 'Cyan',
-  ColorTools.createPrimarySwatch(const Color(0xFFFF5252)): 'Red',
-  ColorTools.createPrimarySwatch(const Color(0xFF69F0AE)): 'Green',
-  ColorTools.createPrimarySwatch(const Color(0xFFFFD740)): 'Yellow',
-  ColorTools.createPrimarySwatch(const Color(0xFFE040FB)): 'Purple',
-  ColorTools.createPrimarySwatch(const Color(0xFFFFFFFF)): 'White',
-  ColorTools.createPrimarySwatch(const Color(0xFF90A4AE)): 'Grey',
-  ColorTools.createPrimarySwatch(const Color(0xFFFF6E40)): 'Orange',
-};
-
-Widget _buildColorPropertyHex(BuildContext context, String label, String hexColor, ValueChanged<String> onChanged) {
-  Color color = Colors.white;
-  try {
-    color = Color(int.parse(hexColor.replaceFirst('#', '0xFF')));
-  } catch (e) {
-    // fallback
+  Widget _buildLatexField(
+    String label,
+    String field,
+    String value,
+    ValueChanged<String> onChanged,
+  ) {
+    final state = ProjectState.instance;
+    final useLatex = state.getLatexMode(nodeId, field);
+    return LatexTextField(
+      label: label,
+      value: value,
+      onChanged: onChanged,
+      useLatex: useLatex,
+      onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+    );
   }
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-      InkWell(
-        onTap: () async {
-          final Color picked = await showColorPickerDialog(
-            context,
-            color,
-            title: Text('Select $label',
-                style: const TextStyle(color: PrimeTheme.textPrimary, fontSize: 16)),
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            spacing: 5,
-            runSpacing: 5,
-            enableOpacity: true,
-            wheelDiameter: 180,
-            showColorCode: true,
-            colorCodeReadOnly: false,
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.custom: false,
-              ColorPickerType.wheel: true,
-              ColorPickerType.both: false,
-              ColorPickerType.bw: false,
-            },
-            customColorSwatchesAndNames: _customSwatches,
-            actionButtons: const ColorPickerActionButtons(
-              okButton: false,
-              closeButton: false,
-            ),
-            constraints: const BoxConstraints(
-              minHeight: 460,
-              minWidth: 420,
-              maxWidth: 420,
-            ),
-          );
-          if (picked.toARGB32() != color.toARGB32()) {
-            final int argb = picked.toARGB32();
-            final String hexStr = (argb & 0xFF000000) == 0xFF000000
-                ? '#${(argb & 0x00FFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}'
-                : '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
-            onChanged(hexStr);
-          }
-        },
-        child: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: PrimeTheme.borderSide),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-Widget _buildSliderProperty(BuildContext context, String label, double value, double min, double max, ValueChanged<double> onChanged) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: PrimeTheme.textPrimary)),
-          Text(value.toStringAsFixed(1), style: const TextStyle(fontSize: 12, color: PrimeTheme.textSecondary)),
-        ],
-      ),
-      const SizedBox(height: 4),
-      SliderTheme(
-        data: SliderTheme.of(context).copyWith(
-          trackHeight: 2,
-          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-          overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-          activeTrackColor: PrimeTheme.primaryAccent,
-          inactiveTrackColor: PrimeTheme.borderSide,
-          thumbColor: Colors.white,
-        ),
-        child: Slider(
-          value: value,
-          min: min,
-          max: max,
-          onChanged: onChanged,
-        ),
-      ),
-    ],
-  );
 }
