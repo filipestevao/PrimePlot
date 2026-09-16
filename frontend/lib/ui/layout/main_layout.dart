@@ -3,8 +3,11 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:window_manager/window_manager.dart';
+import '../../core/file_actions.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
@@ -22,7 +25,7 @@ class MainLayout extends StatefulWidget {
   State<MainLayout> createState() => _MainLayoutState();
 }
 
-class _MainLayoutState extends State<MainLayout> {
+class _MainLayoutState extends State<MainLayout> with WindowListener {
   late MultiSplitViewController _mainController;
   late MultiSplitViewController _leftController;
   late MultiSplitViewController _centerController;
@@ -33,6 +36,10 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
+    windowManager.addListener(this);
+    // Route every close request (X button, Alt+F4, taskbar) through
+    // onWindowClose so dirty state always gets a save prompt.
+    windowManager.setPreventClose(true);
     ProjectState.instance.loadInitialData();
     ProjectState.instance.selectedProjectNodeId.addListener(
       _onSelectionChanged,
@@ -319,15 +326,45 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   void dispose() {
+    windowManager.removeListener(this);
     ProjectState.instance.selectedProjectNodeId.removeListener(
       _onSelectionChanged,
     );
     super.dispose();
   }
 
+  /// Single choke point for window close: prompts to save when dirty.
+  /// Must call [WindowManager.destroy] (not `close`) to exit, since close
+  /// is intercepted while prevent-close is set.
+  @override
+  void onWindowClose() async {
+    var mayExit = true;
+    if (mounted) {
+      mayExit = await FileActions.confirmUnsavedChanges(context, 'exiting');
+    }
+    if (!mayExit && mounted) return;
+    await windowManager.destroy();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DropTarget(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyN, control: true): () =>
+            FileActions.doNew(context),
+        const SingleActivator(LogicalKeyboardKey.keyO, control: true): () =>
+            FileActions.doOpen(context),
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () =>
+            FileActions.doSave(context),
+        const SingleActivator(
+          LogicalKeyboardKey.keyS,
+          control: true,
+          shift: true,
+        ): () => FileActions.doSaveAs(context),
+      },
+      child: Focus(
+        autofocus: true,
+        child: DropTarget(
       onDragEntered: (details) {
         setState(() {
           _dragging = true;
@@ -411,8 +448,8 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                     ),
                     onTap: () {
-                      debugPrint("Menu Selected: new");
                       Navigator.pop(context);
+                      FileActions.doNew(context);
                     },
                   ),
                   ListTile(
@@ -429,8 +466,8 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                     ),
                     onTap: () {
-                      debugPrint("Menu Selected: open");
                       Navigator.pop(context);
+                      FileActions.doOpen(context);
                     },
                   ),
                   ListTile(
@@ -447,8 +484,8 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                     ),
                     onTap: () {
-                      debugPrint("Menu Selected: save");
                       Navigator.pop(context);
+                      FileActions.doSave(context);
                     },
                   ),
                   ListTile(
@@ -465,8 +502,8 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                     ),
                     onTap: () {
-                      debugPrint("Menu Selected: save_as");
                       Navigator.pop(context);
+                      FileActions.doSaveAs(context);
                     },
                   ),
                   const Divider(
@@ -611,6 +648,8 @@ class _MainLayoutState extends State<MainLayout> {
               ),
             ),
         ],
+      ),
+        ),
       ),
     );
   }

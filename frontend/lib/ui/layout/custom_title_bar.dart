@@ -1,9 +1,9 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import '../../core/state.dart';
 import '../../core/theme.dart';
 
 class CustomTitleBar extends StatelessWidget {
@@ -40,6 +40,30 @@ class CustomTitleBar extends StatelessWidget {
                     color: PrimeTheme.textPrimary,
                     letterSpacing: 0.5,
                   ),
+                ),
+                const SizedBox(width: 8),
+                // Current file + dirty star, e.g. "— my_exp.primeplot *".
+                ListenableBuilder(
+                  listenable: Listenable.merge([
+                    ProjectState.instance.currentFilePath,
+                    ProjectState.instance.isDirty,
+                  ]),
+                  builder: (context, _) {
+                    final name = ProjectState.instance.displayFileName;
+                    final dirty = ProjectState.instance.isDirty.value;
+                    final title = '— $name${dirty ? ' *' : ''}';
+                    // Mirror into the OS/taskbar title (fire-and-forget).
+                    windowManager.setTitle('PrimePlot $title');
+                    return Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: PrimeTheme.textSecondary.withValues(alpha: 0.8),
+                        letterSpacing: 0.2,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -109,7 +133,13 @@ class WindowButtons extends StatelessWidget {
             windowManager.maximize();
           }
         }),
-        _buildButton(Icons.close, () => exit(0), hoverColor: Colors.red.withValues(alpha: 0.8)),
+        // Routes through MainLayout's onWindowClose, which prompts to save
+        // when dirty before destroying the window.
+        _buildButton(
+          Icons.close,
+          () => windowManager.close(),
+          hoverColor: Colors.red.withValues(alpha: 0.8),
+        ),
         const SizedBox(width: 4),
       ],
     );

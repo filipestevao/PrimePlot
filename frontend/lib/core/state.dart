@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../src/rust/api/data.dart';
 import '../src/rust/api/project.dart';
 import '../src/rust/api/properties.dart';
+import '../src/rust/api/persistence.dart' as persist;
 
 /// A lightweight, globally accessible state manager.
 class ProjectState {
@@ -46,6 +47,31 @@ class ProjectState {
 
   final ValueNotifier<int> refreshCanvas = ValueNotifier(0);
 
+  /// Path of the currently open `.primeplot` file (null = untitled).
+  final ValueNotifier<String?> currentFilePath = ValueNotifier(null);
+
+  /// True when in-memory state differs from the last save / load / new.
+  final ValueNotifier<bool> isDirty = ValueNotifier(false);
+
+  /// Marks the project as modified (shows `*` in the title bar).
+  void markDirty() {
+    if (!isDirty.value) isDirty.value = true;
+  }
+
+  /// Marks the project as clean (no unsaved changes).
+  void markClean() {
+    if (isDirty.value) isDirty.value = false;
+  }
+
+  /// File name shown in the title bar (`Untitled` when never saved).
+  String get displayFileName {
+    final p = currentFilePath.value;
+    if (p == null || p.isEmpty) return 'Untitled';
+    final sep = p.contains('/') ? '/' : '\\';
+    final base = p.split(sep).last;
+    return base.isEmpty ? 'Untitled' : base;
+  }
+
   final Map<String, bool> latexMode = {};
 
   bool getLatexMode(String nodeId, String field) {
@@ -63,6 +89,7 @@ class ProjectState {
     if (selectedProjectNodeId.value == nodeId) {
       activeFolderProps.value = newProps;
     }
+    markDirty();
   }
 
   void updateGraphProperties(String nodeId, GraphProperties newProps) {
@@ -72,6 +99,7 @@ class ProjectState {
     if (activePlotId == nodeId) {
       activeGraphProps.value = newProps;
     }
+    markDirty();
   }
 
   void updateTableProperties(String nodeId, TableProperties newProps) {
@@ -79,6 +107,7 @@ class ProjectState {
     if (selectedProjectNodeId.value == nodeId) {
       activeTableProps.value = newProps;
     }
+    markDirty();
   }
 
   void updateFunctionProperties(String nodeId, FunctionProperties newProps) {
@@ -86,6 +115,7 @@ class ProjectState {
     if (selectedProjectNodeId.value == nodeId) {
       activeFunctionProps.value = newProps;
     }
+    markDirty();
   }
 
   void updateShapeProperties(String nodeId, ShapeProperties newProps) {
@@ -93,6 +123,7 @@ class ProjectState {
     if (selectedProjectNodeId.value == nodeId) {
       activeShapeProps.value = newProps;
     }
+    markDirty();
   }
 
   String? _getActivePlotId() {
@@ -126,6 +157,8 @@ class ProjectState {
     // Start with an empty table – Rust is the single source of truth.
     activeTable.value = getEmptyTableData();
     projectTree.value = getProjectTree();
+    currentFilePath.value = null;
+    markClean();
   }
 
   /// Parses a raw clipboard string via Rust and updates all dependent state.
@@ -137,6 +170,7 @@ class ProjectState {
     if (displayName != null) {
       renameProjectNodeWrapper('table_1', displayName);
     }
+    markDirty();
   }
 
   /// Creates a new blank 10-row × 2-column table in the active graph.
@@ -159,6 +193,7 @@ class ProjectState {
       final updated = getTable(tableId: active.id);
       activeTable.value = updated;
       tableDisplayName.value = updated.name;
+      markDirty();
       return;
     }
 
@@ -175,6 +210,7 @@ class ProjectState {
       final newNode = parent.children.last;
       selectProjectNode(newNode.id);
     }
+    markDirty();
   }
 
   /// Clears all data rows, keeping the column schema, resetting to an empty table.
@@ -194,6 +230,7 @@ class ProjectState {
     final updated = getTable(tableId: active.id);
     activeTable.value = updated;
     tableDisplayName.value = updated.name;
+    markDirty();
   }
 
   void updateTable(DTODataTable newTable) {
@@ -209,6 +246,7 @@ class ProjectState {
     } else {
       activeTables.value = [newTable];
     }
+    markDirty();
   }
 
   void toggleTableEditMode() {
@@ -222,6 +260,7 @@ class ProjectState {
       nodeType: type,
     );
     projectTree.value = newTree;
+    markDirty();
   }
 
   /// Adds a project node and returns its generated ID.
@@ -236,6 +275,7 @@ class ProjectState {
       nodeType: type,
     );
     projectTree.value = newTree;
+    markDirty();
     // New node is the last child of parent with the matching type
     final parent = findNodeById(newTree, parentId);
     if (parent != null) {
@@ -249,6 +289,7 @@ class ProjectState {
   void moveProjectNodeWrapper(String nodeId, String newParentId) {
     final newTree = moveProjectNode(nodeId: nodeId, newParentId: newParentId);
     projectTree.value = newTree;
+    markDirty();
   }
 
   void selectProjectNode(String nodeId) {
@@ -325,6 +366,7 @@ class ProjectState {
       newIndex: BigInt.from(newIndex),
     );
     projectTree.value = newTree;
+    markDirty();
   }
 
   /// Resolves the nearest valid parent Graph node ID (NodeType.plot).
@@ -409,6 +451,7 @@ class ProjectState {
       graphName.value = graph.name;
     }
     fetchTablesForGraph(parentId);
+    markDirty();
   }
 
   /// Handles paste operations by either updating an existing selected table
@@ -435,6 +478,7 @@ class ProjectState {
       if (parentGraph != null) {
         fetchTablesForGraph(parentGraph.id);
       }
+      markDirty();
       return;
     }
 
@@ -445,6 +489,7 @@ class ProjectState {
   void deleteProjectNodeWrapper(String nodeId) {
     final newTree = deleteProjectNode(nodeId: nodeId);
     projectTree.value = newTree;
+    markDirty();
 
     // Clean up active selections if deleted
     if (selectedProjectNodeId.value == nodeId) {
@@ -474,5 +519,72 @@ class ProjectState {
     // Also update legacy names if editing the default items
     if (nodeId == 'table_1') tableName.value = newName;
     if (nodeId == 'graph_1') graphName.value = newName;
+    markDirty();
+  }
+
+  // ---------------------------------------------------------------------------
+  // File persistence flows (Stage 2B): save / open / new.
+  // Rust remains SSOT; these only snapshot/restore + track path + dirty flag.
+  // Returns null on success, error message otherwise (UI shows SnackBar).
+  // ---------------------------------------------------------------------------
+
+  /// Persists current Rust state to [path]. Sets path + clean on success.
+  String? saveToPath(String path) {
+    try {
+      persist.saveProject(path: path);
+      currentFilePath.value = path;
+      markClean();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Saves to the current path. Returns error string when no path is set
+  /// (caller should fall back to Save As) or when Rust reports failure.
+  String? saveToCurrentPath() {
+    final p = currentFilePath.value;
+    if (p == null || p.isEmpty) return 'No file path set (use Save As).';
+    return saveToPath(p);
+  }
+
+  /// Loads bundle at [path], replacing all UI + Rust state.
+  String? openFromPath(String path) {
+    try {
+      final tree = persist.loadProject(path: path);
+      _applyRestoredTree(tree, path);
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// Resets to the canonical empty project (Workspace > Project > Graph).
+  void createNew() {
+    final tree = persist.newProject();
+    _applyRestoredTree(tree, null);
+  }
+
+  void _applyRestoredTree(ProjectNode tree, String? path) {
+    projectTree.value = tree;
+    currentFilePath.value = path;
+    selectedProjectNodeId.value = null;
+    activeTables.value = [];
+    activeTable.value = null;
+    activeFolderProps.value = null;
+    activeGraphProps.value = null;
+    activeTableProps.value = null;
+    activeFunctionProps.value = null;
+    activeShapeProps.value = null;
+    tableDisplayName.value = 'Table';
+    markClean();
+    // Auto-select the first graph so canvas + inspector populate.
+    final firstGraphId = _findFirstGraphNode(tree);
+    if (firstGraphId != null) {
+      selectProjectNode(firstGraphId);
+    } else {
+      graphName.value = 'Graph';
+      tableName.value = 'Table';
+    }
   }
 }
