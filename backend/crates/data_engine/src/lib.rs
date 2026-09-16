@@ -3,7 +3,9 @@
 
 pub mod table;
 
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NodeType {
     Folder,
     Dataset,
@@ -12,7 +14,7 @@ pub enum NodeType {
     Shape,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ProjectNode {
     pub id: String,
     pub name: String,

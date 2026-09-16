@@ -212,7 +212,7 @@ fn get_table_store() -> &'static Mutex<HashMap<String, EngineDataTable>> {
     TABLE_STORE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {
+pub(crate) fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {
     let mut et = EngineDataTable::new(&dto.id, &dto.name);
     for col in dto.columns {
         let role = match col.role {
@@ -342,4 +342,66 @@ pub fn get_tables_for_graph(graph_id: String) -> Vec<crate::api::data::DTODataTa
         }
     }
     result
+}
+
+// ---------------------------------------------------------------------------
+// Persistence helpers (crate-internal): snapshot / restore project + tables.
+// Used by `persistence.rs` to pack/unpack the `.primeplot` bundle.
+// ---------------------------------------------------------------------------
+
+pub(crate) fn snapshot_tree_engine() -> EngineProjectNode {
+    get_state().lock().unwrap().clone()
+}
+
+pub(crate) fn restore_tree_engine(tree: EngineProjectNode) {
+    *get_state().lock().unwrap() = tree;
+}
+
+pub(crate) fn snapshot_tables_engine() -> HashMap<String, EngineDataTable> {
+    get_table_store().lock().unwrap().clone()
+}
+
+pub(crate) fn restore_tables_engine(map: HashMap<String, EngineDataTable>) {
+    *get_table_store().lock().unwrap() = map;
+}
+
+/// Builds the canonical empty project: Workspace > Project > Graph > Table.
+pub(crate) fn default_project_tree_engine() -> EngineProjectNode {
+    let mut root = EngineProjectNode::new("root_1", "Workspace", EngineNodeType::Folder);
+    let mut project = EngineProjectNode::new("project_1", "Project", EngineNodeType::Folder);
+    let mut graph = EngineProjectNode::new("graph_1", "Graph", EngineNodeType::Plot);
+    graph.add_child(EngineProjectNode::new(
+        "table_1",
+        "Table",
+        EngineNodeType::Dataset,
+    ));
+    project.add_child(graph);
+    root.add_child(project);
+    root
+}
+
+/// After loading a bundle, bump NEXT_ID past the highest numeric suffix found
+/// in the tree so newly created nodes never collide with restored IDs.
+pub(crate) fn reset_next_id_from_tree(tree: &EngineProjectNode) {
+    fn max_suffix(node: &EngineProjectNode, current: usize) -> usize {
+        let mut best = current;
+        if let Some(pos) = node.id.rfind('_') {
+            if let Ok(n) = node.id[pos + 1..].parse::<usize>() {
+                if n >= best {
+                    best = n;
+                }
+            }
+        }
+        for child in &node.children {
+            best = max_suffix(child, best);
+        }
+        best
+    }
+    let max_found = max_suffix(tree, 100);
+    let desired = max_found.saturating_add(1);
+    // Only move forward, never backwards (avoids reusing live IDs).
+    let current = NEXT_ID.load(Ordering::SeqCst);
+    if desired > current {
+        NEXT_ID.store(desired, Ordering::SeqCst);
+    }
 }

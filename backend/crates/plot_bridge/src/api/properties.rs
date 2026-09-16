@@ -4,7 +4,9 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FolderProperties {
     pub information: String,
 }
@@ -17,7 +19,7 @@ impl Default for FolderProperties {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphProperties {
     pub x_min: Option<f64>,
     pub x_max: Option<f64>,
@@ -56,7 +58,7 @@ impl Default for GraphProperties {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TableProperties {
     pub legend_display_name: String,
     pub line_style: String,
@@ -83,7 +85,7 @@ impl Default for TableProperties {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FunctionProperties {
     pub equation: String,
 }
@@ -96,7 +98,7 @@ impl Default for FunctionProperties {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShapeProperties {
     pub shape_type: String,
 }
@@ -186,4 +188,57 @@ pub fn get_shape_properties(node_id: String) -> ShapeProperties {
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_shape_properties(node_id: String, props: ShapeProperties) {
     get_shape_store().lock().unwrap().insert(node_id, props);
+}
+
+// ---------------------------------------------------------------------------
+// Persistence helpers (crate-internal): snapshot / restore / clear all stores.
+// Used by `persistence.rs` to pack/unpack the `.primeplot` bundle.
+// ---------------------------------------------------------------------------
+
+pub(crate) fn snapshot_folder_props() -> HashMap<String, FolderProperties> {
+    get_folder_store().lock().unwrap().clone()
+}
+
+pub(crate) fn snapshot_graph_props() -> HashMap<String, GraphProperties> {
+    get_graph_store().lock().unwrap().clone()
+}
+
+pub(crate) fn snapshot_table_props() -> HashMap<String, TableProperties> {
+    get_table_store().lock().unwrap().clone()
+}
+
+pub(crate) fn snapshot_function_props() -> HashMap<String, FunctionProperties> {
+    get_function_store().lock().unwrap().clone()
+}
+
+pub(crate) fn snapshot_shape_props() -> HashMap<String, ShapeProperties> {
+    get_shape_store().lock().unwrap().clone()
+}
+
+pub(crate) fn restore_folder_props(map: HashMap<String, FolderProperties>) {
+    *get_folder_store().lock().unwrap() = map;
+}
+
+pub(crate) fn restore_graph_props(map: HashMap<String, GraphProperties>) {
+    *get_graph_store().lock().unwrap() = map;
+}
+
+pub(crate) fn restore_table_props(map: HashMap<String, TableProperties>) {
+    *get_table_store().lock().unwrap() = map;
+}
+
+pub(crate) fn restore_function_props(map: HashMap<String, FunctionProperties>) {
+    *get_function_store().lock().unwrap() = map;
+}
+
+pub(crate) fn restore_shape_props(map: HashMap<String, ShapeProperties>) {
+    *get_shape_store().lock().unwrap() = map;
+}
+
+pub(crate) fn clear_all_property_stores() {
+    get_folder_store().lock().unwrap().clear();
+    get_graph_store().lock().unwrap().clear();
+    get_table_store().lock().unwrap().clear();
+    get_function_store().lock().unwrap().clear();
+    get_shape_store().lock().unwrap().clear();
 }

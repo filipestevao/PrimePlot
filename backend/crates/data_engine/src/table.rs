@@ -1,7 +1,9 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ColumnRole {
     X,
     Y,
@@ -10,14 +12,14 @@ pub enum ColumnRole {
     Text,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DataColumn {
     pub name: String,
     pub role: ColumnRole,
     pub data: Vec<f64>, // Keeping it simple with f64 for now, could use an enum for Text later
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DataTable {
     pub id: String,
     pub name: String,
