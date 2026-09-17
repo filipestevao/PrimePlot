@@ -7,17 +7,23 @@
 
 PrimePlot is a personal, open-source project that aims to be a high-performance, modern scientific plotting desktop application. The goal is to provide a lightweight and responsive tool for scientists, engineers, and technicians to plot, customize, and export data.
 
-![PrimePlot screenshot](docs/images/screenshot-01.png)
+<table>
+  <tr>
+    <td><img src="docs/images/screenshot-01.png" alt="PrimePlot screenshot 1" width="100%"></td>
+    <td><img src="docs/images/screenshot-02.png" alt="PrimePlot screenshot 2" width="100%"></td>
+  </tr>
+</table>
 
 > [!CAUTION]
-> The project is in a very early stage of development. There is currently no support for saving, exporting, or customizing charts — at the moment, only basic data plotting is available. Do not use in production.
+> The project is in a very early stage of development. Chart export is not yet supported — at the moment, plotting, axis/color customization, and saving/loading data are available. Do not use in production.
 
 ## Features
 
 - [x] Basic data plotting
 - [x] Import support for multiple data formats
-- [ ] Chart customization (colors, axes, legends, styles)
-- [ ] Save/load projects
+- [x] Chart customization (colors, axes)
+- [x] Save/load data
+- [ ] Chart customization (legends, styles)
 - [ ] Chart export (PNG, SVG, PDF...)
 - [ ] Themes (dark/light)
 
@@ -30,7 +36,7 @@ PrimePlot is a personal, open-source project that aims to be a high-performance,
 
 ## Installation
 
-> Coming soon. As the project is still in an early stage, detailed build and installation instructions will be added once a minimally stable version is available.
+> The project is still in an early stage, and for now the only way to run it is by building from source. See [docs/Installation.md](docs/Installation.md) for step-by-step instructions.
 
 ## Usage
 
@@ -38,9 +44,9 @@ PrimePlot is a personal, open-source project that aims to be a high-performance,
 
 ## Roadmap
 
-- [ ] Visual chart customization
-- [ ] Save/load project files
+- [ ] Chart customization (legends, styles)
 - [ ] Chart export
+- [ ] Themes (dark/light)
 - [ ] Packaging for Windows/Linux/macOS
 
 ## Contributing
