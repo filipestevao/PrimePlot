@@ -126,6 +126,10 @@ class ProjectState {
     markDirty();
   }
 
+  /// Public ID of the plot governing the canvas (selected plot or parent
+  /// of the selected dataset/function/shape). Null when no plot is active.
+  String? get activePlotId => _getActivePlotId();
+
   String? _getActivePlotId() {
     final root = projectTree.value;
     final selectedId = selectedProjectNodeId.value;

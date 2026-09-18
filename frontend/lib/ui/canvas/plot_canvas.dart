@@ -10,8 +10,8 @@ import '../../core/state.dart';
 import '../../core/theme.dart';
 import '../../src/rust/api/data.dart';
 import '../../src/rust/api/properties.dart';
-
-enum _AxisScale { linear, log, sqrt }
+import 'plot_geometry.dart';
+import 'plot_viewport.dart';
 
 Color _parseColor(String value, Color fallback) {
   final trimmed = value.trim();
@@ -39,37 +39,6 @@ Color _parseColor(String value, Color fallback) {
     return Color(int.parse(hex, radix: 16));
   } catch (_) {
     return fallback;
-  }
-}
-
-_AxisScale _axisScale(String? scale) {
-  final normalized = (scale ?? '').toLowerCase();
-  if (normalized.contains('log')) return _AxisScale.log;
-  if (normalized.contains('sqrt') || normalized.contains('square root')) {
-    return _AxisScale.sqrt;
-  }
-  return _AxisScale.linear;
-}
-
-double? _transform(double value, _AxisScale scale) {
-  switch (scale) {
-    case _AxisScale.linear:
-      return value.isFinite ? value : null;
-    case _AxisScale.log:
-      return value > 0 && value.isFinite ? math.log(value) / math.ln10 : null;
-    case _AxisScale.sqrt:
-      return value >= 0 && value.isFinite ? math.sqrt(value) : null;
-  }
-}
-
-double _inverseTransform(double value, _AxisScale scale) {
-  switch (scale) {
-    case _AxisScale.linear:
-      return value;
-    case _AxisScale.log:
-      return math.pow(10, value).toDouble();
-    case _AxisScale.sqrt:
-      return value * value;
   }
 }
 
@@ -233,7 +202,18 @@ class PlotCanvas extends StatelessWidget {
                       );
                     }
 
-                    Widget canvas = baseCanvas;
+                    Widget canvas = PlotViewport(
+                      xSeries: seriesX,
+                      ySeries: seriesY,
+                      visible: [
+                        for (var i = 0; i < tableProps.length; i++)
+                          tableProps[i].lineVisible ||
+                              tableProps[i].markerVisible,
+                      ],
+                      graphProps: graphProps,
+                      plotId: ProjectState.instance.activePlotId,
+                      child: baseCanvas,
+                    );
 
                     if (graphProps?.aspectRatio != null) {
                       canvas = Center(
@@ -260,10 +240,10 @@ class PlotCanvas extends StatelessWidget {
     Size size,
     Set<String> latexFields,
   ) {
-    const marginLeft = 60.0;
-    const marginBottom = 44.0;
-    const marginTop = 24.0;
-    const marginRight = 24.0;
+    const marginLeft = kPlotMarginLeft;
+    const marginBottom = kPlotMarginBottom;
+    const marginTop = kPlotMarginTop;
+    const marginRight = kPlotMarginRight;
 
     const labelStyle = TextStyle(
       fontSize: 12,
@@ -344,53 +324,25 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (xSeries.isEmpty || ySeries.isEmpty) return;
 
-    final xScale = _axisScale(graphProps?.xScale);
-    final yScale = _axisScale(graphProps?.yScale);
-    final combinedX = <double>[];
-    final combinedY = <double>[];
+    // Limits resolved in transformed space (shared with viewport gestures).
+    final resolved = resolvePlotView(
+      xSeries: xSeries,
+      ySeries: ySeries,
+      graphProps: graphProps,
+    );
+    if (resolved == null) return;
 
-    for (var s = 0; s < xSeries.length; s++) {
-      final len = math.min(xSeries[s].length, ySeries[s].length);
-      for (var i = 0; i < len; i++) {
-        final tx = _transform(xSeries[s][i], xScale);
-        final ty = _transform(ySeries[s][i], yScale);
-        if (tx != null && ty != null) {
-          combinedX.add(tx);
-          combinedY.add(ty);
-        }
-      }
-    }
-    if (combinedX.isEmpty || combinedY.isEmpty) return;
+    final xScale = resolved.xScale;
+    final yScale = resolved.yScale;
+    var minX = resolved.minX;
+    var maxX = resolved.maxX;
+    var minY = resolved.minY;
+    var maxY = resolved.maxY;
 
-    var minX = combinedX.reduce(math.min);
-    var maxX = combinedX.reduce(math.max);
-    var minY = combinedY.reduce(math.min);
-    var maxY = combinedY.reduce(math.max);
-
-    final overrideXMin = graphProps?.xMin != null
-        ? _transform(graphProps!.xMin!, xScale)
-        : null;
-    final overrideXMax = graphProps?.xMax != null
-        ? _transform(graphProps!.xMax!, xScale)
-        : null;
-    final overrideYMin = graphProps?.yMin != null
-        ? _transform(graphProps!.yMin!, yScale)
-        : null;
-    final overrideYMax = graphProps?.yMax != null
-        ? _transform(graphProps!.yMax!, yScale)
-        : null;
-    if (overrideXMin != null) minX = overrideXMin;
-    if (overrideXMax != null) maxX = overrideXMax;
-    if (overrideYMin != null) minY = overrideYMin;
-    if (overrideYMax != null) maxY = overrideYMax;
-
-    if (maxX <= minX) maxX = minX + 1;
-    if (maxY <= minY) maxY = minY + 1;
-
-    const marginLeft = 60.0;
-    const marginBottom = 44.0;
-    const marginTop = 24.0;
-    const marginRight = 24.0;
+    const marginLeft = kPlotMarginLeft;
+    const marginBottom = kPlotMarginBottom;
+    const marginTop = kPlotMarginTop;
+    const marginRight = kPlotMarginRight;
     final plotWidth = size.width - marginLeft - marginRight;
     final plotHeight = size.height - marginTop - marginBottom;
     if (plotWidth <= 0 || plotHeight <= 0) return;
@@ -406,8 +358,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       ..strokeWidth = 1.0;
 
     Offset? mapToScreen(double x, double y) {
-      final tx = _transform(x, xScale);
-      final ty = _transform(y, yScale);
+      final tx = transformValue(x, xScale);
+      final ty = transformValue(y, yScale);
       if (tx == null || ty == null) return null;
       final screenX = marginLeft + ((tx - minX) / (maxX - minX)) * plotWidth;
       final screenY =
@@ -449,7 +401,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
             Offset(screenX, bottom + 5),
             paintAxis,
           );
-          final rawX = _inverseTransform(minX + (maxX - minX) * t, xScale);
+          final rawX = inverseTransformValue(minX + (maxX - minX) * t, xScale);
           final label = TextPainter(
             text: TextSpan(text: _formatTick(rawX), style: textStyle),
             textDirection: TextDirection.ltr,
@@ -464,7 +416,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
             Offset(marginLeft, screenY),
             paintAxis,
           );
-          final rawY = _inverseTransform(minY + (maxY - minY) * t, yScale);
+          final rawY = inverseTransformValue(minY + (maxY - minY) * t, yScale);
           final label = TextPainter(
             text: TextSpan(text: _formatTick(rawY), style: textStyle),
             textDirection: TextDirection.ltr,
