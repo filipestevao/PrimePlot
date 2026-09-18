@@ -1,8 +1,8 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
-//! Interactive canvas viewport: wheel zoom at cursor, grab-pan,
-//! Shift+drag box zoom, dashed crosshair + live coordinate HUD,
+//! Interactive canvas viewport: wheel zoom at cursor, left-drag box zoom,
+//! right/middle-drag grab-pan, dashed crosshair + live coordinate readout,
 //! double-click autoscale (envelope + 5% margin).
 //!
 //! Navigation writes explicit limits into Rust `GraphProperties` (SSOT)
@@ -13,7 +13,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../core/state.dart';
 import '../../core/theme.dart';
@@ -83,12 +82,6 @@ class _PlotViewportState extends State<PlotViewport> {
     );
   }
 
-  static bool _shiftHeld() {
-    final pressed = HardwareKeyboard.instance.logicalKeysPressed;
-    return pressed.contains(LogicalKeyboardKey.shiftLeft) ||
-        pressed.contains(LogicalKeyboardKey.shiftRight);
-  }
-
   void _onScroll(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
     if (!_canNavigate) return;
@@ -110,14 +103,15 @@ class _PlotViewportState extends State<PlotViewport> {
 
   void _onDown(PointerDownEvent event) {
     if (!_canNavigate) return;
-    if (_shiftHeld()) {
+    // Left button starts a marquee box zoom; right/middle buttons pan.
+    if ((event.buttons & kPrimaryMouseButton) != 0) {
       setState(() {
         _marqueeStart = event.localPosition;
         _marquee = Rect.fromPoints(event.localPosition, event.localPosition);
       });
       return;
     }
-    if ((event.buttons & (kPrimaryMouseButton | kMiddleMouseButton)) != 0) {
+    if ((event.buttons & (kSecondaryMouseButton | kMiddleMouseButton)) != 0) {
       setState(() {
         _panning = true;
         _panLast = event.localPosition;
@@ -223,11 +217,10 @@ class _PlotViewportState extends State<PlotViewport> {
             : null;
 
         return MouseRegion(
+          // Crosshair hints left-drag box zoom; grabber while right-panning.
           cursor: _panning
               ? SystemMouseCursors.grabbing
-              : _marqueeStart != null
-              ? SystemMouseCursors.precise
-              : SystemMouseCursors.grab,
+              : SystemMouseCursors.precise,
           onHover: (e) => setState(() => _hover = e.localPosition),
           onExit: (_) => setState(() => _hover = null),
           child: GestureDetector(
@@ -251,15 +244,17 @@ class _PlotViewportState extends State<PlotViewport> {
                       ),
                     ),
                   ),
+                  // Readout lives in the top margin strip, above the axes,
+                  // so it never covers data.
                   if (data != null)
                     Positioned(
-                      left: kPlotMarginLeft + 8,
-                      bottom: kPlotMarginBottom + 8,
+                      left: 8,
+                      top: 2,
                       child: IgnorePointer(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
-                            vertical: 4,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
                             color: PrimeTheme.panelBackground.withValues(

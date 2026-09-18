@@ -489,6 +489,12 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
     drawAxisAndGrid();
 
+    // Axes act as boundaries: curves/markers never paint outside the plot.
+    canvas.save();
+    canvas.clipRect(
+      Rect.fromLTWH(marginLeft, marginTop, plotWidth, plotHeight),
+    );
+
     for (var s = 0; s < xSeries.length; s++) {
       final xs = xSeries[s];
       final ys = ySeries[s];
@@ -553,6 +559,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         }
       }
     }
+
+    canvas.restore();
 
     _drawLegend(canvas, size, marginTop, marginRight);
   }

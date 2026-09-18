@@ -447,14 +447,11 @@ class ProjectState {
     );
     projectTree.value = newTree;
 
-    // Refresh chart + selection directly (mirrors handlePaste pattern)
-    selectedProjectNodeId.value = parentId;
-    final root = projectTree.value;
-    final graph = root != null ? findNodeById(root, parentId) : null;
-    if (graph != null) {
-      graphName.value = graph.name;
-    }
-    fetchTablesForGraph(parentId);
+    // Canonical selection path: loads graph props (viewport limits),
+    // fetches tables and sets the graph name. Direct assignment of
+    // selectedProjectNodeId here used to leave activeGraphProps stale/null,
+    // silently disabling canvas navigation until nodes were reselected.
+    selectProjectNode(parentId);
     markDirty();
   }
 
