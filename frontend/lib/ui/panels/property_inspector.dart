@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
+import '../../src/rust/api/palettes.dart';
 import '../components/latex_text_field.dart';
 import '../components/prime_color_picker.dart';
 import '../components/prime_number_field.dart';
@@ -525,6 +526,16 @@ class _GraphInspector extends StatelessWidget {
                 ),
               ],
             ),
+
+            // Section 5: Palette — re-align curve order to a color sequence.
+            PropertySection(
+              title: 'Palette',
+              icon: Icons.palette,
+              children: [
+                for (final name in listPalettes())
+                  _PaletteButton(graphId: nodeId, paletteName: name),
+              ],
+            ),
           ],
         );
       },
@@ -545,6 +556,97 @@ class _GraphInspector extends StatelessWidget {
       onChanged: onChanged,
       useLatex: useLatex,
       onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+    );
+  }
+}
+
+/// One palette row: swatch dots + name. Tap re-aligns this graph's curves
+/// (in tree order) to the palette sequence, overwriting per-curve colors.
+class _PaletteButton extends StatelessWidget {
+  final String graphId;
+  final String paletteName;
+  const _PaletteButton({required this.graphId, required this.paletteName});
+
+  static Color _hex(String hex) {
+    var h = hex.trim().replaceFirst('#', '');
+    if (h.length == 6) h = 'FF$h';
+    final v = int.tryParse(h, radix: 16);
+    if (v == null) return const Color(0xFF808080);
+    return Color(v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<String> hexes = const [];
+    try {
+      hexes = paletteColors(palette: paletteName);
+    } catch (_) {
+      // Leave dots empty; tap will surface the error.
+    }
+    final dots = hexes.take(6).map((h) => _hex(h)).toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4),
+          onTap: () {
+            final err = ProjectState.instance.applyPalette(
+              graphId,
+              paletteName,
+            );
+            if (err != null && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Palette failed: $err',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  backgroundColor: const Color(0xFF7F1D1D),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+          child: Container(
+            height: 26,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: PrimeTheme.searchBarBackground,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: PrimeTheme.borderSide),
+            ),
+            child: Row(
+              children: [
+                for (var i = 0; i < dots.length; i++)
+                  Container(
+                    width: 12,
+                    height: 12,
+                    margin: EdgeInsets.only(
+                      right: i == dots.length - 1 ? 0 : 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: dots[i],
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Text(
+                  paletteName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: PrimeTheme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

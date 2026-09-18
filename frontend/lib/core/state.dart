@@ -7,6 +7,7 @@ import '../src/rust/api/data.dart';
 import '../src/rust/api/project.dart';
 import '../src/rust/api/properties.dart';
 import '../src/rust/api/persistence.dart' as persist;
+import '../src/rust/api/palettes.dart' as pal;
 
 /// A lightweight, globally accessible state manager.
 class ProjectState {
@@ -521,6 +522,32 @@ class ProjectState {
     if (nodeId == 'table_1') tableName.value = newName;
     if (nodeId == 'graph_1') graphName.value = newName;
     markDirty();
+  }
+
+  /// Re-aligns a graph's curves to a palette (curve order → color order).
+  /// Returns null on success, error message otherwise.
+  String? applyPalette(String graphId, String palette) {
+    try {
+      pal.applyPalette(graphId: graphId, palette: palette);
+    } catch (e) {
+      return e.toString();
+    }
+    // Reload the inspector snapshot when a curve is selected: the painter
+    // reads Rust live, but the inspector holds a snapshot.
+    final sel = selectedProjectNodeId.value;
+    if (sel != null) {
+      final node = findNodeById(projectTree.value, sel);
+      if (node != null && node.nodeType == NodeType.dataset) {
+        try {
+          activeTableProps.value = getTableProperties(nodeId: sel);
+        } catch (_) {
+          // Keep previous snapshot on error.
+        }
+      }
+    }
+    markDirty();
+    refreshCanvas.value++;
+    return null;
   }
 
   // ---------------------------------------------------------------------------
