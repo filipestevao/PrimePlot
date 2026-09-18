@@ -127,7 +127,12 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
             data: Vec::new(),
         });
         let mut store = get_table_store().lock().unwrap();
-        store.insert(new_id, table);
+        store.insert(new_id.clone(), table);
+        drop(store);
+        // Academic palette: next unused Tab10 color when born under a graph.
+        if let Some(sibs) = dataset_sibling_ids(&state, &parent_id) {
+            crate::api::palettes::assign_next_color(&sibs, &new_id);
+        }
     }
     
     state.clone().into()
@@ -274,6 +279,11 @@ pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_co
         state.add_child(node);
     }
 
+    drop(store);
+    if let Some(sibs) = dataset_sibling_ids(&state, &parent_id) {
+        crate::api::palettes::assign_next_color(&sibs, &new_id);
+    }
+
     state.clone().into()
 }
 
@@ -298,6 +308,11 @@ pub fn add_table_from_raw(parent_id: String, raw: String, display_name: String) 
     state.insert_node_opt(&parent_id, &mut opt_node);
     if let Some(node) = opt_node.take() {
         state.add_child(node);
+    }
+
+    drop(store);
+    if let Some(sibs) = dataset_sibling_ids(&state, &parent_id) {
+        crate::api::palettes::assign_next_color(&sibs, &new_id);
     }
 
     state.clone().into()
@@ -348,6 +363,38 @@ pub fn get_tables_for_graph(graph_id: String) -> Vec<crate::api::data::DTODataTa
 // Persistence helpers (crate-internal): snapshot / restore project + tables.
 // Used by `persistence.rs` to pack/unpack the `.primeplot` bundle.
 // ---------------------------------------------------------------------------
+
+/// Dataset children of `graph_id` (empty when the node is missing or not a
+/// plot). Used for palette cycling. Callers must NOT hold any store lock
+/// other than `PROJECT_STATE` (palettes lock the property stores).
+fn dataset_sibling_ids(
+    state: &EngineProjectNode,
+    graph_id: &str,
+) -> Option<Vec<String>> {
+    fn find<'a>(node: &'a EngineProjectNode, target: &str) -> Option<&'a EngineProjectNode> {
+        if node.id == target {
+            return Some(node);
+        }
+        for c in &node.children {
+            if let Some(n) = find(c, target) {
+                return Some(n);
+            }
+        }
+        None
+    }
+    let graph = find(state, graph_id)?;
+    if !matches!(graph.node_type, EngineNodeType::Plot) {
+        return None;
+    }
+    Some(
+        graph
+            .children
+            .iter()
+            .filter(|c| matches!(c.node_type, EngineNodeType::Dataset))
+            .map(|c| c.id.clone())
+            .collect(),
+    )
+}
 
 pub(crate) fn snapshot_tree_engine() -> EngineProjectNode {
     get_state().lock().unwrap().clone()

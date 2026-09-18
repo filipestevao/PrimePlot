@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'data.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `default_project_tree_engine`, `dto_to_engine_table`, `generate_id`, `get_state`, `get_table_store`, `reset_next_id_from_tree`, `restore_tables_engine`, `restore_tree_engine`, `snapshot_tables_engine`, `snapshot_tree_engine`
+// These functions are ignored because they are not marked as `pub`: `dataset_sibling_ids`, `default_project_tree_engine`, `dto_to_engine_table`, `generate_id`, `get_state`, `get_table_store`, `reset_next_id_from_tree`, `restore_tables_engine`, `restore_tree_engine`, `snapshot_tables_engine`, `snapshot_tree_engine`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
 
 ProjectNode getProjectTree() =>

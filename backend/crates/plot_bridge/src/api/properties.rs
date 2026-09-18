@@ -79,7 +79,7 @@ impl Default for TableProperties {
             line_visible: true,
             marker_type: "Circle".to_string(),
             marker_visible: true,
-            line_color: "#00C3FF".to_string(),
+            line_color: "#1F77B4".to_string(),
             marker_color: "#FFFFFF".to_string(),
         }
     }
@@ -242,3 +242,8 @@ pub(crate) fn clear_all_property_stores() {
     get_function_store().lock().unwrap().clear();
     get_shape_store().lock().unwrap().clear();
 }
+
+/// Serializes tests that mutate global stores (Rust runs tests in parallel
+/// threads; without this, store-backed tests flake against each other).
+#[cfg(test)]
+pub(crate) static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());

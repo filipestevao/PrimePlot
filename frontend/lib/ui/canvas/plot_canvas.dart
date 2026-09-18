@@ -139,7 +139,7 @@ class PlotCanvas extends StatelessWidget {
                             lineVisible: true,
                             markerType: 'Circle',
                             markerVisible: true,
-                            lineColor: '#00C3FF',
+                            lineColor: '#1F77B4',
                             markerColor: '#FFFFFF',
                           ),
                         );
@@ -502,8 +502,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
       final props = s < tableProps.length ? tableProps[s] : null;
       final lineColor = props != null
-          ? _parseColor(props.lineColor, const Color(0xFF00C3FF))
-          : const Color(0xFF00C3FF);
+          ? _parseColor(props.lineColor, const Color(0xFF1F77B4))
+          : const Color(0xFF1F77B4);
       final markerColor = props != null
           ? _parseColor(props.markerColor, Colors.white)
           : Colors.white;
@@ -706,7 +706,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       entries.add(
         _LegendEntry(
           name: entryName,
-          lineColor: _parseColor(props.lineColor, const Color(0xFF00C3FF)),
+          lineColor: _parseColor(props.lineColor, const Color(0xFF1F77B4)),
           markerColor: _parseColor(props.markerColor, Colors.white),
           lineStyle: props.lineStyle,
           markerType: props.markerType,

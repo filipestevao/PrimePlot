@@ -576,6 +576,7 @@ mod tests {
 
     #[test]
     fn save_and_load_zip_round_trip() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
         use data_engine::NodeType as EngineNodeType;
 
         // Arrange: build a small project in global state.
