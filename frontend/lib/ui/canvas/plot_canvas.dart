@@ -180,13 +180,11 @@ class PlotCanvas extends StatelessWidget {
                       }
                     }
 
-                    // Analytical `f(x)` curves. Definition vs. visualization
-                    // are strictly separate: an explicit function Domain is
-                    // sampled as-is; Auto-domain follows the tabular data
-                    // envelope (or [-10, 10] with no datasets). Graph X/Y
-                    // ranges only choose the visible window — they never
-                    // define function limits. Broken equations are skipped
-                    // here; the Function inspector surfaces the error.
+                    // Analytical `f(x)` curves, sampled live over the view
+                    // range (explicit graph limits, else tabular envelope,
+                    // else [-10, 10]). Local per-function domain overrides
+                    // apply inside Rust. Broken equations are skipped here;
+                    // the Function inspector surfaces the error.
                     final functionIds = <String>[];
                     {
                       var lo = -10.0;
@@ -204,19 +202,16 @@ class PlotCanvas extends StatelessWidget {
                       if (fMin.isFinite && fMax.isFinite && fMax > fMin) {
                         lo = fMin;
                         hi = fMax;
-                      } else {
-                        // No datasets: fall back to the visible window so
-                        // function-only graphs stay usable while navigating.
-                        final gxMin = graphProps?.xMin;
-                        final gxMax = graphProps?.xMax;
-                        if (gxMin != null &&
-                            gxMax != null &&
-                            gxMin.isFinite &&
-                            gxMax.isFinite &&
-                            gxMax > gxMin) {
-                          lo = gxMin;
-                          hi = gxMax;
-                        }
+                      }
+                      final gxMin = graphProps?.xMin;
+                      final gxMax = graphProps?.xMax;
+                      if (gxMin != null &&
+                          gxMax != null &&
+                          gxMin.isFinite &&
+                          gxMax.isFinite &&
+                          gxMax > gxMin) {
+                        lo = gxMin;
+                        hi = gxMax;
                       }
                       for (final fn in functionNodes) {
                         FunctionProperties fprops;
