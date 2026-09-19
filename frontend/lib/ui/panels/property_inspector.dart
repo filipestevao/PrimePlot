@@ -277,7 +277,8 @@ class _FunctionInspector extends StatelessWidget {
               ],
             ),
 
-            // Section 3: Domain (local override; Auto follows the viewport)
+            // Section 3: Domain (local override; Auto follows the data
+            // envelope, or [-10, 10] with no datasets — never the viewport)
             PropertySection(
               title: 'Domain',
               icon: Icons.horizontal_rule,
