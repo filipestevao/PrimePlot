@@ -55,9 +55,10 @@ pub fn palette_colors(palette: String) -> Result<Vec<String>, String> {
         })
 }
 
-/// Re-aligns a graph's curves to a palette: curve order → color sequence
-/// (`i`-th dataset gets `palette[i % len]`). Custom single-curve tweaks are
-/// overwritten; other properties are preserved.
+/// Re-aligns a graph's curves to a palette: tree order → color sequence
+/// (datasets and functions share one index, so deleting/reordering is fixed
+/// with one tap). Custom single-curve tweaks are overwritten; other
+/// properties are preserved.
 #[flutter_rust_bridge::frb(sync)]
 pub fn apply_palette(graph_id: String, palette: String) -> Result<(), String> {
     let colors = palette_by_name(&palette).ok_or_else(|| {
@@ -66,50 +67,114 @@ pub fn apply_palette(graph_id: String, palette: String) -> Result<(), String> {
 
     // Snapshot + release before touching property stores (lock ordering).
     let tree = crate::api::project::snapshot_tree_engine();
-    let ids = crate::api::project::dataset_ids_in_order(&tree, &graph_id)
+    let graph = find_graph(&tree, &graph_id)
         .ok_or_else(|| format!("graph '{graph_id}' not found"))?;
 
-    for (i, id) in ids.iter().enumerate() {
-        let mut props = crate::api::properties::get_table_properties(id.clone());
-        props.line_color = colors[i % colors.len()].to_string();
-        crate::api::properties::set_table_properties(id.clone(), props);
+    let mut i = 0;
+    for child in &graph.children {
+        let color = colors[i % colors.len()].to_string();
+        match child.node_type {
+            data_engine::NodeType::Dataset => {
+                let mut props =
+                    crate::api::properties::get_table_properties(child.id.clone());
+                props.line_color = color;
+                crate::api::properties::set_table_properties(child.id.clone(), props);
+                i += 1;
+            }
+            data_engine::NodeType::Function => {
+                let mut props =
+                    crate::api::properties::get_function_properties(child.id.clone());
+                props.line_color = color;
+                crate::api::properties::set_function_properties(child.id.clone(), props);
+                i += 1;
+            }
+            _ => {}
+        }
     }
     Ok(())
+}
+
+fn find_graph<'a>(
+    tree: &'a data_engine::ProjectNode,
+    graph_id: &str,
+) -> Option<&'a data_engine::ProjectNode> {
+    if tree.id == graph_id {
+        return match tree.node_type {
+            data_engine::NodeType::Plot => Some(tree),
+            _ => None,
+        };
+    }
+    for child in &tree.children {
+        if let Some(n) = find_graph(child, graph_id) {
+            return Some(n);
+        }
+    }
+    None
 }
 
 /// First unused Tab10 color among `sibling_dataset_ids` (compared
 /// case-insensitively against stored `line_color` values). Falls back to
 /// cycling by sibling count once the palette is exhausted.
 pub(crate) fn next_color_for_siblings(sibling_dataset_ids: &[String]) -> String {
-    let props = crate::api::properties::snapshot_table_props();
-    let mut used: Vec<String> = Vec::with_capacity(sibling_dataset_ids.len());
-    for id in sibling_dataset_ids {
-        if let Some(p) = props.get(id) {
-            used.push(p.line_color.to_ascii_uppercase());
+    next_combined_color(Some(sibling_dataset_ids), None)
+        .unwrap_or_else(|| TAB10[0].to_string())
+}
+
+/// First unused Tab10 color across dataset + function siblings of a graph.
+/// `None` when the node wasn't born under a graph (caller keeps lazy default).
+pub(crate) fn next_combined_color(
+    dataset_ids: Option<&[String]>,
+    function_ids: Option<&[String]>,
+) -> Option<String> {
+    if dataset_ids.is_none() && function_ids.is_none() {
+        return None;
+    }
+    let table_props = crate::api::properties::snapshot_table_props();
+    let fn_props = crate::api::properties::snapshot_function_props();
+    let mut used: Vec<String> = Vec::new();
+    for id in dataset_ids.unwrap_or(&[]).iter().chain(function_ids.unwrap_or(&[])) {
+        let color = table_props
+            .get(id)
+            .map(|p| p.line_color.clone())
+            .or_else(|| fn_props.get(id).map(|p| p.line_color.clone()));
+        if let Some(c) = color {
+            used.push(c.to_ascii_uppercase());
         }
     }
     for candidate in TAB10 {
         if !used.iter().any(|u| u == candidate) {
-            return candidate.to_string();
+            return Some(candidate.to_string());
         }
     }
-    TAB10[sibling_dataset_ids.len() % TAB10.len()].to_string()
+    let total = dataset_ids.map_or(0, |s| s.len()) + function_ids.map_or(0, |s| s.len());
+    Some(TAB10[total % TAB10.len()].to_string())
 }
 
 /// Initializes a newborn curve's props: Display Name follows the node name
 /// (so legend label and inspector agree from the start) and, when born
-/// under a graph (`sibling_ids` present), the next unused Tab10 color.
+/// under a graph (`color` present), the next unused Tab10 color.
 pub(crate) fn init_curve_props(
     table_id: &str,
     display_name: &str,
-    sibling_ids: Option<&[String]>,
+    color: Option<String>,
 ) {
     let mut props = crate::api::properties::get_table_properties(table_id.to_string());
-    if let Some(sibs) = sibling_ids {
-        props.line_color = next_color_for_siblings(sibs);
+    if let Some(c) = color {
+        props.line_color = c;
     }
     props.legend_display_name = display_name.to_string();
     crate::api::properties::set_table_properties(table_id.to_string(), props);
+}
+
+/// Initializes a newborn function's color (functions have no Display Name
+/// field; the legend follows the node name live). No-op off-graph.
+pub(crate) fn init_function_props(node_id: &str, color: Option<String>) {
+    if let Some(c) = color {
+        let mut props =
+            crate::api::properties::get_function_properties(node_id.to_string());
+        props.line_color = c;
+        crate::api::properties::set_function_properties(node_id.to_string(), props);
+    }
 }
 
 #[cfg(test)]
@@ -175,11 +240,33 @@ mod tests {
                 ..Default::default()
             },
         )]));
-        init_curve_props("table_9", "curve_a.txt", Some(&["table_9".to_string()]));
+        init_curve_props(
+            "table_9",
+            "curve_a.txt",
+            next_combined_color(Some(&["table_9".to_string()]), None),
+        );
         let back = crate::api::properties::get_table_properties("table_9".to_string());
         assert_eq!(back.line_color, "#1F77B4");
         assert_eq!(back.legend_display_name, "curve_a.txt");
         assert_eq!(back.line_thickness, 5.0);
+        crate::api::properties::clear_all_property_stores();
+    }
+
+    #[test]
+    fn combined_cycle_skips_function_colors() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        crate::api::properties::clear_all_property_stores();
+        crate::api::properties::set_function_properties(
+            "fn_1".to_string(),
+            crate::api::properties::FunctionProperties {
+                line_color: "#1F77B4".to_string(),
+                ..Default::default()
+            },
+        );
+        let color = next_combined_color(Some(&[]), Some(&["fn_1".to_string()]));
+        assert_eq!(color, Some("#FF7F0E".to_string()));
+        // Off-graph creation keeps the lazy default.
+        assert_eq!(next_combined_color(None, None), None);
         crate::api::properties::clear_all_property_stores();
     }
 
@@ -198,18 +285,26 @@ mod tests {
         assert!(palette_colors("Nope".to_string()).is_err());
     }
 
-    fn three_curve_tree() -> data_engine::ProjectNode {
+    fn mixed_curve_tree() -> data_engine::ProjectNode {
         use data_engine::NodeType as EngineNodeType;
         let mut root =
             data_engine::ProjectNode::new("root_1", "Workspace", EngineNodeType::Folder);
         let mut graph = data_engine::ProjectNode::new("graph_1", "Graph", EngineNodeType::Plot);
-        for id in ["table_1", "table_2", "table_3"] {
-            graph.add_child(data_engine::ProjectNode::new(
-                id,
-                id,
-                EngineNodeType::Dataset,
-            ));
-        }
+        graph.add_child(data_engine::ProjectNode::new(
+            "table_1",
+            "table_1",
+            EngineNodeType::Dataset,
+        ));
+        graph.add_child(data_engine::ProjectNode::new(
+            "fn_1",
+            "fn_1",
+            EngineNodeType::Function,
+        ));
+        graph.add_child(data_engine::ProjectNode::new(
+            "table_2",
+            "table_2",
+            EngineNodeType::Dataset,
+        ));
         root.add_child(graph);
         root
     }
@@ -219,15 +314,23 @@ mod tests {
         let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
         let saved_tree = crate::api::project::snapshot_tree_engine();
         let saved_tables = crate::api::project::snapshot_tables_engine();
-        crate::api::project::restore_tree_engine(three_curve_tree());
+        crate::api::project::restore_tree_engine(mixed_curve_tree());
         crate::api::properties::clear_all_property_stores();
 
+        // Datasets and functions share one tree-order index.
         apply_palette("graph_1".to_string(), "Set1".to_string()).unwrap();
-        for (i, id) in ["table_1", "table_2", "table_3"].iter().enumerate() {
-            let back =
-                crate::api::properties::get_table_properties(id.to_string());
-            assert_eq!(back.line_color, SET1[i]);
-        }
+        assert_eq!(
+            crate::api::properties::get_table_properties("table_1".to_string()).line_color,
+            SET1[0]
+        );
+        assert_eq!(
+            crate::api::properties::get_function_properties("fn_1".to_string()).line_color,
+            SET1[1]
+        );
+        assert_eq!(
+            crate::api::properties::get_table_properties("table_2".to_string()).line_color,
+            SET1[2]
+        );
 
         // Unknown palette / graph are clean errors, state untouched.
         assert!(apply_palette("graph_1".to_string(), "Nope".to_string()).is_err());

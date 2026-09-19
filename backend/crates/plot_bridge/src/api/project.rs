@@ -129,12 +129,22 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
         let mut store = get_table_store().lock().unwrap();
         store.insert(new_id.clone(), table);
         drop(store);
-        // Display Name follows the node name; palette color when under a graph.
-        crate::api::palettes::init_curve_props(
-            &new_id,
-            &name,
-            dataset_ids_in_order(&state, &parent_id).as_deref(),
-        );
+        // Display Name follows the node name; palette color skips colors
+        // already used by dataset + function siblings under the graph.
+        let ds = dataset_ids_in_order(&state, &parent_id);
+        let fs = function_ids_in_order(&state, &parent_id);
+        let color =
+            crate::api::palettes::next_combined_color(ds.as_deref(), fs.as_deref());
+        crate::api::palettes::init_curve_props(&new_id, &name, color);
+    }
+
+    // Newborn functions join the same palette cycle as datasets.
+    if let NodeType::Function = node_type {
+        let ds = dataset_ids_in_order(&state, &parent_id);
+        let fs = function_ids_in_order(&state, &parent_id);
+        let color =
+            crate::api::palettes::next_combined_color(ds.as_deref(), fs.as_deref());
+        crate::api::palettes::init_function_props(&new_id, color);
     }
     
     state.clone().into()
@@ -282,11 +292,11 @@ pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_co
     }
 
     drop(store);
-    crate::api::palettes::init_curve_props(
-        &new_id,
-        &name,
-        dataset_ids_in_order(&state, &parent_id).as_deref(),
-    );
+    let ds = dataset_ids_in_order(&state, &parent_id);
+    let fs = function_ids_in_order(&state, &parent_id);
+    let color =
+        crate::api::palettes::next_combined_color(ds.as_deref(), fs.as_deref());
+    crate::api::palettes::init_curve_props(&new_id, &name, color);
 
     state.clone().into()
 }
@@ -315,11 +325,11 @@ pub fn add_table_from_raw(parent_id: String, raw: String, display_name: String) 
     }
 
     drop(store);
-    crate::api::palettes::init_curve_props(
-        &new_id,
-        &display_name,
-        dataset_ids_in_order(&state, &parent_id).as_deref(),
-    );
+    let ds = dataset_ids_in_order(&state, &parent_id);
+    let fs = function_ids_in_order(&state, &parent_id);
+    let color =
+        crate::api::palettes::next_combined_color(ds.as_deref(), fs.as_deref());
+    crate::api::palettes::init_curve_props(&new_id, &display_name, color);
 
     state.clone().into()
 }
@@ -378,6 +388,22 @@ pub(crate) fn dataset_ids_in_order(
     state: &EngineProjectNode,
     graph_id: &str,
 ) -> Option<Vec<String>> {
+    child_ids_of_type(state, graph_id, true)
+}
+
+/// Function children of `graph_id` in tree order. Same locking rules.
+pub(crate) fn function_ids_in_order(
+    state: &EngineProjectNode,
+    graph_id: &str,
+) -> Option<Vec<String>> {
+    child_ids_of_type(state, graph_id, false)
+}
+
+fn child_ids_of_type(
+    state: &EngineProjectNode,
+    graph_id: &str,
+    datasets: bool,
+) -> Option<Vec<String>> {
     fn find<'a>(node: &'a EngineProjectNode, target: &str) -> Option<&'a EngineProjectNode> {
         if node.id == target {
             return Some(node);
@@ -397,7 +423,11 @@ pub(crate) fn dataset_ids_in_order(
         graph
             .children
             .iter()
-            .filter(|c| matches!(c.node_type, EngineNodeType::Dataset))
+            .filter(|c| match c.node_type {
+                EngineNodeType::Dataset => datasets,
+                EngineNodeType::Function => !datasets,
+                _ => false,
+            })
             .map(|c| c.id.clone())
             .collect(),
     )

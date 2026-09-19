@@ -80,29 +80,42 @@ class PlotCanvas extends StatelessWidget {
               );
             }
 
-            final hasData = tables.isNotEmpty
-                ? tables.any(
-                    (t) => t.columns.length >= 2 && t.columns.first.data.isNotEmpty,
-                  )
-                : primaryTable != null &&
-                      primaryTable.columns.length >= 2 &&
-                      primaryTable.columns.first.data.isNotEmpty;
-
-            // Analytical function nodes under the active plot render
-            // alongside tabular series (even in function-only graphs).
+            // Selection scope: a selected table/function isolates its own
+            // curve(s); graph (or other) selection shows the whole plot.
             final st = ProjectState.instance;
             final plotId = st.activePlotId;
             final root = st.projectTree.value;
+            final selectedId = st.selectedProjectNodeId.value;
+            final selectedNode = (root != null && selectedId != null)
+                ? st.findNodeById(root, selectedId)
+                : null;
+            final selectDataset =
+                selectedNode?.nodeType == NodeType.dataset;
+            final selectFunction =
+                selectedNode?.nodeType == NodeType.function;
             final plotNode = (root != null && plotId != null)
                 ? st.findNodeById(root, plotId)
                 : null;
-            final functionNodes = plotNode == null
+            final functionNodes = plotNode == null || selectDataset
                 ? const <ProjectNode>[]
-                : plotNode.children
-                      .where((c) => c.nodeType == NodeType.function)
-                      .toList();
+                : plotNode.children.where((c) {
+                    if (c.nodeType != NodeType.function) return false;
+                    if (selectFunction) return c.id == selectedId;
+                    return true;
+                  }).toList();
 
-            if ((primaryTable == null || !hasData) && functionNodes.isEmpty) {
+            final toPlotScoped = selectFunction
+                ? const <DTODataTable>[]
+                : (tables.isNotEmpty
+                      ? tables
+                      : (primaryTable != null
+                            ? [primaryTable]
+                            : const <DTODataTable>[]));
+            final scopedHasTabular = toPlotScoped.any(
+              (t) => t.columns.length >= 2 && t.columns.first.data.isNotEmpty,
+            );
+
+            if (!scopedHasTabular && functionNodes.isEmpty) {
               return const Center(
                 child: Text(
                   'No data available to plot.',
@@ -121,11 +134,7 @@ class PlotCanvas extends StatelessWidget {
                     final seriesY = <List<double>>[];
                     final tableProps = <TableProperties>[];
                     final tableNames = <String>[];
-                    final toPlot = tables.isNotEmpty
-                        ? tables
-                        : (primaryTable != null
-                              ? [primaryTable]
-                              : const <DTODataTable>[]);
+                    final toPlot = toPlotScoped;
 
                     for (final tableData in toPlot) {
                       DTODataColumn? xCol;
