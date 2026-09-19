@@ -166,15 +166,23 @@ pub(crate) fn init_curve_props(
     crate::api::properties::set_table_properties(table_id.to_string(), props);
 }
 
-/// Initializes a newborn function's color (functions have no Display Name
-/// field; the legend follows the node name live). No-op off-graph.
-pub(crate) fn init_function_props(node_id: &str, color: Option<String>) {
-    if let Some(c) = color {
-        let mut props =
-            crate::api::properties::get_function_properties(node_id.to_string());
-        props.line_color = c;
-        crate::api::properties::set_function_properties(node_id.to_string(), props);
+/// Initializes a newborn function's props: Display Name follows the node
+/// name and, when born under a graph, the next palette color. No-op
+/// off-graph (lazy defaults apply on first read).
+pub(crate) fn init_function_props(
+    node_id: &str,
+    display_name: &str,
+    color: Option<String>,
+) {
+    if color.is_none() {
+        return;
     }
+    let mut props = crate::api::properties::get_function_properties(node_id.to_string());
+    if let Some(c) = color {
+        props.line_color = c;
+    }
+    props.legend_display_name = display_name.to_string();
+    crate::api::properties::set_function_properties(node_id.to_string(), props);
 }
 
 #[cfg(test)]

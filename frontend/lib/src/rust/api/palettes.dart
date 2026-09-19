@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `init_curve_props`, `next_color_for_siblings`, `palette_by_name`
+// These functions are ignored because they are not marked as `pub`: `find_graph`, `init_curve_props`, `init_function_props`, `next_color_for_siblings`, `next_combined_color`, `palette_by_name`
 
 /// Palette names for building UI buttons.
 List<String> listPalettes() =>
@@ -16,9 +16,10 @@ List<String> listPalettes() =>
 List<String> paletteColors({required String palette}) =>
     RustLib.instance.api.crateApiPalettesPaletteColors(palette: palette);
 
-/// Re-aligns a graph's curves to a palette: curve order → color sequence
-/// (`i`-th dataset gets `palette[i % len]`). Custom single-curve tweaks are
-/// overwritten; other properties are preserved.
+/// Re-aligns a graph's curves to a palette: tree order → color sequence
+/// (datasets and functions share one index, so deleting/reordering is fixed
+/// with one tap). Custom single-curve tweaks are overwritten; other
+/// properties are preserved.
 void applyPalette({required String graphId, required String palette}) => RustLib
     .instance
     .api

@@ -1517,6 +1517,7 @@ impl SseDecode for crate::api::properties::FunctionProperties {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_equation = <String>::sse_decode(deserializer);
+        let mut var_legendDisplayName = <String>::sse_decode(deserializer);
         let mut var_xMin = <Option<f64>>::sse_decode(deserializer);
         let mut var_xMax = <Option<f64>>::sse_decode(deserializer);
         let mut var_numSamples = <usize>::sse_decode(deserializer);
@@ -1525,6 +1526,7 @@ impl SseDecode for crate::api::properties::FunctionProperties {
         let mut var_lineStyle = <String>::sse_decode(deserializer);
         return crate::api::properties::FunctionProperties {
             equation: var_equation,
+            legend_display_name: var_legendDisplayName,
             x_min: var_xMin,
             x_max: var_xMax,
             num_samples: var_numSamples,
@@ -1961,6 +1963,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::FunctionPropertie
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.equation.into_into_dart().into_dart(),
+            self.legend_display_name.into_into_dart().into_dart(),
             self.x_min.into_into_dart().into_dart(),
             self.x_max.into_into_dart().into_dart(),
             self.num_samples.into_into_dart().into_dart(),
@@ -2189,6 +2192,7 @@ impl SseEncode for crate::api::properties::FunctionProperties {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.equation, serializer);
+        <String>::sse_encode(self.legend_display_name, serializer);
         <Option<f64>>::sse_encode(self.x_min, serializer);
         <Option<f64>>::sse_encode(self.x_max, serializer);
         <usize>::sse_encode(self.num_samples, serializer);

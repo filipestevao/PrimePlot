@@ -144,7 +144,7 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
         let fs = function_ids_in_order(&state, &parent_id);
         let color =
             crate::api::palettes::next_combined_color(ds.as_deref(), fs.as_deref());
-        crate::api::palettes::init_function_props(&new_id, color);
+        crate::api::palettes::init_function_props(&new_id, &name, color);
     }
     
     state.clone().into()

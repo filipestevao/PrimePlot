@@ -1523,16 +1523,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   FunctionProperties dco_decode_function_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return FunctionProperties(
       equation: dco_decode_String(arr[0]),
-      xMin: dco_decode_opt_box_autoadd_f_64(arr[1]),
-      xMax: dco_decode_opt_box_autoadd_f_64(arr[2]),
-      numSamples: dco_decode_usize(arr[3]),
-      lineColor: dco_decode_String(arr[4]),
-      lineThickness: dco_decode_f_64(arr[5]),
-      lineStyle: dco_decode_String(arr[6]),
+      legendDisplayName: dco_decode_String(arr[1]),
+      xMin: dco_decode_opt_box_autoadd_f_64(arr[2]),
+      xMax: dco_decode_opt_box_autoadd_f_64(arr[3]),
+      numSamples: dco_decode_usize(arr[4]),
+      lineColor: dco_decode_String(arr[5]),
+      lineThickness: dco_decode_f_64(arr[6]),
+      lineStyle: dco_decode_String(arr[7]),
     );
   }
 
@@ -1791,6 +1792,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_equation = sse_decode_String(deserializer);
+    var var_legendDisplayName = sse_decode_String(deserializer);
     var var_xMin = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_xMax = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_numSamples = sse_decode_usize(deserializer);
@@ -1799,6 +1801,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_lineStyle = sse_decode_String(deserializer);
     return FunctionProperties(
       equation: var_equation,
+      legendDisplayName: var_legendDisplayName,
       xMin: var_xMin,
       xMax: var_xMax,
       numSamples: var_numSamples,
@@ -2128,6 +2131,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.equation, serializer);
+    sse_encode_String(self.legendDisplayName, serializer);
     sse_encode_opt_box_autoadd_f_64(self.xMin, serializer);
     sse_encode_opt_box_autoadd_f_64(self.xMax, serializer);
     sse_encode_usize(self.numSamples, serializer);

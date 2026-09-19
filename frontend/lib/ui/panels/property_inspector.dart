@@ -80,6 +80,7 @@ extension TablePropertiesExt on TableProperties {
 extension FunctionPropertiesExt on FunctionProperties {
   FunctionProperties copyWith({
     String? equation,
+    String? legendDisplayName,
     double? Function()? xMin,
     double? Function()? xMax,
     BigInt? numSamples,
@@ -89,6 +90,7 @@ extension FunctionPropertiesExt on FunctionProperties {
   }) {
     return FunctionProperties(
       equation: equation ?? this.equation,
+      legendDisplayName: legendDisplayName ?? this.legendDisplayName,
       xMin: xMin != null ? xMin() : this.xMin,
       xMax: xMax != null ? xMax() : this.xMax,
       numSamples: numSamples ?? this.numSamples,
@@ -211,7 +213,27 @@ class _FunctionInspector extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(10.0),
           children: [
-            // Section 1: Definition
+            // Section 1: Identification
+            PropertySection(
+              title: 'Identification',
+              icon: Icons.label,
+              children: [
+                PropertyRow(
+                  label: 'Display Name',
+                  child: _buildLatexField(
+                    'Display Name',
+                    'legendDisplayName',
+                    props.legendDisplayName,
+                    (val) => ProjectState.instance.updateFunctionProperties(
+                      nodeId,
+                      props.copyWith(legendDisplayName: val),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Section 2: Definition
             PropertySection(
               title: 'Function Definition',
               icon: Icons.functions,
@@ -255,7 +277,7 @@ class _FunctionInspector extends StatelessWidget {
               ],
             ),
 
-            // Section 2: Domain (local override; Auto follows the viewport)
+            // Section 3: Domain (local override; Auto follows the viewport)
             PropertySection(
               title: 'Domain',
               icon: Icons.horizontal_rule,
@@ -317,7 +339,7 @@ class _FunctionInspector extends StatelessWidget {
               ],
             ),
 
-            // Section 3: Line Style
+            // Section 4: Line Style
             PropertySection(
               title: 'Line Style',
               icon: Icons.timeline,
@@ -410,6 +432,23 @@ class _FunctionInspector extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildLatexField(
+    String label,
+    String field,
+    String value,
+    ValueChanged<String> onChanged,
+  ) {
+    final state = ProjectState.instance;
+    final useLatex = state.getLatexMode(nodeId, field);
+    return LatexTextField(
+      label: label,
+      value: value,
+      onChanged: onChanged,
+      useLatex: useLatex,
+      onLatexToggle: () => state.toggleLatexMode(nodeId, field),
     );
   }
 }

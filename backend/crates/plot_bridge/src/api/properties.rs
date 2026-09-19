@@ -88,6 +88,10 @@ impl Default for TableProperties {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FunctionProperties {
     pub equation: String,
+    /// Display Name shown in the legend (falls back to the node name when
+    /// empty or `"Series"`, mirroring `TableProperties`).
+    #[serde(default = "default_legend_name")]
+    pub legend_display_name: String,
     /// Optional local domain override (falls back to the graph viewport).
     /// `#[serde(default)]` keeps pre-Step-4 bundles loadable.
     #[serde(default)]
@@ -102,6 +106,10 @@ pub struct FunctionProperties {
     pub line_thickness: f64,
     #[serde(default = "default_line_style")]
     pub line_style: String,
+}
+
+fn default_legend_name() -> String {
+    "Series".to_string()
 }
 
 fn default_num_samples() -> usize {
@@ -124,6 +132,7 @@ impl Default for FunctionProperties {
     fn default() -> Self {
         Self {
             equation: "f(x) = x".to_string(),
+            legend_display_name: default_legend_name(),
             x_min: None,
             x_max: None,
             num_samples: default_num_samples(),
@@ -293,6 +302,7 @@ mod tests {
         // Pre-Step-4 bundles stored only {"equation": ...}.
         let legacy: FunctionProperties = serde_json::from_str(r#"{"equation":"x"}"#).unwrap();
         assert_eq!(legacy.equation, "x");
+        assert_eq!(legacy.legend_display_name, "Series");
         assert_eq!(legacy.x_min, None);
         assert_eq!(legacy.num_samples, 1000);
         assert_eq!(legacy.line_color, "#FF7F0E");

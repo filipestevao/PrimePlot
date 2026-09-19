@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_line_style`, `default_line_thickness`, `default_num_samples`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
+// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_legend_name`, `default_line_style`, `default_line_thickness`, `default_num_samples`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 FolderProperties getFolderProperties({required String nodeId}) =>
@@ -88,6 +88,10 @@ class FolderProperties {
 class FunctionProperties {
   final String equation;
 
+  /// Display Name shown in the legend (falls back to the node name when
+  /// empty or `"Series"`, mirroring `TableProperties`).
+  final String legendDisplayName;
+
   /// Optional local domain override (falls back to the graph viewport).
   /// `#[serde(default)]` keeps pre-Step-4 bundles loadable.
   final double? xMin;
@@ -99,6 +103,7 @@ class FunctionProperties {
 
   const FunctionProperties({
     required this.equation,
+    required this.legendDisplayName,
     this.xMin,
     this.xMax,
     required this.numSamples,
@@ -113,6 +118,7 @@ class FunctionProperties {
   @override
   int get hashCode =>
       equation.hashCode ^
+      legendDisplayName.hashCode ^
       xMin.hashCode ^
       xMax.hashCode ^
       numSamples.hashCode ^
@@ -126,6 +132,7 @@ class FunctionProperties {
       other is FunctionProperties &&
           runtimeType == other.runtimeType &&
           equation == other.equation &&
+          legendDisplayName == other.legendDisplayName &&
           xMin == other.xMin &&
           xMax == other.xMax &&
           numSamples == other.numSamples &&

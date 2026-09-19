@@ -191,6 +191,10 @@ class ProjectState {
     if (node == null) return null;
 
     if (node.nodeType == NodeType.plot) return node.id;
+    if (node.nodeType == NodeType.folder) {
+      // Folders present their first descendant plot (if any).
+      return _findFirstGraphNode(node);
+    }
     if (node.nodeType == NodeType.dataset ||
         node.nodeType == NodeType.function ||
         node.nodeType == NodeType.shape) {
@@ -375,6 +379,19 @@ class ProjectState {
       // Refresh active properties based on node type
       if (node.nodeType == NodeType.folder) {
         activeFolderProps.value = getFolderProperties(nodeId: nodeId);
+        // Folders show their first descendant plot on the canvas (if any),
+        // so curves (incl. functions) keep rendering at Project level.
+        final firstPlot = _findFirstGraphNode(node);
+        if (firstPlot != null) {
+          plotId = firstPlot;
+          activeGraphProps.value = getGraphProperties(nodeId: firstPlot);
+          fetchTablesForGraph(firstPlot);
+          final plotNode = findNodeById(root, firstPlot);
+          if (plotNode != null) graphName.value = plotNode.name;
+        } else {
+          activeTables.value = [];
+          activeTable.value = null;
+        }
       } else if (node.nodeType == NodeType.plot) {
         activeGraphProps.value = getGraphProperties(nodeId: nodeId);
       } else if (node.nodeType == NodeType.dataset) {

@@ -185,6 +185,7 @@ class PlotCanvas extends StatelessWidget {
                     // else [-10, 10]). Local per-function domain overrides
                     // apply inside Rust. Broken equations are skipped here;
                     // the Function inspector surfaces the error.
+                    final functionIds = <String>[];
                     {
                       var lo = -10.0;
                       var hi = 10.0;
@@ -232,9 +233,12 @@ class PlotCanvas extends StatelessWidget {
                         if (pts.isEmpty) continue;
                         seriesX.add([for (final p in pts) p.x]);
                         seriesY.add([for (final p in pts) p.y]);
+                        functionIds.add(fn.id);
                         tableProps.add(
                           TableProperties(
-                            legendDisplayName: fn.name,
+                            // Empty/"Series" falls back to the node name in
+                            // the legend, mirroring Table curves.
+                            legendDisplayName: fprops.legendDisplayName,
                             lineStyle: fprops.lineStyle,
                             lineThickness: fprops.lineThickness,
                             lineVisible: true,
@@ -248,7 +252,12 @@ class PlotCanvas extends StatelessWidget {
                       }
                     }
 
-                    final tableIds = toPlot.map((t) => t.id).toList();
+                    final tableIds = [
+                      ...toPlot.map((t) => t.id),
+                      // Sampled function ids, aligned with the appended
+                      // series, so legend LaTeX toggles resolve like tables.
+                      ...functionIds,
+                    ];
                     final latexFields = <String>{};
                     final nodeId = ProjectState.instance.selectedProjectNodeId.value;
                     if (nodeId != null && graphProps != null) {
