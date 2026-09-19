@@ -23,7 +23,6 @@ import 'plot_geometry.dart';
 class PlotViewport extends StatefulWidget {
   final List<List<double>> xSeries;
   final List<List<double>> ySeries;
-  final List<bool> visible;
   final GraphProperties? graphProps;
   final String? plotId;
   final Widget child;
@@ -32,7 +31,6 @@ class PlotViewport extends StatefulWidget {
     super.key,
     required this.xSeries,
     required this.ySeries,
-    required this.visible,
     required this.graphProps,
     required this.plotId,
     required this.child,
@@ -187,15 +185,24 @@ class _PlotViewportState extends State<PlotViewport> {
     }
   }
 
+  /// Double-click returns to the inspector-defined home ranges
+  /// (or Auto when the user never set any). No-op when already home.
   void _autoscale() {
-    if (!_canNavigate) return;
-    final raw = autoscaleLimits(
-      xSeries: widget.xSeries,
-      ySeries: widget.ySeries,
-      visible: widget.visible,
-      graphProps: widget.graphProps,
+    final id = widget.plotId;
+    final gp = widget.graphProps;
+    if (id == null || gp == null) return;
+    final st = ProjectState.instance;
+    final home = st.homeViewFor(id, gp);
+    if (home.matches(gp)) return;
+    st.updateGraphProperties(
+      id,
+      gp.copyWith(
+        xMin: () => home.xMin,
+        xMax: () => home.xMax,
+        yMin: () => home.yMin,
+        yMax: () => home.yMax,
+      ),
     );
-    if (raw != null) _write(raw);
   }
 
   static String _fmt(double v) {

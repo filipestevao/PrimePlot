@@ -138,7 +138,7 @@ class PlotCanvas extends StatelessWidget {
                             lineThickness: 2.5,
                             lineVisible: true,
                             markerType: 'Circle',
-                            markerVisible: true,
+                            markerVisible: false,
                             lineColor: '#1F77B4',
                             markerColor: '#FFFFFF',
                           ),
@@ -205,11 +205,6 @@ class PlotCanvas extends StatelessWidget {
                     Widget canvas = PlotViewport(
                       xSeries: seriesX,
                       ySeries: seriesY,
-                      visible: [
-                        for (var i = 0; i < tableProps.length; i++)
-                          tableProps[i].lineVisible ||
-                              tableProps[i].markerVisible,
-                      ],
                       graphProps: graphProps,
                       plotId: ProjectState.instance.activePlotId,
                       child: baseCanvas,
@@ -534,7 +529,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         _drawStyledPath(canvas, segment, linePaint, props?.lineStyle ?? 'Full');
       }
 
-      if (props?.markerVisible ?? true) {
+      if (props?.markerVisible ?? false) {
         final markerPaint = Paint()
           ..color = markerColor
           ..style = PaintingStyle.fill

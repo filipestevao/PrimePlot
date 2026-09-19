@@ -9,6 +9,24 @@ import '../src/rust/api/properties.dart';
 import '../src/rust/api/persistence.dart' as persist;
 import '../src/rust/api/palettes.dart' as pal;
 
+/// Double-click home view: inspector-defined axis ranges per graph.
+/// Null bound = Auto.
+class GraphHomeView {
+  final double? xMin;
+  final double? xMax;
+  final double? yMin;
+  final double? yMax;
+
+  const GraphHomeView({this.xMin, this.xMax, this.yMin, this.yMax});
+
+  bool matches(GraphProperties props) {
+    return xMin == props.xMin &&
+        xMax == props.xMax &&
+        yMin == props.yMin &&
+        yMax == props.yMax;
+  }
+}
+
 /// A lightweight, globally accessible state manager.
 class ProjectState {
   static final ProjectState instance = ProjectState._internal();
@@ -73,6 +91,24 @@ class ProjectState {
     return base.isEmpty ? 'Untitled' : base;
   }
 
+  /// Session home view per graph: last inspector-defined X/Y ranges.
+  /// A null bound means Auto. Navigation (zoom/pan/box) never touches it;
+  /// double-click restores it. Cleared on load/new; lazily seeded from the
+  /// saved ranges on first selection.
+  final Map<String, GraphHomeView> _homeViews = {};
+
+  GraphHomeView homeViewFor(String plotId, GraphProperties? current) {
+    return _homeViews.putIfAbsent(
+      plotId,
+      () => GraphHomeView(
+        xMin: current?.xMin,
+        xMax: current?.xMax,
+        yMin: current?.yMin,
+        yMax: current?.yMax,
+      ),
+    );
+  }
+
   final Map<String, bool> latexMode = {};
 
   bool getLatexMode(String nodeId, String field) {
@@ -93,12 +129,25 @@ class ProjectState {
     markDirty();
   }
 
-  void updateGraphProperties(String nodeId, GraphProperties newProps) {
+  void updateGraphProperties(
+    String nodeId,
+    GraphProperties newProps, {
+    bool isHomeUpdate = false,
+  }) {
     setGraphProperties(nodeId: nodeId, props: newProps);
     // If it's the active plot, update the notifier
     final activePlotId = _getActivePlotId();
     if (activePlotId == nodeId) {
       activeGraphProps.value = newProps;
+    }
+    // Inspector range edits (re)define the double-click home view.
+    if (isHomeUpdate) {
+      _homeViews[nodeId] = GraphHomeView(
+        xMin: newProps.xMin,
+        xMax: newProps.xMax,
+        yMin: newProps.yMin,
+        yMax: newProps.yMax,
+      );
     }
     markDirty();
   }
@@ -163,6 +212,7 @@ class ProjectState {
     activeTable.value = getEmptyTableData();
     projectTree.value = getProjectTree();
     currentFilePath.value = null;
+    _homeViews.clear();
     markClean();
   }
 
@@ -334,6 +384,11 @@ class ProjectState {
       // Ensure graph properties are also loaded if a child of a graph is selected
       if (plotId != null && node.nodeType != NodeType.plot) {
         activeGraphProps.value = getGraphProperties(nodeId: plotId);
+      }
+
+      // Seed the double-click home view from the saved ranges (once).
+      if (plotId != null) {
+        homeViewFor(plotId, activeGraphProps.value);
       }
 
       if (node.nodeType == NodeType.plot) {
@@ -597,6 +652,7 @@ class ProjectState {
     projectTree.value = tree;
     currentFilePath.value = path;
     selectedProjectNodeId.value = null;
+    _homeViews.clear();
     activeTables.value = [];
     activeTable.value = null;
     activeFolderProps.value = null;

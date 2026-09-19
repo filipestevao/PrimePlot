@@ -287,6 +287,7 @@ class _GraphInspector extends StatelessWidget {
                             ProjectState.instance.updateGraphProperties(
                               nodeId,
                               props.copyWith(xMin: () => val),
+                              isHomeUpdate: true,
                             );
                           },
                         ),
@@ -301,6 +302,7 @@ class _GraphInspector extends StatelessWidget {
                             ProjectState.instance.updateGraphProperties(
                               nodeId,
                               props.copyWith(xMax: () => val),
+                              isHomeUpdate: true,
                             );
                           },
                         ),
@@ -356,6 +358,7 @@ class _GraphInspector extends StatelessWidget {
                             ProjectState.instance.updateGraphProperties(
                               nodeId,
                               props.copyWith(yMin: () => val),
+                              isHomeUpdate: true,
                             );
                           },
                         ),
@@ -370,6 +373,7 @@ class _GraphInspector extends StatelessWidget {
                             ProjectState.instance.updateGraphProperties(
                               nodeId,
                               props.copyWith(yMax: () => val),
+                              isHomeUpdate: true,
                             );
                           },
                         ),

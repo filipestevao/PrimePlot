@@ -78,7 +78,7 @@ impl Default for TableProperties {
             line_thickness: 2.5,
             line_visible: true,
             marker_type: "Circle".to_string(),
-            marker_visible: true,
+            marker_visible: false,
             line_color: "#1F77B4".to_string(),
             marker_color: "#FFFFFF".to_string(),
         }
