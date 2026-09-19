@@ -7,6 +7,7 @@ import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
 import '../../src/rust/api/palettes.dart';
+import '../../src/rust/api/functions.dart';
 import '../components/latex_text_field.dart';
 import '../components/prime_color_picker.dart';
 import '../components/prime_number_field.dart';
@@ -72,6 +73,28 @@ extension TablePropertiesExt on TableProperties {
       markerVisible: markerVisible ?? this.markerVisible,
       lineColor: lineColor ?? this.lineColor,
       markerColor: markerColor ?? this.markerColor,
+    );
+  }
+}
+
+extension FunctionPropertiesExt on FunctionProperties {
+  FunctionProperties copyWith({
+    String? equation,
+    double? Function()? xMin,
+    double? Function()? xMax,
+    BigInt? numSamples,
+    String? lineColor,
+    double? lineThickness,
+    String? lineStyle,
+  }) {
+    return FunctionProperties(
+      equation: equation ?? this.equation,
+      xMin: xMin != null ? xMin() : this.xMin,
+      xMax: xMax != null ? xMax() : this.xMax,
+      numSamples: numSamples ?? this.numSamples,
+      lineColor: lineColor ?? this.lineColor,
+      lineThickness: lineThickness ?? this.lineThickness,
+      lineStyle: lineStyle ?? this.lineStyle,
     );
   }
 }
@@ -177,9 +200,18 @@ class _FunctionInspector extends StatelessWidget {
       valueListenable: ProjectState.instance.activeFunctionProps,
       builder: (context, props, child) {
         if (props == null) return const SizedBox.shrink();
+
+        String? equationError;
+        try {
+          validateFunctionExpression(expr: props.equation);
+        } catch (e) {
+          equationError = e.toString().replaceFirst('Exception: ', '');
+        }
+
         return ListView(
           padding: const EdgeInsets.all(10.0),
           children: [
+            // Section 1: Definition
             PropertySection(
               title: 'Function Definition',
               icon: Icons.functions,
@@ -192,9 +224,185 @@ class _FunctionInspector extends StatelessWidget {
                     onChanged: (val) {
                       ProjectState.instance.updateFunctionProperties(
                         nodeId,
-                        FunctionProperties(equation: val),
+                        props.copyWith(equation: val),
                       );
                     },
+                  ),
+                ),
+                if (equationError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 13,
+                          color: Color(0xFFF87171),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            equationError,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFFF87171),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+
+            // Section 2: Domain (local override; Auto follows the viewport)
+            PropertySection(
+              title: 'Domain',
+              icon: Icons.horizontal_rule,
+              children: [
+                PropertyRow(
+                  label: 'X Range',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: PrimeNumberField(
+                          value: props.xMin,
+                          prefixText: 'Min: ',
+                          allowAuto: true,
+                          onChanged: (val) {
+                            ProjectState.instance.updateFunctionProperties(
+                              nodeId,
+                              props.copyWith(xMin: () => val),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: PrimeNumberField(
+                          value: props.xMax,
+                          prefixText: 'Max: ',
+                          allowAuto: true,
+                          onChanged: (val) {
+                            ProjectState.instance.updateFunctionProperties(
+                              nodeId,
+                              props.copyWith(xMax: () => val),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Samples',
+                  child: PrimeNumberField(
+                    value: props.numSamples.toDouble(),
+                    step: 500,
+                    min: 10,
+                    max: 100000,
+                    precision: 0,
+                    onChanged: (val) {
+                      if (val != null) {
+                        ProjectState.instance.updateFunctionProperties(
+                          nodeId,
+                          props.copyWith(
+                            numSamples: BigInt.from(val.round()),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            // Section 3: Line Style
+            PropertySection(
+              title: 'Line Style',
+              icon: Icons.timeline,
+              children: [
+                PropertyRow(
+                  label: 'Line Pattern',
+                  child: PrimeSelect<String>(
+                    value: props.lineStyle,
+                    options: const {
+                      'Solid': 'Solid (────)',
+                      'Dashed': 'Dashed (── ──)',
+                      'Dotted': 'Dotted (••••)',
+                      'Dash-Dot': 'Dash-Dot (── • ──)',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateFunctionProperties(
+                        nodeId,
+                        props.copyWith(lineStyle: val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Line Color',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeColorPicker(
+                      hexColor: props.lineColor,
+                      label: 'Line Color',
+                      onChanged: (c) {
+                        ProjectState.instance.updateFunctionProperties(
+                          nodeId,
+                          props.copyWith(lineColor: c),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Thickness',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                            activeTrackColor: PrimeTheme.primaryAccent,
+                            inactiveTrackColor: PrimeTheme.borderSide,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: props.lineThickness.clamp(0.5, 10.0),
+                            min: 0.5,
+                            max: 10.0,
+                            onChanged: (val) {
+                              ProjectState.instance.updateFunctionProperties(
+                                nodeId,
+                                props.copyWith(lineThickness: val),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 58,
+                        child: PrimeNumberField(
+                          value: props.lineThickness,
+                          step: 0.5,
+                          min: 0.5,
+                          max: 20.0,
+                          precision: 1,
+                          onChanged: (val) {
+                            if (val != null) {
+                              ProjectState.instance.updateFunctionProperties(
+                                nodeId,
+                                props.copyWith(lineThickness: val),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

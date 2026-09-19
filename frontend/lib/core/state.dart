@@ -165,6 +165,8 @@ class ProjectState {
     if (selectedProjectNodeId.value == nodeId) {
       activeFunctionProps.value = newProps;
     }
+    // Canvas samples function props live but doesn't listen to them.
+    refreshCanvas.value++;
     markDirty();
   }
 
@@ -189,7 +191,9 @@ class ProjectState {
     if (node == null) return null;
 
     if (node.nodeType == NodeType.plot) return node.id;
-    if (node.nodeType == NodeType.dataset) {
+    if (node.nodeType == NodeType.dataset ||
+        node.nodeType == NodeType.function ||
+        node.nodeType == NodeType.shape) {
       final parent = _findParentById(root, selectedId);
       if (parent != null && parent.nodeType == NodeType.plot) {
         return parent.id;

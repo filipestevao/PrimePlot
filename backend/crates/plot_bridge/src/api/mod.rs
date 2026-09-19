@@ -7,3 +7,4 @@ pub mod data;
 pub mod properties;
 pub mod persistence;
 pub mod palettes;
+pub mod functions;

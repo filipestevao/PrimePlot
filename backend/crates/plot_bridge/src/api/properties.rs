@@ -88,12 +88,48 @@ impl Default for TableProperties {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FunctionProperties {
     pub equation: String,
+    /// Optional local domain override (falls back to the graph viewport).
+    /// `#[serde(default)]` keeps pre-Step-4 bundles loadable.
+    #[serde(default)]
+    pub x_min: Option<f64>,
+    #[serde(default)]
+    pub x_max: Option<f64>,
+    #[serde(default = "default_num_samples")]
+    pub num_samples: usize,
+    #[serde(default = "default_function_color")]
+    pub line_color: String,
+    #[serde(default = "default_line_thickness")]
+    pub line_thickness: f64,
+    #[serde(default = "default_line_style")]
+    pub line_style: String,
+}
+
+fn default_num_samples() -> usize {
+    1000
+}
+
+fn default_function_color() -> String {
+    "#FF7F0E".to_string()
+}
+
+fn default_line_thickness() -> f64 {
+    2.5
+}
+
+fn default_line_style() -> String {
+    "Solid".to_string()
 }
 
 impl Default for FunctionProperties {
     fn default() -> Self {
         Self {
             equation: "f(x) = x".to_string(),
+            x_min: None,
+            x_max: None,
+            num_samples: default_num_samples(),
+            line_color: default_function_color(),
+            line_thickness: default_line_thickness(),
+            line_style: default_line_style(),
         }
     }
 }
@@ -247,3 +283,18 @@ pub(crate) fn clear_all_property_stores() {
 /// threads; without this, store-backed tests flake against each other).
 #[cfg(test)]
 pub(crate) static TEST_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_function_props_migrate_with_defaults() {
+        // Pre-Step-4 bundles stored only {"equation": ...}.
+        let legacy: FunctionProperties = serde_json::from_str(r#"{"equation":"x"}"#).unwrap();
+        assert_eq!(legacy.equation, "x");
+        assert_eq!(legacy.x_min, None);
+        assert_eq!(legacy.num_samples, 1000);
+        assert_eq!(legacy.line_color, "#FF7F0E");
+    }
+}

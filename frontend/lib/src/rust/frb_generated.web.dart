@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/data.dart';
+import 'api/functions.dart';
 import 'api/palettes.dart';
 import 'api/persistence.dart';
 import 'api/project.dart';

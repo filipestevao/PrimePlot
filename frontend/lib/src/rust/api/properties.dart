@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
+// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_line_style`, `default_line_thickness`, `default_num_samples`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 FolderProperties getFolderProperties({required String nodeId}) =>
@@ -88,20 +88,50 @@ class FolderProperties {
 class FunctionProperties {
   final String equation;
 
-  const FunctionProperties({required this.equation});
+  /// Optional local domain override (falls back to the graph viewport).
+  /// `#[serde(default)]` keeps pre-Step-4 bundles loadable.
+  final double? xMin;
+  final double? xMax;
+  final BigInt numSamples;
+  final String lineColor;
+  final double lineThickness;
+  final String lineStyle;
+
+  const FunctionProperties({
+    required this.equation,
+    this.xMin,
+    this.xMax,
+    required this.numSamples,
+    required this.lineColor,
+    required this.lineThickness,
+    required this.lineStyle,
+  });
 
   static Future<FunctionProperties> default_() =>
       RustLib.instance.api.crateApiPropertiesFunctionPropertiesDefault();
 
   @override
-  int get hashCode => equation.hashCode;
+  int get hashCode =>
+      equation.hashCode ^
+      xMin.hashCode ^
+      xMax.hashCode ^
+      numSamples.hashCode ^
+      lineColor.hashCode ^
+      lineThickness.hashCode ^
+      lineStyle.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is FunctionProperties &&
           runtimeType == other.runtimeType &&
-          equation == other.equation;
+          equation == other.equation &&
+          xMin == other.xMin &&
+          xMax == other.xMax &&
+          numSamples == other.numSamples &&
+          lineColor == other.lineColor &&
+          lineThickness == other.lineThickness &&
+          lineStyle == other.lineStyle;
 }
 
 class GraphProperties {

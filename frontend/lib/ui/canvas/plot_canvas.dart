@@ -9,6 +9,8 @@ import '../../core/latex_symbols.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
 import '../../src/rust/api/data.dart';
+import '../../src/rust/api/functions.dart';
+import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
 import 'plot_geometry.dart';
 import 'plot_viewport.dart';
@@ -57,9 +59,14 @@ class PlotCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: ProjectState.instance.refreshCanvas,
-      builder: (context, _, _) {
+    // Canvas also tracks the project tree so newly added Function nodes
+    // appear without requiring a reselection.
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        ProjectState.instance.refreshCanvas,
+        ProjectState.instance.projectTree,
+      ]),
+      builder: (context, _) {
         return ValueListenableBuilder<List<DTODataTable>>(
           valueListenable: ProjectState.instance.activeTables,
           builder: (context, tables, child) {
@@ -81,7 +88,21 @@ class PlotCanvas extends StatelessWidget {
                       primaryTable.columns.length >= 2 &&
                       primaryTable.columns.first.data.isNotEmpty;
 
-            if (primaryTable == null || !hasData) {
+            // Analytical function nodes under the active plot render
+            // alongside tabular series (even in function-only graphs).
+            final st = ProjectState.instance;
+            final plotId = st.activePlotId;
+            final root = st.projectTree.value;
+            final plotNode = (root != null && plotId != null)
+                ? st.findNodeById(root, plotId)
+                : null;
+            final functionNodes = plotNode == null
+                ? const <ProjectNode>[]
+                : plotNode.children
+                      .where((c) => c.nodeType == NodeType.function)
+                      .toList();
+
+            if ((primaryTable == null || !hasData) && functionNodes.isEmpty) {
               return const Center(
                 child: Text(
                   'No data available to plot.',
@@ -100,7 +121,11 @@ class PlotCanvas extends StatelessWidget {
                     final seriesY = <List<double>>[];
                     final tableProps = <TableProperties>[];
                     final tableNames = <String>[];
-                    final toPlot = tables.isNotEmpty ? tables : [primaryTable!];
+                    final toPlot = tables.isNotEmpty
+                        ? tables
+                        : (primaryTable != null
+                              ? [primaryTable]
+                              : const <DTODataTable>[]);
 
                     for (final tableData in toPlot) {
                       DTODataColumn? xCol;
@@ -143,6 +168,74 @@ class PlotCanvas extends StatelessWidget {
                             markerColor: '#FFFFFF',
                           ),
                         );
+                      }
+                    }
+
+                    // Analytical `f(x)` curves, sampled live over the view
+                    // range (explicit graph limits, else tabular envelope,
+                    // else [-10, 10]). Local per-function domain overrides
+                    // apply inside Rust. Broken equations are skipped here;
+                    // the Function inspector surfaces the error.
+                    {
+                      var lo = -10.0;
+                      var hi = 10.0;
+                      var fMin = double.infinity;
+                      var fMax = double.negativeInfinity;
+                      for (final xs in seriesX) {
+                        for (final x in xs) {
+                          if (x.isFinite) {
+                            if (x < fMin) fMin = x;
+                            if (x > fMax) fMax = x;
+                          }
+                        }
+                      }
+                      if (fMin.isFinite && fMax.isFinite && fMax > fMin) {
+                        lo = fMin;
+                        hi = fMax;
+                      }
+                      final gxMin = graphProps?.xMin;
+                      final gxMax = graphProps?.xMax;
+                      if (gxMin != null &&
+                          gxMax != null &&
+                          gxMin.isFinite &&
+                          gxMax.isFinite &&
+                          gxMax > gxMin) {
+                        lo = gxMin;
+                        hi = gxMax;
+                      }
+                      for (final fn in functionNodes) {
+                        FunctionProperties fprops;
+                        try {
+                          fprops = getFunctionProperties(nodeId: fn.id);
+                        } catch (_) {
+                          continue;
+                        }
+                        List<Point2D> pts;
+                        try {
+                          pts = getFunctionCurveData(
+                            nodeId: fn.id,
+                            viewportXMin: lo,
+                            viewportXMax: hi,
+                          );
+                        } catch (_) {
+                          continue;
+                        }
+                        if (pts.isEmpty) continue;
+                        seriesX.add([for (final p in pts) p.x]);
+                        seriesY.add([for (final p in pts) p.y]);
+                        tableProps.add(
+                          TableProperties(
+                            legendDisplayName: fn.name,
+                            lineStyle: fprops.lineStyle,
+                            lineThickness: fprops.lineThickness,
+                            lineVisible: true,
+                            markerType: 'None',
+                            markerVisible: false,
+                            lineColor: fprops.lineColor,
+                            markerColor: '#FFFFFF',
+                          ),
+                        );
+                        tableNames.add(fn.name);
                       }
                     }
 
