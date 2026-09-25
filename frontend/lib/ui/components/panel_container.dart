@@ -34,9 +34,9 @@ class PanelContainer extends StatelessWidget {
           Container(
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: PrimeTheme.tabBackground,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(7.0)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(7.0)),
               border: Border(bottom: BorderSide(color: PrimeTheme.borderSide)),
             ),
             child: Row(
@@ -47,7 +47,7 @@ class PanelContainer extends StatelessWidget {
                 ],
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: PrimeTheme.textPrimary,
@@ -57,7 +57,7 @@ class PanelContainer extends StatelessWidget {
                 if (actions != null)
                   ...?actions
                 else ...[
-                  const Icon(Icons.more_horiz, size: 16, color: PrimeTheme.textSecondary),
+                  Icon(Icons.more_horiz, size: 16, color: PrimeTheme.textSecondary),
                 ],
               ],
             ),

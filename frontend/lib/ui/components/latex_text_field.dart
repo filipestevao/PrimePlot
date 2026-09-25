@@ -85,7 +85,7 @@ class LatexTextField extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 11.5, color: PrimeTheme.textSecondary),
+            style: TextStyle(fontSize: 11.5, color: PrimeTheme.textSecondary),
           ),
           const SizedBox(height: 4),
           inputField,

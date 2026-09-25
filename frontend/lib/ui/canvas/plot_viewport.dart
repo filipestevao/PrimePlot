@@ -272,10 +272,10 @@ class _PlotViewportState extends State<PlotViewport> {
                           ),
                           child: Text(
                             'X: ${_fmt(data.dx)}   Y: ${_fmt(data.dy)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               color: PrimeTheme.textPrimary,
-                              fontFeatures: [FontFeature.tabularFigures()],
+                              fontFeatures: const [FontFeature.tabularFigures()],
                             ),
                           ),
                         ),

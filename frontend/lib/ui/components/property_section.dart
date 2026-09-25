@@ -72,7 +72,7 @@ class _PropertySectionState extends State<PropertySection> {
                       turns: _isExpanded ? 0.25 : 0.0,
                       duration: const Duration(milliseconds: 140),
                       curve: Curves.easeOutCubic,
-                      child: const Icon(
+                      child: Icon(
                         Icons.chevron_right,
                         size: 14,
                         color: PrimeTheme.textSecondary,
@@ -86,7 +86,7 @@ class _PropertySectionState extends State<PropertySection> {
                     Expanded(
                       child: Text(
                         widget.title.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: PrimeTheme.textPrimary,
@@ -104,7 +104,7 @@ class _PropertySectionState extends State<PropertySection> {
           if (_isExpanded)
             Container(
               padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 10.0),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(color: PrimeTheme.borderSide, width: 0.5),
                 ),

@@ -132,11 +132,11 @@ class _PrimeNumberFieldState extends State<PrimeNumberField> {
             children: [
               InkWell(
                 onTap: () => _nudge(widget.step),
-                child: const Icon(Icons.arrow_drop_up, size: 11, color: PrimeTheme.textSecondary),
+                child: Icon(Icons.arrow_drop_up, size: 11, color: PrimeTheme.textSecondary),
               ),
               InkWell(
                 onTap: () => _nudge(-widget.step),
-                child: const Icon(Icons.arrow_drop_down, size: 11, color: PrimeTheme.textSecondary),
+                child: Icon(Icons.arrow_drop_down, size: 11, color: PrimeTheme.textSecondary),
               ),
             ],
           ),
@@ -150,7 +150,7 @@ class _PrimeNumberFieldState extends State<PrimeNumberField> {
       prefix: widget.prefixText != null
           ? Text(
               widget.prefixText!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: PrimeTheme.textSecondary,

@@ -99,7 +99,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
               backgroundColor: PrimeTheme.panelBackground,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
-                side: const BorderSide(color: PrimeTheme.borderSide),
+                side: BorderSide(color: PrimeTheme.borderSide),
               ),
               child: Container(
                 width: 320,
@@ -112,7 +112,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       children: [
                         Text(
                           'Select ${widget.label}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: PrimeTheme.textPrimary,
@@ -131,7 +131,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'ACADEMIC PALETTE (Tab10)',
                       style: TextStyle(
                         fontSize: 10,
@@ -153,7 +153,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       }).toList(),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'COLORBREWER (Set 1)',
                       style: TextStyle(
                         fontSize: 10,
@@ -175,7 +175,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       }).toList(),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'SCIENTIFIC NEON',
                       style: TextStyle(
                         fontSize: 10,
@@ -199,7 +199,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        const Text('Hex:', style: TextStyle(fontSize: 11, color: PrimeTheme.textSecondary)),
+                        Text('Hex:', style: TextStyle(fontSize: 11, color: PrimeTheme.textSecondary)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: PrimeTextField(

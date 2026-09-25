@@ -326,7 +326,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                           child: TextField(
                             controller: _editController,
                             autofocus: true,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 13, color: PrimeTheme.primaryAccent),
                             decoration: const InputDecoration(
                               isDense: true,
@@ -339,7 +339,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                         )
                       : Text(
                           table.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 13, color: PrimeTheme.textPrimary),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -352,7 +352,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                         builder: (ctx) => InkWell(
                           onTap: () => _showNodeMenu(ctx, table),
                           borderRadius: BorderRadius.circular(4),
-                          child: const Padding(
+                          child: Padding(
                             padding: EdgeInsets.all(4),
                             child: Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
                           ),
@@ -428,7 +428,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                           child: TextField(
                             controller: _editController,
                             autofocus: true,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 13, color: PrimeTheme.primaryAccent),
                             decoration: const InputDecoration(
                               isDense: true,
@@ -441,7 +441,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                         )
                       : Text(
                           item.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 13, color: PrimeTheme.textPrimary),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -454,7 +454,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
                         builder: (ctx) => InkWell(
                           onTap: () => _showNodeMenu(ctx, item),
                           borderRadius: BorderRadius.circular(4),
-                          child: const Padding(
+                          child: Padding(
                             padding: EdgeInsets.all(4),
                             child: Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
                           ),
@@ -505,7 +505,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
       position: position,
       color: PrimeTheme.backgroundDark,
       items: [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: TableAction.rename,
           child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
         ),
@@ -589,7 +589,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             child: TextField(
               controller: _editController,
               autofocus: true,
-              style: const TextStyle(fontSize: 13, color: PrimeTheme.primaryAccent),
+              style: TextStyle(fontSize: 13, color: PrimeTheme.primaryAccent),
               decoration: const InputDecoration(
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 4),
@@ -639,7 +639,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
             builder: (ctx) => InkWell(
               onTap: () => _showNodeMenu(ctx, node),
               borderRadius: BorderRadius.circular(4),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.all(4),
                 child: Icon(Icons.more_vert, size: 16, color: PrimeTheme.textSecondary),
               ),

@@ -116,7 +116,7 @@ class _PropertyInspectorState extends State<PropertyInspector> {
         valueListenable: ProjectState.instance.selectedProjectNodeId,
         builder: (context, selectedId, child) {
           if (selectedId == null) {
-            return const Center(
+            return Center(
               child: Text(
                 'No selection',
                 style: TextStyle(color: PrimeTheme.textSecondary, fontSize: 12),
@@ -590,7 +590,7 @@ class _GraphInspector extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Divider(height: 1, thickness: 0.5, color: PrimeTheme.borderSide),
+                Divider(height: 1, thickness: 0.5, color: PrimeTheme.borderSide),
                 const SizedBox(height: 6),
                 PropertyRow(
                   label: 'Y Range',
@@ -888,7 +888,7 @@ class _PaletteButton extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   paletteName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: PrimeTheme.textPrimary,
                   ),

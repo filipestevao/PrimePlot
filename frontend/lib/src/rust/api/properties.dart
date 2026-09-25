@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_legend_name`, `default_line_style`, `default_line_thickness`, `default_num_samples`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
+// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_function_xmax`, `default_function_xmin`, `default_legend_name`, `default_line_style`, `default_line_thickness`, `default_num_samples`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 FolderProperties getFolderProperties({required String nodeId}) =>

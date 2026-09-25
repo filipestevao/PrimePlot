@@ -27,7 +27,7 @@ class PropertyRow extends StatelessWidget {
       width: labelWidth,
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11.5,
           color: PrimeTheme.textSecondary,
           fontWeight: FontWeight.w400,

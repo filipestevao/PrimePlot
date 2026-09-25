@@ -17,6 +17,7 @@ import '../panels/project_explorer.dart';
 import '../panels/property_inspector.dart';
 import '../panels/collapsible_data_panel.dart';
 import '../canvas/plot_canvas.dart';
+import '../dialogs/settings_dialog.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -56,7 +57,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
             actions: [
               PopupMenuButton<_ExplorerAction>(
                 tooltip: 'Add Item',
-                icon: const Icon(
+                icon: Icon(
                   Icons.more_horiz,
                   size: 16,
                   color: PrimeTheme.textSecondary,
@@ -182,35 +183,35 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                 },
                 itemBuilder: (BuildContext context) =>
                     <PopupMenuEntry<_ExplorerAction>>[
-                      const PopupMenuItem<_ExplorerAction>(
+                      PopupMenuItem<_ExplorerAction>(
                         value: _ExplorerAction.addTable,
                         child: Text(
                           'Add Table',
                           style: TextStyle(color: PrimeTheme.textPrimary),
                         ),
                       ),
-                      const PopupMenuItem<_ExplorerAction>(
+                      PopupMenuItem<_ExplorerAction>(
                         value: _ExplorerAction.addFunction,
                         child: Text(
                           'Add Function',
                           style: TextStyle(color: PrimeTheme.textPrimary),
                         ),
                       ),
-                      const PopupMenuItem<_ExplorerAction>(
+                      PopupMenuItem<_ExplorerAction>(
                         value: _ExplorerAction.addShape,
                         child: Text(
                           'Add Shape',
                           style: TextStyle(color: PrimeTheme.textPrimary),
                         ),
                       ),
-                      const PopupMenuItem<_ExplorerAction>(
+                      PopupMenuItem<_ExplorerAction>(
                         value: _ExplorerAction.addGraph,
                         child: Text(
                           'Add Graph',
                           style: TextStyle(color: PrimeTheme.textPrimary),
                         ),
                       ),
-                      const PopupMenuItem<_ExplorerAction>(
+                      PopupMenuItem<_ExplorerAction>(
                         value: _ExplorerAction.addFolder,
                         child: Text(
                           'Add Folder',
@@ -409,13 +410,13 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.pie_chart,
                             size: 20,
                             color: PrimeTheme.primaryAccent,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
+                          Text(
                             'PrimePlot',
                             style: TextStyle(
                               fontSize: 14,
@@ -428,19 +429,19 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                       ),
                     ),
                   ),
-                  const Divider(
+                  Divider(
                     height: 1,
                     thickness: 1,
                     color: PrimeTheme.borderSide,
                   ),
                   const SizedBox(height: 8),
                   ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.create_new_folder,
                       size: 18,
                       color: PrimeTheme.textSecondary,
                     ),
-                    title: const Text(
+                    title: Text(
                       'New project',
                       style: TextStyle(
                         color: PrimeTheme.textPrimary,
@@ -453,12 +454,12 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.folder_open,
                       size: 18,
                       color: PrimeTheme.textSecondary,
                     ),
-                    title: const Text(
+                    title: Text(
                       'Open project',
                       style: TextStyle(
                         color: PrimeTheme.textPrimary,
@@ -471,12 +472,12 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.save,
                       size: 18,
                       color: PrimeTheme.textSecondary,
                     ),
-                    title: const Text(
+                    title: Text(
                       'Save',
                       style: TextStyle(
                         color: PrimeTheme.textPrimary,
@@ -489,12 +490,12 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.save_as,
                       size: 18,
                       color: PrimeTheme.textSecondary,
                     ),
-                    title: const Text(
+                    title: Text(
                       'Save as...',
                       style: TextStyle(
                         color: PrimeTheme.textPrimary,
@@ -506,18 +507,18 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                       FileActions.doSaveAs(context);
                     },
                   ),
-                  const Divider(
+                  Divider(
                     height: 16,
                     thickness: 1,
                     color: PrimeTheme.borderSide,
                   ),
                   ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.settings,
                       size: 18,
                       color: PrimeTheme.textSecondary,
                     ),
-                    title: const Text(
+                    title: Text(
                       'Settings',
                       style: TextStyle(
                         color: PrimeTheme.textPrimary,
@@ -525,17 +526,20 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                       ),
                     ),
                     onTap: () {
-                      debugPrint("Menu Selected: settings");
                       Navigator.pop(context);
+                      showDialog(
+                        context: context,
+                        builder: (context) => const SettingsDialog(),
+                      );
                     },
                   ),
                   ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.info_outline,
                       size: 18,
                       color: PrimeTheme.textSecondary,
                     ),
-                    title: const Text(
+                    title: Text(
                       'About',
                       style: TextStyle(
                         color: PrimeTheme.textPrimary,
@@ -612,14 +616,14 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                                 ),
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.file_present_rounded,
                               size: 56,
                               color: PrimeTheme.primaryAccent,
                             ),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                          Text(
                             "drop the file here",
                             style: TextStyle(
                               fontSize: 22,

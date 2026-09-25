@@ -57,7 +57,7 @@ class _DataPanelHeader extends StatelessWidget {
       child: Container(
         height: 36,
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: PrimeTheme.tabBackground,
           borderRadius: BorderRadius.vertical(top: Radius.circular(7.0)),
           border: Border(bottom: BorderSide(color: PrimeTheme.borderSide)),
@@ -68,14 +68,14 @@ class _DataPanelHeader extends StatelessWidget {
               turns: isCollapsed ? 0.0 : 0.25,
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOutCubic,
-              child: const Icon(
+              child: Icon(
                 Icons.chevron_right,
                 size: 18,
                 color: PrimeTheme.textSecondary,
               ),
             ),
             const SizedBox(width: 6),
-            const Text(
+            Text(
               'Data',
               style: TextStyle(
                 fontSize: 12,
@@ -117,7 +117,7 @@ class _DataPanelHeader extends StatelessWidget {
             const SizedBox(width: 4),
             PopupMenuButton<String>(
               tooltip: 'Table Options',
-              icon: const Icon(
+              icon: Icon(
                 Icons.more_horiz,
                 size: 16,
                 color: PrimeTheme.textSecondary,
@@ -133,14 +133,14 @@ class _DataPanelHeader extends StatelessWidget {
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
+                PopupMenuItem<String>(
                   value: 'new',
                   child: Text(
                     'New table',
                     style: TextStyle(color: PrimeTheme.textPrimary),
                   ),
                 ),
-                const PopupMenuItem<String>(
+                PopupMenuItem<String>(
                   value: 'clear',
                   child: Text(
                     'Clean all data',
@@ -177,7 +177,7 @@ class _DataTab extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w500,
           color: PrimeTheme.textPrimary,

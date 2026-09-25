@@ -116,7 +116,7 @@ class PlotCanvas extends StatelessWidget {
             );
 
             if (!scopedHasTabular && functionNodes.isEmpty) {
-              return const Center(
+              return Center(
                 child: Text(
                   'No data available to plot.',
                   style: TextStyle(color: PrimeTheme.textSecondary),
@@ -351,7 +351,7 @@ class PlotCanvas extends StatelessWidget {
     const marginTop = kPlotMarginTop;
     const marginRight = kPlotMarginRight;
 
-    const labelStyle = TextStyle(
+    final labelStyle = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.bold,
       color: PrimeTheme.textPrimary,
@@ -453,14 +453,17 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     final plotHeight = size.height - marginTop - marginBottom;
     if (plotWidth <= 0 || plotHeight <= 0) return;
 
+    final bgPaint = Paint()..color = PrimeTheme.canvasBackground;
+    canvas.drawRect(Offset.zero & size, bgPaint);
+
     final showGrid = graphProps?.showGrid ?? true;
     final showXAxis = graphProps?.xVisible ?? true;
     final showYAxis = graphProps?.yVisible ?? true;
     final paintAxis = Paint()
-      ..color = PrimeTheme.textSecondary
+      ..color = PrimeTheme.canvasAxis
       ..strokeWidth = 1.5;
     final paintGrid = Paint()
-      ..color = PrimeTheme.textSecondary.withValues(alpha: 0.2)
+      ..color = PrimeTheme.canvasGrid.withValues(alpha: 0.3)
       ..strokeWidth = 1.0;
 
     Offset? mapToScreen(double x, double y) {
@@ -476,8 +479,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
     void drawAxisAndGrid() {
       const ticks = 5;
-      const textStyle = TextStyle(
-        color: PrimeTheme.textSecondary,
+      final textStyle = TextStyle(
+        color: PrimeTheme.canvasAxis,
         fontSize: 10,
       );
       final bottom = size.height - marginBottom;
@@ -554,7 +557,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         final title = TextPainter(
           text: TextSpan(
             text: graphProps?.xLabel ?? 'X',
-            style: const TextStyle(
+            style: TextStyle(
               color: PrimeTheme.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -576,7 +579,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         final title = TextPainter(
           text: TextSpan(
             text: graphProps?.yLabel ?? 'Y',
-            style: const TextStyle(
+            style: TextStyle(
               color: PrimeTheme.textPrimary,
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -823,7 +826,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     }
     if (entries.isEmpty) return;
 
-    const textStyle = TextStyle(color: PrimeTheme.textPrimary, fontSize: 11);
+    final textStyle = TextStyle(color: PrimeTheme.textPrimary, fontSize: 11);
     const padding = 8.0;
     const rowHeight = 20.0;
     const swatchWidth = 28.0;

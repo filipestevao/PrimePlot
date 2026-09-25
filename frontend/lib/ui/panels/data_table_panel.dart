@@ -139,7 +139,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
             valueListenable: ProjectState.instance.activeTable,
             builder: (context, tableData, child) {
               if (tableData == null) {
-                return const Center(
+                return Center(
                   child: Text(
                     'No table selected.',
                     style: TextStyle(color: PrimeTheme.textSecondary),
@@ -174,7 +174,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _buildHeaderRow(tableData, rowCount, colCount),
-                              const Divider(
+                              Divider(
                                   height: 1,
                                   thickness: 1,
                                   color: PrimeTheme.borderSide),
@@ -193,7 +193,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
                                           border: Border(
                                             bottom: BorderSide(
                                               color: PrimeTheme.borderSide
-                                                  .withOpacity(0.5),
+                                                  .withValues(alpha: 0.5),
                                             ),
                                           ),
                                         ),
@@ -240,7 +240,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
         children: [
           // Keep the header visible even when empty
           Container(
-            color: PrimeTheme.backgroundDark.withOpacity(0.5),
+            color: PrimeTheme.backgroundDark.withValues(alpha: 0.5),
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Row(
               children: [
@@ -250,7 +250,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
               ],
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: PrimeTheme.borderSide),
+          Divider(height: 1, thickness: 1, color: PrimeTheme.borderSide),
           // Hint area
           Expanded(
             child: Center(
@@ -260,7 +260,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
                   Icon(
                     Icons.content_paste_rounded,
                     size: 36,
-                    color: PrimeTheme.textSecondary.withOpacity(0.35),
+                    color: PrimeTheme.textSecondary.withValues(alpha: 0.35),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -268,7 +268,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: PrimeTheme.textSecondary.withOpacity(0.6),
+                      color: PrimeTheme.textSecondary.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -276,7 +276,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
                     'Ctrl + V',
                     style: TextStyle(
                       fontSize: 12,
-                      color: PrimeTheme.primaryAccent.withOpacity(0.55),
+                      color: PrimeTheme.primaryAccent.withValues(alpha: 0.55),
                       fontFamily: 'monospace',
                       letterSpacing: 1.2,
                     ),
@@ -296,7 +296,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
 
   Widget _buildHeaderRow(DTODataTable tableData, int rowCount, int colCount) {
     return Container(
-      color: PrimeTheme.backgroundDark.withOpacity(0.5),
+      color: PrimeTheme.backgroundDark.withValues(alpha: 0.5),
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
@@ -318,12 +318,12 @@ class _DataTablePanelState extends State<DataTablePanel> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           border: Border(
-            right: BorderSide(color: PrimeTheme.borderSide.withOpacity(0.5)),
+            right: BorderSide(color: PrimeTheme.borderSide.withValues(alpha: 0.5)),
           ),
         ),
         child: Text(
           text,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.bold,
             color: PrimeTheme.textPrimary,
@@ -361,10 +361,10 @@ class _DataTablePanelState extends State<DataTablePanel> {
       width: width,
       decoration: BoxDecoration(
         color: isColSelected
-            ? PrimeTheme.primaryAccent.withOpacity(0.2)
+            ? PrimeTheme.primaryAccent.withValues(alpha: 0.2)
             : Colors.transparent,
         border: Border(
-          right: BorderSide(color: PrimeTheme.borderSide.withOpacity(0.5)),
+          right: BorderSide(color: PrimeTheme.borderSide.withValues(alpha: 0.5)),
         ),
       ),
       child: Row(
@@ -384,7 +384,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
                     children: [
                       Text(
                         col.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: PrimeTheme.textPrimary),
@@ -406,7 +406,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
           ),
           PopupMenuButton<DTOColumnRole>(
             tooltip: 'Change Column Role',
-            icon: const Icon(Icons.arrow_drop_down,
+            icon: Icon(Icons.arrow_drop_down,
                 size: 16, color: PrimeTheme.textSecondary),
             color: PrimeTheme.backgroundDark,
             elevation: 8,
@@ -424,23 +424,23 @@ class _DataTablePanelState extends State<DataTablePanel> {
               },
             itemBuilder: (BuildContext context) =>
                 <PopupMenuEntry<DTOColumnRole>>[
-              const PopupMenuItem<DTOColumnRole>(
+              PopupMenuItem<DTOColumnRole>(
                   value: DTOColumnRole.x,
                   child: Text('Set as X',
                       style: TextStyle(color: PrimeTheme.textPrimary))),
-              const PopupMenuItem<DTOColumnRole>(
+              PopupMenuItem<DTOColumnRole>(
                   value: DTOColumnRole.y,
                   child: Text('Set as Y',
                       style: TextStyle(color: PrimeTheme.textPrimary))),
-              const PopupMenuItem<DTOColumnRole>(
+              PopupMenuItem<DTOColumnRole>(
                   value: DTOColumnRole.xError,
                   child: Text('Set as X Error',
                       style: TextStyle(color: PrimeTheme.textPrimary))),
-              const PopupMenuItem<DTOColumnRole>(
+              PopupMenuItem<DTOColumnRole>(
                   value: DTOColumnRole.yError,
                   child: Text('Set as Y Error',
                       style: TextStyle(color: PrimeTheme.textPrimary))),
-              const PopupMenuItem<DTOColumnRole>(
+              PopupMenuItem<DTOColumnRole>(
                   value: DTOColumnRole.text,
                   child: Text('Set as Text',
                       style: TextStyle(color: PrimeTheme.textPrimary))),
@@ -466,16 +466,16 @@ class _DataTablePanelState extends State<DataTablePanel> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isRowSelected
-                ? PrimeTheme.primaryAccent.withOpacity(0.2)
+                ? PrimeTheme.primaryAccent.withValues(alpha: 0.2)
                 : Colors.transparent,
             border: Border(
               right:
-                  BorderSide(color: PrimeTheme.borderSide.withOpacity(0.5)),
+                  BorderSide(color: PrimeTheme.borderSide.withValues(alpha: 0.5)),
             ),
           ),
           child: Text(
             '${rowIndex + 1}',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 12, color: PrimeTheme.textSecondary),
           ),
         ),
@@ -524,18 +524,18 @@ class _DataTablePanelState extends State<DataTablePanel> {
           color: isEditing
               ? PrimeTheme.backgroundDark
               : (isHighlighted
-                  ? PrimeTheme.primaryAccent.withOpacity(0.2)
+                  ? PrimeTheme.primaryAccent.withValues(alpha: 0.2)
                   : Colors.transparent),
           border: Border(
             right:
-                BorderSide(color: PrimeTheme.borderSide.withOpacity(0.5)),
+                BorderSide(color: PrimeTheme.borderSide.withValues(alpha: 0.5)),
           ),
         ),
         child: isEditing
             ? TextFormField(
                 controller: _editController,
                 autofocus: true,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12, color: PrimeTheme.primaryAccent),
                 decoration: const InputDecoration(
                   isDense: true,
@@ -557,7 +557,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
                 style: TextStyle(
                   fontSize: 12,
                   color: isEmpty
-                      ? PrimeTheme.textSecondary.withOpacity(0.3)
+                      ? PrimeTheme.textSecondary.withValues(alpha: 0.3)
                       : PrimeTheme.textPrimary,
                 ),
               ),

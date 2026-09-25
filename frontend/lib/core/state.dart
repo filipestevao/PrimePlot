@@ -8,6 +8,8 @@ import '../src/rust/api/project.dart';
 import '../src/rust/api/properties.dart';
 import '../src/rust/api/persistence.dart' as persist;
 import '../src/rust/api/palettes.dart' as pal;
+import '../src/rust/api/prefs.dart' as prefs;
+import 'theme.dart';
 
 /// Double-click home view: inspector-defined axis ranges per graph.
 /// Null bound = Auto.
@@ -31,6 +33,8 @@ class GraphHomeView {
 class ProjectState {
   static final ProjectState instance = ProjectState._internal();
   ProjectState._internal();
+
+  bool _initialLoaded = false;
 
   /// Holds the active DataTable. Both the Table UI and the Canvas listen to this.
   final ValueNotifier<DTODataTable?> activeTable = ValueNotifier(null);
@@ -63,6 +67,31 @@ class ProjectState {
     null,
   );
   final ValueNotifier<ShapeProperties?> activeShapeProps = ValueNotifier(null);
+  final ValueNotifier<String> activeTheme = ValueNotifier('primeplot');
+
+  /// Loads saved user preferences from the Rust backend.
+  void initTheme() {
+    try {
+      final p = prefs.getPreferences();
+      PrimeTheme.setTheme(p.theme);
+      activeTheme.value = p.theme;
+    } catch (e) {
+      debugPrint("Error loading preferences: $e");
+    }
+  }
+
+  /// Sets the active theme and persists it via Rust backend.
+  void setTheme(String themeId) {
+    if (activeTheme.value == themeId) return;
+    PrimeTheme.setTheme(themeId);
+    activeTheme.value = themeId;
+    refreshCanvas.value++;
+    try {
+      prefs.setPreferences(prefs: prefs.AppPreferences(theme: themeId));
+    } catch (e) {
+      debugPrint("Error saving preferences: $e");
+    }
+  }
 
   final ValueNotifier<int> refreshCanvas = ValueNotifier(0);
 
@@ -216,6 +245,10 @@ class ProjectState {
   }
 
   void loadInitialData() {
+    // Idempotent: MainLayout remounts on theme switch (ValueKey) and must
+    // not wipe live project state, file path, or dirty flag.
+    if (_initialLoaded) return;
+    _initialLoaded = true;
     // Start with an empty table – Rust is the single source of truth.
     activeTable.value = getEmptyTableData();
     projectTree.value = getProjectTree();

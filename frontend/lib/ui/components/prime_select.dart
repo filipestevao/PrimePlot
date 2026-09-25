@@ -52,8 +52,8 @@ class _PrimeSelectState<T> extends State<PrimeSelect<T>> {
             isDense: true,
             isExpanded: true,
             dropdownColor: PrimeTheme.panelBackground,
-            icon: const Icon(Icons.arrow_drop_down, color: PrimeTheme.textSecondary, size: 16),
-            style: const TextStyle(
+            icon: Icon(Icons.arrow_drop_down, color: PrimeTheme.textSecondary, size: 16),
+            style: TextStyle(
               fontSize: 12,
               color: PrimeTheme.textPrimary,
               fontFamily: 'Inter',
@@ -76,7 +76,7 @@ class _PrimeSelectState<T> extends State<PrimeSelect<T>> {
                       ),
                     ),
                     if (isSelected)
-                      const Icon(Icons.check, size: 14, color: PrimeTheme.primaryAccent),
+                      Icon(Icons.check, size: 14, color: PrimeTheme.primaryAccent),
                   ],
                 ),
               );

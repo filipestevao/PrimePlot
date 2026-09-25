@@ -145,7 +145,7 @@ class _PrimeTextFieldState extends State<PrimeTextField> {
                   readOnly: widget.readOnly,
                   maxLines: widget.maxLines,
                   textAlignVertical: TextAlignVertical.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: PrimeTheme.textPrimary,
                     fontFamily: 'Inter',

@@ -23,16 +23,16 @@ class CustomTitleBar extends StatelessWidget {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.menu, size: 20, color: PrimeTheme.textSecondary),
+                  icon: Icon(Icons.menu, size: 20, color: PrimeTheme.textSecondary),
                   splashRadius: 20,
                   onPressed: () {
                     Scaffold.of(context).openDrawer();
                   },
                 ),
                 const SizedBox(width: 16),
-                const Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent), // Placeholder logo
+                Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent), // Placeholder logo
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'PrimePlot',
                   style: TextStyle(
                     fontSize: 14,
