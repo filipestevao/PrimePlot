@@ -94,9 +94,9 @@ pub struct FunctionProperties {
     pub legend_display_name: String,
     /// Optional local domain override (falls back to the graph viewport).
     /// `#[serde(default)]` keeps pre-Step-4 bundles loadable.
-    #[serde(default)]
+    #[serde(default = "default_function_xmin")]
     pub x_min: Option<f64>,
-    #[serde(default)]
+    #[serde(default = "default_function_xmax")]
     pub x_max: Option<f64>,
     #[serde(default = "default_num_samples")]
     pub num_samples: usize,
@@ -110,6 +110,14 @@ pub struct FunctionProperties {
 
 fn default_legend_name() -> String {
     "Series".to_string()
+}
+
+fn default_function_xmin() -> Option<f64> {
+    Some(-10.0)
+}
+
+fn default_function_xmax() -> Option<f64> {
+    Some(10.0)
 }
 
 fn default_num_samples() -> usize {
@@ -133,8 +141,8 @@ impl Default for FunctionProperties {
         Self {
             equation: "f(x) = x".to_string(),
             legend_display_name: default_legend_name(),
-            x_min: None,
-            x_max: None,
+            x_min: default_function_xmin(),
+            x_max: default_function_xmax(),
             num_samples: default_num_samples(),
             line_color: default_function_color(),
             line_thickness: default_line_thickness(),
@@ -303,7 +311,8 @@ mod tests {
         let legacy: FunctionProperties = serde_json::from_str(r#"{"equation":"x"}"#).unwrap();
         assert_eq!(legacy.equation, "x");
         assert_eq!(legacy.legend_display_name, "Series");
-        assert_eq!(legacy.x_min, None);
+        assert_eq!(legacy.x_min, Some(-10.0));
+        assert_eq!(legacy.x_max, Some(10.0));
         assert_eq!(legacy.num_samples, 1000);
         assert_eq!(legacy.line_color, "#FF7F0E");
     }

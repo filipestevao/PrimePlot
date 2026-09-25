@@ -277,7 +277,7 @@ class _FunctionInspector extends StatelessWidget {
               ],
             ),
 
-            // Section 3: Domain (local override; Auto follows the viewport)
+            // Section 3: Domain (explicit range, defaults -10/10)
             PropertySection(
               title: 'Domain',
               icon: Icons.horizontal_rule,
@@ -290,7 +290,7 @@ class _FunctionInspector extends StatelessWidget {
                         child: PrimeNumberField(
                           value: props.xMin,
                           prefixText: 'Min: ',
-                          allowAuto: true,
+                          resetValue: -10.0,
                           onChanged: (val) {
                             ProjectState.instance.updateFunctionProperties(
                               nodeId,
@@ -304,7 +304,7 @@ class _FunctionInspector extends StatelessWidget {
                         child: PrimeNumberField(
                           value: props.xMax,
                           prefixText: 'Max: ',
-                          allowAuto: true,
+                          resetValue: 10.0,
                           onChanged: (val) {
                             ProjectState.instance.updateFunctionProperties(
                               nodeId,

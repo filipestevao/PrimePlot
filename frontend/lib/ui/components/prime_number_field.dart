@@ -18,6 +18,10 @@ class PrimeNumberField extends StatefulWidget {
   final double? max;
   final int precision;
 
+  /// Explicit reset target (e.g. a domain default). Takes precedence over
+  /// the Auto reset; the button hides while the value already equals it.
+  final double? resetValue;
+
   const PrimeNumberField({
     super.key,
     required this.value,
@@ -30,6 +34,7 @@ class PrimeNumberField extends StatefulWidget {
     this.min,
     this.max,
     this.precision = 2,
+    this.resetValue,
   });
 
   @override
@@ -79,13 +84,29 @@ class _PrimeNumberFieldState extends State<PrimeNumberField> {
 
     final suffixWidgets = <Widget>[];
 
-    // Reset button only if allowAuto is true and value is currently non-null
-    if (widget.allowAuto && !isAuto) {
+    // Reset button: explicit default wins; otherwise Auto when allowed.
+    // Hidden while the value already equals the reset target.
+    final double? resetTarget;
+    final String resetTip;
+    if (widget.resetValue != null) {
+      resetTarget = widget.resetValue;
+      resetTip = 'Reset to default';
+    } else if (widget.allowAuto) {
+      resetTarget = null;
+      resetTip = 'Reset to ${widget.autoLabel}';
+    } else {
+      resetTarget = null;
+      resetTip = '';
+    }
+    final showReset =
+        (widget.resetValue != null || widget.allowAuto) &&
+        widget.value != resetTarget;
+    if (showReset) {
       suffixWidgets.add(
         Tooltip(
-          message: 'Reset to ${widget.autoLabel}',
+          message: resetTip,
           child: InkWell(
-            onTap: () => widget.onChanged(null),
+            onTap: () => widget.onChanged(resetTarget),
             borderRadius: BorderRadius.circular(3),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),

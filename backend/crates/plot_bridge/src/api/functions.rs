@@ -44,13 +44,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn samples_default_function_over_viewport() {
+    fn default_domain_wins_over_viewport() {
         let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
         crate::api::properties::clear_all_property_stores();
+        // Fresh functions default to [-10, 10], ignoring the viewport.
         let pts = get_function_curve_data("fn_1".to_string(), 0.0, 20.0).unwrap();
         assert_eq!(pts.len(), 1000); // default num_samples
-        assert!((pts[0].x - 0.0).abs() < 1e-12);
-        assert!((pts[0].y - 0.0).abs() < 1e-12); // f(x) = x
+        assert!((pts[0].x - -10.0).abs() < 1e-12);
+        assert!((pts[0].y - -10.0).abs() < 1e-12); // f(x) = x
         crate::api::properties::clear_all_property_stores();
     }
 
@@ -68,7 +69,16 @@ mod tests {
         assert!(get_function_curve_data("fn_bad".to_string(), 0.0, 1.0).is_err());
         assert!(validate_function_expression("sin(".to_string()).is_err());
         assert!(validate_function_expression("sin(x)".to_string()).is_ok());
-        assert!(get_function_curve_data("fn_1".to_string(), 5.0, 5.0).is_err());
+        // Empty explicit domain is an error even with a valid equation.
+        crate::api::properties::set_function_properties(
+            "fn_empty".to_string(),
+            crate::api::properties::FunctionProperties {
+                x_min: Some(5.0),
+                x_max: Some(5.0),
+                ..Default::default()
+            },
+        );
+        assert!(get_function_curve_data("fn_empty".to_string(), 0.0, 20.0).is_err());
         crate::api::properties::clear_all_property_stores();
     }
 
