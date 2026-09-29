@@ -660,6 +660,101 @@ class ProjectState {
   }
 
   // ---------------------------------------------------------------------------
+  // Column management (Step B): structural edits on one dataset.
+  // Each returns null on success, error message otherwise.
+  // ---------------------------------------------------------------------------
+
+  static String columnRoleName(DTOColumnRole role) {
+    switch (role) {
+      case DTOColumnRole.x:
+        return 'X';
+      case DTOColumnRole.y:
+        return 'Y';
+      case DTOColumnRole.xError:
+        return 'XError';
+      case DTOColumnRole.yError:
+        return 'YError';
+      case DTOColumnRole.text:
+        return 'Text';
+    }
+  }
+
+  String? _applyColumnUpdate(DTODataTable updated) {
+    activeTable.value = updated;
+    final list = activeTables.value;
+    final idx = list.indexWhere((t) => t.id == updated.id);
+    if (idx != -1) {
+      final newList = List<DTODataTable>.from(list);
+      newList[idx] = updated;
+      activeTables.value = newList;
+    }
+    markDirty();
+    return null;
+  }
+
+  String? addTableColumn(String tableId, String name, DTOColumnRole role) {
+    try {
+      return _applyColumnUpdate(
+        addColumn(tableId: tableId, name: name, role: columnRoleName(role)),
+      );
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  String? removeTableColumn(String tableId, int colIndex) {
+    try {
+      return _applyColumnUpdate(
+        removeColumn(tableId: tableId, colIndex: BigInt.from(colIndex)),
+      );
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  String? renameTableColumn(String tableId, int colIndex, String newName) {
+    try {
+      return _applyColumnUpdate(
+        renameColumn(
+          tableId: tableId,
+          colIndex: BigInt.from(colIndex),
+          newName: newName,
+        ),
+      );
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  String? setTableColumnRole(String tableId, int colIndex, DTOColumnRole role) {
+    try {
+      return _applyColumnUpdate(
+        setColumnRole(
+          tableId: tableId,
+          colIndex: BigInt.from(colIndex),
+          role: columnRoleName(role),
+        ),
+      );
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  String? moveTableColumn(String tableId, int oldIndex, int newIndex) {
+    try {
+      return _applyColumnUpdate(
+        reorderColumn(
+          tableId: tableId,
+          oldIndex: BigInt.from(oldIndex),
+          newIndex: BigInt.from(newIndex),
+        ),
+      );
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // File persistence flows (Stage 2B): save / open / new.
   // Rust remains SSOT; these only snapshot/restore + track path + dirty flag.
   // Returns null on success, error message otherwise (UI shows SnackBar).

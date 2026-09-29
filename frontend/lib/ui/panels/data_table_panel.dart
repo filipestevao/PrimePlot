@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/data.dart';
 import '../../src/rust/api/project.dart';
+import '../components/prime_select.dart';
 
 class DataTablePanel extends StatefulWidget {
   const DataTablePanel({super.key});
@@ -20,13 +21,21 @@ class _DataTablePanelState extends State<DataTablePanel> {
   final ScrollController _horizontalController = ScrollController();
   final ScrollController _verticalController = ScrollController();
 
+  // Fixed layout widths: the scroll content budgets index + data columns
+  // + the trailing add-column button, so growing the table never overflows.
+  static const double _indexColWidth = 40.0;
+  static const double _dataColWidth = 100.0;
+  static const double _addColWidth = 36.0;
+
   int? _editingRow;
   int? _editingCol;
+  int? _renamingCol;
 
   final Set<int> _selectedRows = {};
   final Set<int> _selectedCols = {};
 
   final TextEditingController _editController = TextEditingController();
+  final TextEditingController _renameController = TextEditingController();
   final FocusNode _tableFocus = FocusNode();
 
   bool _isMouseDown = false;
@@ -44,6 +53,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
         _selectedCols.clear();
         _editingRow = null;
         _editingCol = null;
+        _renamingCol = null;
       });
     }
   }
@@ -54,8 +64,37 @@ class _DataTablePanelState extends State<DataTablePanel> {
     _horizontalController.dispose();
     _verticalController.dispose();
     _editController.dispose();
+    _renameController.dispose();
     _tableFocus.dispose();
     super.dispose();
+  }
+
+  void _snack(String message, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontSize: 12)),
+        backgroundColor: error ? const Color(0xFF7F1D1D) : const Color(0xFF1C2331),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: error ? 4 : 2),
+      ),
+    );
+  }
+
+  /// Compact role badge text: X, Y, ±X, ±Y, T.
+  static String _roleBadge(DTOColumnRole role) {
+    switch (role) {
+      case DTOColumnRole.x:
+        return 'X';
+      case DTOColumnRole.y:
+        return 'Y';
+      case DTOColumnRole.xError:
+        return '±X';
+      case DTOColumnRole.yError:
+        return '±Y';
+      case DTOColumnRole.text:
+        return 'T';
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -169,7 +208,9 @@ class _DataTablePanelState extends State<DataTablePanel> {
                         controller: _horizontalController,
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
-                          width: 40 + (colCount * 100.0),
+                          width: _indexColWidth +
+                              (colCount * _dataColWidth) +
+                              _addColWidth,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -244,9 +285,10 @@ class _DataTablePanelState extends State<DataTablePanel> {
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Row(
               children: [
-                _buildFixedHeaderCell('#', 40, 0, colCount),
+                _buildFixedHeaderCell('#', _indexColWidth, 0, colCount),
                 for (int i = 0; i < colCount; i++)
-                  _buildInteractiveHeaderCell(tableData, i, 100),
+                  _buildInteractiveHeaderCell(tableData, i, _dataColWidth),
+                _buildAddColumnButton(tableData),
               ],
             ),
           ),
@@ -300,12 +342,141 @@ class _DataTablePanelState extends State<DataTablePanel> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          _buildFixedHeaderCell('#', 40, rowCount, colCount),
+          _buildFixedHeaderCell('#', _indexColWidth, rowCount, colCount),
           for (int i = 0; i < colCount; i++)
-            _buildInteractiveHeaderCell(tableData, i, 100),
+            _buildInteractiveHeaderCell(tableData, i, _dataColWidth),
+          _buildAddColumnButton(tableData),
         ],
       ),
     );
+  }
+
+  Widget _buildAddColumnButton(DTODataTable tableData) {
+    return Tooltip(
+      message: 'Add column',
+      child: SizedBox(
+        width: _addColWidth,
+        child: InkWell(
+          onTap: () => _showAddColumnDialog(tableData),
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6.0),
+            child: Center(
+              child:
+                  Icon(Icons.add, size: 16, color: PrimeTheme.textSecondary),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAddColumnDialog(DTODataTable tableData) async {
+    String name = 'Col ${tableData.columns.length + 1}';
+    DTOColumnRole role = tableData.columns.any((c) => c.role == DTOColumnRole.x)
+        ? DTOColumnRole.y
+        : DTOColumnRole.x;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: PrimeTheme.panelBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: PrimeTheme.borderSide),
+          ),
+          title: Text(
+            'Add column',
+            style: TextStyle(fontSize: 14, color: PrimeTheme.textPrimary),
+          ),
+          content: StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              return SizedBox(
+                width: 260,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Name',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: PrimeTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: TextEditingController(text: name),
+                      autofocus: true,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: PrimeTheme.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
+                        filled: true,
+                        fillColor: PrimeTheme.searchBarBackground,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: BorderSide(
+                            color: PrimeTheme.borderSide,
+                          ),
+                        ),
+                      ),
+                      onChanged: (v) => name = v,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Role',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: PrimeTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    PrimeSelect<DTOColumnRole>(
+                      value: role,
+                      options: const {
+                        DTOColumnRole.x: 'X — horizontal axis',
+                        DTOColumnRole.y: 'Y — data series',
+                        DTOColumnRole.xError: '±X — horizontal error',
+                        DTOColumnRole.yError: '±Y — vertical error',
+                        DTOColumnRole.text: 'T — text / label',
+                      },
+                      onChanged: (v) => setDialogState(() => role = v),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: PrimeTheme.textSecondary),
+              ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+    if (result != true || !mounted) return;
+    final err = ProjectState.instance.addTableColumn(
+      tableData.id,
+      name,
+      role,
+    );
+    if (err != null) _snack('Add column failed: $err', error: true);
   }
 
   Widget _buildFixedHeaderCell(
@@ -337,6 +508,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
       DTODataTable tableData, int columnIndex, double width) {
     final col = tableData.columns[columnIndex];
     final isColSelected = _selectedCols.contains(columnIndex);
+    final isRenaming = _renamingCol == columnIndex;
 
     Color roleColor = PrimeTheme.textPrimary;
     switch (col.role) {
@@ -367,88 +539,188 @@ class _DataTablePanelState extends State<DataTablePanel> {
           right: BorderSide(color: PrimeTheme.borderSide.withValues(alpha: 0.5)),
         ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Listener(
-              onPointerDown: (_) => _startColSelection(columnIndex),
-              child: MouseRegion(
-                onEnter: (_) => _continueColSelection(columnIndex),
-                child: Container(
-                  color: Colors.transparent,
-                  padding:
-                      const EdgeInsets.only(left: 12.0, top: 4.0, bottom: 4.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        col.name,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: PrimeTheme.textPrimary),
-                        overflow: TextOverflow.ellipsis,
+      child: Listener(
+        onPointerDown: (_) => _startColSelection(columnIndex),
+        child: MouseRegion(
+          onEnter: (_) => _continueColSelection(columnIndex),
+          child: GestureDetector(
+            onSecondaryTapDown: (details) => _showColumnMenu(
+              details.globalPosition,
+              tableData,
+              columnIndex,
+            ),
+            onDoubleTap: () {
+              _renameController.text = col.name;
+              setState(() => _renamingCol = columnIndex);
+            },
+            child: Container(
+              color: Colors.transparent,
+              padding: const EdgeInsets.only(
+                  left: 12.0, right: 8.0, top: 4.0, bottom: 4.0),
+              child: isRenaming
+                  ? TextField(
+                      controller: _renameController,
+                      autofocus: true,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: PrimeTheme.textPrimary,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '[${col.role.name}]',
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: roleColor),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        border: InputBorder.none,
                       ),
-                    ],
-                  ),
-                ),
-              ),
+                      onSubmitted: (v) =>
+                          _commitRename(tableData, columnIndex, v),
+                      onTapOutside: (_) => _commitRename(
+                        tableData,
+                        columnIndex,
+                        _renameController.text,
+                      ),
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          col.name,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: PrimeTheme.textPrimary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '[${_roleBadge(col.role)}]',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: roleColor),
+                        ),
+                      ],
+                    ),
             ),
           ),
-          PopupMenuButton<DTOColumnRole>(
-            tooltip: 'Change Column Role',
-            icon: Icon(Icons.arrow_drop_down,
-                size: 16, color: PrimeTheme.textSecondary),
-            color: PrimeTheme.backgroundDark,
-            elevation: 8,
-            offset: const Offset(0, 30),
-            onSelected: (DTOColumnRole newRole) {
-                final newColumns = List<DTODataColumn>.from(tableData.columns);
-                newColumns[columnIndex] = DTODataColumn(
-                  name: col.name,
-                  role: newRole,
-                  data: col.data,
-                );
-                saveTable(tableId: tableData.id, columns: newColumns);
-                final updated = getTable(tableId: tableData.id);
-                ProjectState.instance.updateTable(updated);
-              },
-            itemBuilder: (BuildContext context) =>
-                <PopupMenuEntry<DTOColumnRole>>[
-              PopupMenuItem<DTOColumnRole>(
-                  value: DTOColumnRole.x,
-                  child: Text('Set as X',
-                      style: TextStyle(color: PrimeTheme.textPrimary))),
-              PopupMenuItem<DTOColumnRole>(
-                  value: DTOColumnRole.y,
-                  child: Text('Set as Y',
-                      style: TextStyle(color: PrimeTheme.textPrimary))),
-              PopupMenuItem<DTOColumnRole>(
-                  value: DTOColumnRole.xError,
-                  child: Text('Set as X Error',
-                      style: TextStyle(color: PrimeTheme.textPrimary))),
-              PopupMenuItem<DTOColumnRole>(
-                  value: DTOColumnRole.yError,
-                  child: Text('Set as Y Error',
-                      style: TextStyle(color: PrimeTheme.textPrimary))),
-              PopupMenuItem<DTOColumnRole>(
-                  value: DTOColumnRole.text,
-                  child: Text('Set as Text',
-                      style: TextStyle(color: PrimeTheme.textPrimary))),
-            ],
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  void _commitRename(DTODataTable tableData, int columnIndex, String value) {
+    if (_renamingCol != columnIndex) return;
+    setState(() => _renamingCol = null);
+    final err = ProjectState.instance.renameTableColumn(
+      tableData.id,
+      columnIndex,
+      value,
+    );
+    if (err != null) _snack('Rename failed: $err', error: true);
+  }
+
+  Future<void> _showColumnMenu(
+    Offset position,
+    DTODataTable tableData,
+    int columnIndex,
+  ) async {
+    final colCount = tableData.columns.length;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      color: PrimeTheme.backgroundDark,
+      elevation: 8,
+      items: [
+        PopupMenuItem<String>(
+          value: 'rename',
+          child: Text('Rename',
+              style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12)),
+        ),
+        const PopupMenuDivider(height: 8),
+        for (final role in DTOColumnRole.values)
+          PopupMenuItem<String>(
+            value: 'role_${role.name}',
+            child: Text('Role: ${_roleBadge(role)} — ${_roleName(role)}',
+                style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12)),
+          ),
+        const PopupMenuDivider(height: 8),
+        PopupMenuItem<String>(
+          value: 'left',
+          enabled: columnIndex > 0,
+          child: Text('Move Left',
+              style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12)),
+        ),
+        PopupMenuItem<String>(
+          value: 'right',
+          enabled: columnIndex < colCount - 1,
+          child: Text('Move Right',
+              style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12)),
+        ),
+        const PopupMenuDivider(height: 8),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Text('Delete Column',
+              style: TextStyle(color: const Color(0xFFF87171), fontSize: 12)),
+        ),
+      ],
+    );
+    if (choice == null || !mounted) return;
+    final st = ProjectState.instance;
+    String? err;
+    switch (choice) {
+      case 'rename':
+        _renameController.text = tableData.columns[columnIndex].name;
+        setState(() => _renamingCol = columnIndex);
+        return;
+      case 'role_x':
+        err = st.setTableColumnRole(tableData.id, columnIndex, DTOColumnRole.x);
+        break;
+      case 'role_y':
+        err = st.setTableColumnRole(tableData.id, columnIndex, DTOColumnRole.y);
+        break;
+      case 'role_xError':
+        err = st.setTableColumnRole(
+            tableData.id, columnIndex, DTOColumnRole.xError);
+        break;
+      case 'role_yError':
+        err = st.setTableColumnRole(
+            tableData.id, columnIndex, DTOColumnRole.yError);
+        break;
+      case 'role_text':
+        err = st.setTableColumnRole(
+            tableData.id, columnIndex, DTOColumnRole.text);
+        break;
+      case 'left':
+        err = st.moveTableColumn(tableData.id, columnIndex, columnIndex - 1);
+        break;
+      case 'right':
+        err = st.moveTableColumn(tableData.id, columnIndex, columnIndex + 1);
+        break;
+      case 'delete':
+        err = st.removeTableColumn(tableData.id, columnIndex);
+        break;
+    }
+    if (err != null) _snack('Column action failed: $err', error: true);
+  }
+
+  static String _roleName(DTOColumnRole role) {
+    switch (role) {
+      case DTOColumnRole.x:
+        return 'X axis';
+      case DTOColumnRole.y:
+        return 'Y series';
+      case DTOColumnRole.xError:
+        return 'X error';
+      case DTOColumnRole.yError:
+        return 'Y error';
+      case DTOColumnRole.text:
+        return 'Text';
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -461,7 +733,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
       child: MouseRegion(
         onEnter: (_) => _continueRowSelection(rowIndex),
         child: Container(
-          width: 40,
+          width: _indexColWidth,
           padding: const EdgeInsets.symmetric(vertical: 6.0),
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -516,7 +788,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
         });
       },
       child: Container(
-        width: 100,
+        width: _dataColWidth,
         padding:
             const EdgeInsets.symmetric(vertical: 6.0, horizontal: 12.0),
         alignment: Alignment.centerLeft,

@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'data.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `child_ids_of_type`, `dataset_ids_in_order`, `default_project_tree_engine`, `dto_to_engine_table`, `function_ids_in_order`, `generate_id`, `get_state`, `get_table_store`, `reset_next_id_from_tree`, `restore_tables_engine`, `restore_tree_engine`, `snapshot_tables_engine`, `snapshot_tree_engine`
+// These functions are ignored because they are not marked as `pub`: `child_ids_of_type`, `dataset_ids_in_order`, `default_project_tree_engine`, `dto_to_engine_table`, `function_ids_in_order`, `generate_id`, `get_state`, `get_table_store`, `parse_engine_role`, `reset_next_id_from_tree`, `restore_tables_engine`, `restore_tree_engine`, `snapshot_tables_engine`, `snapshot_tree_engine`, `table_not_found`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
 
 ProjectNode getProjectTree() =>
@@ -64,6 +64,56 @@ void saveTable({
 }) => RustLib.instance.api.crateApiProjectSaveTable(
   tableId: tableId,
   columns: columns,
+);
+
+/// Appends a blank column (NaN-filled to the current row count).
+DTODataTable addColumn({
+  required String tableId,
+  required String name,
+  required String role,
+}) => RustLib.instance.api.crateApiProjectAddColumn(
+  tableId: tableId,
+  name: name,
+  role: role,
+);
+
+/// Removes a column; refuses the last X or Y column.
+DTODataTable removeColumn({
+  required String tableId,
+  required BigInt colIndex,
+}) => RustLib.instance.api.crateApiProjectRemoveColumn(
+  tableId: tableId,
+  colIndex: colIndex,
+);
+
+DTODataTable renameColumn({
+  required String tableId,
+  required BigInt colIndex,
+  required String newName,
+}) => RustLib.instance.api.crateApiProjectRenameColumn(
+  tableId: tableId,
+  colIndex: colIndex,
+  newName: newName,
+);
+
+DTODataTable setColumnRole({
+  required String tableId,
+  required BigInt colIndex,
+  required String role,
+}) => RustLib.instance.api.crateApiProjectSetColumnRole(
+  tableId: tableId,
+  colIndex: colIndex,
+  role: role,
+);
+
+DTODataTable reorderColumn({
+  required String tableId,
+  required BigInt oldIndex,
+  required BigInt newIndex,
+}) => RustLib.instance.api.crateApiProjectReorderColumn(
+  tableId: tableId,
+  oldIndex: oldIndex,
+  newIndex: newIndex,
 );
 
 ProjectNode addEmptyTable({

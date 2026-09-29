@@ -262,6 +262,100 @@ pub fn save_table(table_id: String, columns: Vec<crate::api::data::DTODataColumn
     store.insert(table_id, et);
 }
 
+// ---------------------------------------------------------------------------
+// Column management (Step B): structural edits on one dataset.
+// Each endpoint returns the updated table DTO or a clean error string.
+// ---------------------------------------------------------------------------
+
+fn parse_engine_role(role: &str) -> Result<EngineColumnRole, String> {
+    match role.trim().to_ascii_lowercase().as_str() {
+        "x" => Ok(EngineColumnRole::X),
+        "y" => Ok(EngineColumnRole::Y),
+        "xerror" | "x_error" => Ok(EngineColumnRole::XError),
+        "yerror" | "y_error" => Ok(EngineColumnRole::YError),
+        "text" => Ok(EngineColumnRole::Text),
+        other => Err(format!(
+            "unknown column role '{other}' (expected X, Y, XError, YError or Text)"
+        )),
+    }
+}
+
+fn table_not_found(table_id: &str) -> String {
+    format!("table '{table_id}' not found")
+}
+
+/// Appends a blank column (NaN-filled to the current row count).
+#[flutter_rust_bridge::frb(sync)]
+pub fn add_column(
+    table_id: String,
+    name: String,
+    role: String,
+) -> Result<crate::api::data::DTODataTable, String> {
+    let role = parse_engine_role(&role)?;
+    let clean = name.trim();
+    if clean.is_empty() {
+        return Err("column name must not be empty".to_string());
+    }
+    let mut store = get_table_store().lock().unwrap();
+    let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
+    let rows = table.row_count();
+    table.add_column(EngineDataColumn {
+        name: clean.to_string(),
+        role,
+        data: vec![f64::NAN; rows],
+    });
+    Ok(table.clone().into())
+}
+
+/// Removes a column; refuses the last X or Y column.
+#[flutter_rust_bridge::frb(sync)]
+pub fn remove_column(
+    table_id: String,
+    col_index: usize,
+) -> Result<crate::api::data::DTODataTable, String> {
+    let mut store = get_table_store().lock().unwrap();
+    let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
+    table.remove_column(col_index)?;
+    Ok(table.clone().into())
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn rename_column(
+    table_id: String,
+    col_index: usize,
+    new_name: String,
+) -> Result<crate::api::data::DTODataTable, String> {
+    let mut store = get_table_store().lock().unwrap();
+    let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
+    table.rename_column(col_index, &new_name)?;
+    Ok(table.clone().into())
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn set_column_role(
+    table_id: String,
+    col_index: usize,
+    role: String,
+) -> Result<crate::api::data::DTODataTable, String> {
+    let role = parse_engine_role(&role)?;
+    let mut store = get_table_store().lock().unwrap();
+    let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
+    table.set_column_role(col_index, role)?;
+    Ok(table.clone().into())
+}
+
+#[flutter_rust_bridge::frb(sync)]
+pub fn reorder_column(
+    table_id: String,
+    old_index: usize,
+    new_index: usize,
+) -> Result<crate::api::data::DTODataTable, String> {
+    let mut store = get_table_store().lock().unwrap();
+    let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
+    table.move_column(old_index, new_index)?;
+    Ok(table.clone().into())
+}
+
 #[flutter_rust_bridge::frb(sync)]
 pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_count: usize) -> ProjectNode {
     let mut state = get_state().lock().unwrap();
@@ -487,5 +581,74 @@ pub(crate) fn reset_next_id_from_tree(tree: &EngineProjectNode) {
     let current = NEXT_ID.load(Ordering::SeqCst);
     if desired > current {
         NEXT_ID.store(desired, Ordering::SeqCst);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use data_engine::table::DataColumn;
+
+    fn seed_table() {
+        let mut t = EngineDataTable::new("coltest_1", "Cols");
+        t.add_column(DataColumn {
+            name: "X".to_string(),
+            role: EngineColumnRole::X,
+            data: vec![1.0, 2.0],
+        });
+        t.add_column(DataColumn {
+            name: "Y".to_string(),
+            role: EngineColumnRole::Y,
+            data: vec![3.0, 4.0],
+        });
+        get_table_store()
+            .lock()
+            .unwrap()
+            .insert("coltest_1".to_string(), t);
+    }
+
+    #[test]
+    fn column_endpoints_round_trip() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        let saved = snapshot_tables_engine();
+        seed_table();
+
+        // add (blank, NaN-filled to row count)
+        let t = add_column(
+            "coltest_1".to_string(),
+            "Err".to_string(),
+            "YError".to_string(),
+        )
+        .unwrap();
+        assert_eq!(t.columns.len(), 3);
+        assert!(add_column("coltest_1".to_string(), "  ".to_string(), "Y".to_string()).is_err());
+        assert!(add_column("coltest_1".to_string(), "Z".to_string(), "Bogus".to_string()).is_err());
+
+        // rename + role
+        let t = rename_column("coltest_1".to_string(), 2, "E".to_string()).unwrap();
+        assert_eq!(t.columns[2].name, "E");
+        assert!(rename_column("coltest_1".to_string(), 9, "Z".to_string()).is_err());
+        let t = set_column_role("coltest_1".to_string(), 2, "Text".to_string()).unwrap();
+        assert!(matches!(
+            t.columns[2].role,
+            crate::api::data::DTOColumnRole::Text
+        ));
+
+        // reorder
+        let t = reorder_column("coltest_1".to_string(), 0, 2).unwrap();
+        assert_eq!(t.columns[0].name, "Y");
+
+        // remove guards the last X / Y
+        assert!(remove_column("coltest_1".to_string(), 0).is_err()); // last Y
+        assert!(remove_column("coltest_1".to_string(), 9).is_err()); // OOB
+        assert!(remove_column("coltest_1".to_string(), 2).is_err()); // last X
+        let t = remove_column("coltest_1".to_string(), 1).unwrap(); // Text col
+        assert_eq!(t.columns.len(), 2);
+
+        // unknown table is a clean error
+        assert!(get_table_store().lock().unwrap().get("nope").is_none());
+        assert!(add_column("nope".to_string(), "A".to_string(), "X".to_string()).is_err());
+
+        restore_tables_engine(saved);
     }
 }
