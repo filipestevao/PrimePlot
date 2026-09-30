@@ -14,6 +14,7 @@ import 'api/prefs.dart';
 import 'api/project.dart';
 import 'api/properties.dart';
 import 'api/simple.dart';
+import 'api/transforms.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -56,6 +57,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   TableProperties dco_decode_box_autoadd_table_properties(dynamic raw);
+
+  @protected
+  ColumnStatistics dco_decode_column_statistics(dynamic raw);
 
   @protected
   DTOColumnRole dco_decode_dto_column_role(dynamic raw);
@@ -170,6 +174,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TableProperties sse_decode_box_autoadd_table_properties(
     SseDeserializer deserializer,
   );
+
+  @protected
+  ColumnStatistics sse_decode_column_statistics(SseDeserializer deserializer);
 
   @protected
   DTOColumnRole sse_decode_dto_column_role(SseDeserializer deserializer);
@@ -297,6 +304,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_table_properties(
     TableProperties self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_column_statistics(
+    ColumnStatistics self,
     SseSerializer serializer,
   );
 

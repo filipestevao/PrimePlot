@@ -43,7 +43,7 @@ impl From<EngineProjectNode> for ProjectNode {
     }
 }
 
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::HashMap;
 use data_engine::table::{DataTable as EngineDataTable, DataColumn as EngineDataColumn, ColumnRole as EngineColumnRole};
@@ -227,6 +227,12 @@ static TABLE_STORE: OnceLock<Mutex<HashMap<String, EngineDataTable>>> = OnceLock
 
 fn get_table_store() -> &'static Mutex<HashMap<String, EngineDataTable>> {
     TABLE_STORE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Crate-internal store access for table-mutating modules (transforms, …).
+/// Callers must not hold `PROJECT_STATE` while locking (lock ordering).
+pub(crate) fn lock_table_store() -> MutexGuard<'static, HashMap<String, EngineDataTable>> {
+    get_table_store().lock().unwrap()
 }
 
 pub(crate) fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {

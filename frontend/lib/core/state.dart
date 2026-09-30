@@ -8,6 +8,7 @@ import '../src/rust/api/project.dart';
 import '../src/rust/api/properties.dart';
 import '../src/rust/api/persistence.dart' as persist;
 import '../src/rust/api/palettes.dart' as pal;
+import '../src/rust/api/transforms.dart' as tr;
 import '../src/rust/api/prefs.dart' as prefs;
 import 'theme.dart';
 
@@ -266,6 +267,7 @@ class ProjectState {
     if (displayName != null) {
       renameProjectNodeWrapper('table_1', displayName);
     }
+    refreshCanvas.value++;
     markDirty();
   }
 
@@ -289,6 +291,7 @@ class ProjectState {
       final updated = getTable(tableId: active.id);
       activeTable.value = updated;
       tableDisplayName.value = updated.name;
+      refreshCanvas.value++;
       markDirty();
       return;
     }
@@ -326,6 +329,7 @@ class ProjectState {
     final updated = getTable(tableId: active.id);
     activeTable.value = updated;
     tableDisplayName.value = updated.name;
+    refreshCanvas.value++;
     markDirty();
   }
 
@@ -589,6 +593,7 @@ class ProjectState {
       if (parentGraph != null) {
         fetchTablesForGraph(parentGraph.id);
       }
+      refreshCanvas.value++;
       markDirty();
       return;
     }
@@ -687,6 +692,10 @@ class ProjectState {
       final newList = List<DTODataTable>.from(list);
       newList[idx] = updated;
       activeTables.value = newList;
+    } else {
+      // Single-table view: mirror updateTable so the canvas (which listens
+      // to activeTables, not activeTable) repaints immediately.
+      activeTables.value = [updated];
     }
     markDirty();
     return null;
@@ -752,6 +761,66 @@ class ProjectState {
     } catch (e) {
       return e.toString().replaceFirst('Exception: ', '');
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Column transforms (Step C): per-cell math on one column.
+  // Each returns null on success, error message otherwise.
+  // ---------------------------------------------------------------------------
+
+  String? _applyTransform(DTODataTable Function() call) {
+    try {
+      return _applyColumnUpdate(call());
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  String? addScalarToColumn(String tableId, int colIndex, double value) {
+    return _applyTransform(
+      () => tr.columnAddScalar(
+        tableId: tableId,
+        colIndex: BigInt.from(colIndex),
+        value: value,
+      ),
+    );
+  }
+
+  String? multiplyColumn(String tableId, int colIndex, double value) {
+    return _applyTransform(
+      () => tr.columnMultiplyScalar(
+        tableId: tableId,
+        colIndex: BigInt.from(colIndex),
+        value: value,
+      ),
+    );
+  }
+
+  String? normalizeColumn(String tableId, int colIndex) {
+    return _applyTransform(
+      () => tr.columnNormalize(tableId: tableId, colIndex: BigInt.from(colIndex)),
+    );
+  }
+
+  String? applyColumnExpression(String tableId, int colIndex, String expr) {
+    return _applyTransform(
+      () => tr.columnApplyExpression(
+        tableId: tableId,
+        colIndex: BigInt.from(colIndex),
+        expr: expr,
+      ),
+    );
+  }
+
+  String? fillColumnLinspace(String tableId, int colIndex, double start, double end) {
+    return _applyTransform(
+      () => tr.columnFillLinspace(
+        tableId: tableId,
+        colIndex: BigInt.from(colIndex),
+        start: start,
+        end: end,
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------

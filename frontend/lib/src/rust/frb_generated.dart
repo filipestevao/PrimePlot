@@ -11,6 +11,7 @@ import 'api/prefs.dart';
 import 'api/project.dart';
 import 'api/properties.dart';
 import 'api/simple.dart';
+import 'api/transforms.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -73,7 +74,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1010652178;
+  int get rustContentHash => 1099810079;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -119,11 +120,46 @@ abstract class RustLibApi extends BaseApi {
 
   bool crateApiDataApplyScatterRule({required BigInt rowCount});
 
+  DTODataTable crateApiTransformsColumnAddScalar({
+    required String tableId,
+    required BigInt colIndex,
+    required double value,
+  });
+
+  DTODataTable crateApiTransformsColumnApplyExpression({
+    required String tableId,
+    required BigInt colIndex,
+    required String expr,
+  });
+
+  DTODataTable crateApiTransformsColumnFillLinspace({
+    required String tableId,
+    required BigInt colIndex,
+    required double start,
+    required double end,
+  });
+
+  DTODataTable crateApiTransformsColumnMultiplyScalar({
+    required String tableId,
+    required BigInt colIndex,
+    required double value,
+  });
+
+  DTODataTable crateApiTransformsColumnNormalize({
+    required String tableId,
+    required BigInt colIndex,
+  });
+
   ProjectNode crateApiProjectDeleteProjectNode({required String nodeId});
 
   Future<FolderProperties> crateApiPropertiesFolderPropertiesDefault();
 
   Future<FunctionProperties> crateApiPropertiesFunctionPropertiesDefault();
+
+  ColumnStatistics crateApiTransformsGetColumnStatistics({
+    required String tableId,
+    required BigInt colIndex,
+  });
 
   DTODataTable crateApiDataGetEmptyTableData();
 
@@ -192,6 +228,12 @@ abstract class RustLibApi extends BaseApi {
   List<String> crateApiPalettesPaletteColors({required String palette});
 
   DTODataTable crateApiDataParseClipboardTable({required String raw});
+
+  Float64List crateApiTransformsPreviewColumnExpression({
+    required String tableId,
+    required BigInt colIndex,
+    required String expr,
+  });
 
   DTODataTable crateApiProjectRemoveColumn({
     required String tableId,
@@ -494,13 +536,173 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  DTODataTable crateApiTransformsColumnAddScalar({
+    required String tableId,
+    required BigInt colIndex,
+    required double value,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(tableId, serializer);
+          sse_encode_usize(colIndex, serializer);
+          sse_encode_f_64(value, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_dto_data_table,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTransformsColumnAddScalarConstMeta,
+        argValues: [tableId, colIndex, value],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTransformsColumnAddScalarConstMeta =>
+      const TaskConstMeta(
+        debugName: "column_add_scalar",
+        argNames: ["tableId", "colIndex", "value"],
+      );
+
+  @override
+  DTODataTable crateApiTransformsColumnApplyExpression({
+    required String tableId,
+    required BigInt colIndex,
+    required String expr,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(tableId, serializer);
+          sse_encode_usize(colIndex, serializer);
+          sse_encode_String(expr, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_dto_data_table,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTransformsColumnApplyExpressionConstMeta,
+        argValues: [tableId, colIndex, expr],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTransformsColumnApplyExpressionConstMeta =>
+      const TaskConstMeta(
+        debugName: "column_apply_expression",
+        argNames: ["tableId", "colIndex", "expr"],
+      );
+
+  @override
+  DTODataTable crateApiTransformsColumnFillLinspace({
+    required String tableId,
+    required BigInt colIndex,
+    required double start,
+    required double end,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(tableId, serializer);
+          sse_encode_usize(colIndex, serializer);
+          sse_encode_f_64(start, serializer);
+          sse_encode_f_64(end, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_dto_data_table,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTransformsColumnFillLinspaceConstMeta,
+        argValues: [tableId, colIndex, start, end],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTransformsColumnFillLinspaceConstMeta =>
+      const TaskConstMeta(
+        debugName: "column_fill_linspace",
+        argNames: ["tableId", "colIndex", "start", "end"],
+      );
+
+  @override
+  DTODataTable crateApiTransformsColumnMultiplyScalar({
+    required String tableId,
+    required BigInt colIndex,
+    required double value,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(tableId, serializer);
+          sse_encode_usize(colIndex, serializer);
+          sse_encode_f_64(value, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_dto_data_table,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTransformsColumnMultiplyScalarConstMeta,
+        argValues: [tableId, colIndex, value],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTransformsColumnMultiplyScalarConstMeta =>
+      const TaskConstMeta(
+        debugName: "column_multiply_scalar",
+        argNames: ["tableId", "colIndex", "value"],
+      );
+
+  @override
+  DTODataTable crateApiTransformsColumnNormalize({
+    required String tableId,
+    required BigInt colIndex,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(tableId, serializer);
+          sse_encode_usize(colIndex, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_dto_data_table,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTransformsColumnNormalizeConstMeta,
+        argValues: [tableId, colIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTransformsColumnNormalizeConstMeta =>
+      const TaskConstMeta(
+        debugName: "column_normalize",
+        argNames: ["tableId", "colIndex"],
+      );
+
+  @override
   ProjectNode crateApiProjectDeleteProjectNode({required String nodeId}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -528,7 +730,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 14,
             port: port_,
           );
         },
@@ -555,7 +757,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 15,
             port: port_,
           );
         },
@@ -577,12 +779,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  ColumnStatistics crateApiTransformsGetColumnStatistics({
+    required String tableId,
+    required BigInt colIndex,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(tableId, serializer);
+          sse_encode_usize(colIndex, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_column_statistics,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTransformsGetColumnStatisticsConstMeta,
+        argValues: [tableId, colIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTransformsGetColumnStatisticsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_column_statistics",
+        argNames: ["tableId", "colIndex"],
+      );
+
+  @override
   DTODataTable crateApiDataGetEmptyTableData() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -607,7 +839,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_folder_properties,
@@ -639,7 +871,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(nodeId, serializer);
           sse_encode_f_64(viewportXMin, serializer);
           sse_encode_f_64(viewportXMax, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_point_2_d,
@@ -667,7 +899,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_function_properties,
@@ -695,7 +927,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_graph_properties,
@@ -720,7 +952,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -743,7 +975,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_usize(numPoints, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_point_2_d,
@@ -773,7 +1005,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_usize(rowCount, serializer);
           sse_encode_usize(colCount, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -798,7 +1030,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_app_preferences,
@@ -820,7 +1052,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -845,7 +1077,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_shape_properties,
@@ -871,7 +1103,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(tableId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -896,7 +1128,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_table_properties,
@@ -924,7 +1156,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(graphId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_dto_data_table,
@@ -952,7 +1184,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 31,
             port: port_,
           );
         },
@@ -977,7 +1209,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1002,7 +1234,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1026,7 +1258,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -1049,7 +1281,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(path, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -1076,7 +1308,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_String(newParentId, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -1101,7 +1333,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -1124,7 +1356,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(palette, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_String,
@@ -1147,7 +1379,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(raw, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -1167,6 +1399,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Float64List crateApiTransformsPreviewColumnExpression({
+    required String tableId,
+    required BigInt colIndex,
+    required String expr,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(tableId, serializer);
+          sse_encode_usize(colIndex, serializer);
+          sse_encode_String(expr, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_f_64_strict,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiTransformsPreviewColumnExpressionConstMeta,
+        argValues: [tableId, colIndex, expr],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiTransformsPreviewColumnExpressionConstMeta =>
+      const TaskConstMeta(
+        debugName: "preview_column_expression",
+        argNames: ["tableId", "colIndex", "expr"],
+      );
+
+  @override
   DTODataTable crateApiProjectRemoveColumn({
     required String tableId,
     required BigInt colIndex,
@@ -1177,7 +1441,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(tableId, serializer);
           sse_encode_usize(colIndex, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -1209,7 +1473,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(tableId, serializer);
           sse_encode_usize(colIndex, serializer);
           sse_encode_String(newName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -1239,7 +1503,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_String(newName, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -1271,7 +1535,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(tableId, serializer);
           sse_encode_usize(oldIndex, serializer);
           sse_encode_usize(newIndex, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -1303,7 +1567,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(parentId, serializer);
           sse_encode_usize(oldIndex, serializer);
           sse_encode_usize(newIndex, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_project_node,
@@ -1329,7 +1593,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(path, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1356,7 +1620,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(tableId, serializer);
           sse_encode_list_dto_data_column(columns, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1387,7 +1651,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(tableId, serializer);
           sse_encode_usize(colIndex, serializer);
           sse_encode_String(role, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_dto_data_table,
@@ -1417,7 +1681,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_box_autoadd_folder_properties(props, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 49)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1447,7 +1711,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_box_autoadd_function_properties(props, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 50)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1477,7 +1741,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_box_autoadd_graph_properties(props, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 51)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1503,7 +1767,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_app_preferences(prefs, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 52)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1530,7 +1794,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_box_autoadd_shape_properties(props, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 53)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1560,7 +1824,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(nodeId, serializer);
           sse_encode_box_autoadd_table_properties(props, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 54)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1588,7 +1852,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 55,
             port: port_,
           );
         },
@@ -1615,7 +1879,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 56,
             port: port_,
           );
         },
@@ -1644,7 +1908,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(tableId, serializer);
           sse_encode_String(raw, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 50)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 57)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1670,7 +1934,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(expr, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 51)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 58)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1750,6 +2014,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TableProperties dco_decode_box_autoadd_table_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_table_properties(raw);
+  }
+
+  @protected
+  ColumnStatistics dco_decode_column_statistics(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ColumnStatistics(
+      min: dco_decode_f_64(arr[0]),
+      max: dco_decode_f_64(arr[1]),
+      mean: dco_decode_f_64(arr[2]),
+      stdDev: dco_decode_f_64(arr[3]),
+      count: dco_decode_usize(arr[4]),
+      nanCount: dco_decode_usize(arr[5]),
+    );
   }
 
   @protected
@@ -2041,6 +2321,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_table_properties(deserializer));
+  }
+
+  @protected
+  ColumnStatistics sse_decode_column_statistics(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_min = sse_decode_f_64(deserializer);
+    var var_max = sse_decode_f_64(deserializer);
+    var var_mean = sse_decode_f_64(deserializer);
+    var var_stdDev = sse_decode_f_64(deserializer);
+    var var_count = sse_decode_usize(deserializer);
+    var var_nanCount = sse_decode_usize(deserializer);
+    return ColumnStatistics(
+      min: var_min,
+      max: var_max,
+      mean: var_mean,
+      stdDev: var_stdDev,
+      count: var_count,
+      nanCount: var_nanCount,
+    );
   }
 
   @protected
@@ -2392,6 +2691,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_table_properties(self, serializer);
+  }
+
+  @protected
+  void sse_encode_column_statistics(
+    ColumnStatistics self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.min, serializer);
+    sse_encode_f_64(self.max, serializer);
+    sse_encode_f_64(self.mean, serializer);
+    sse_encode_f_64(self.stdDev, serializer);
+    sse_encode_usize(self.count, serializer);
+    sse_encode_usize(self.nanCount, serializer);
   }
 
   @protected

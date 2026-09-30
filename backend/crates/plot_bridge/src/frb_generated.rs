@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1010652178;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1099810079;
 
 // Section: executor
 
@@ -283,6 +283,184 @@ fn wire__crate__api__data__apply_scatter_rule_impl(
         },
     )
 }
+fn wire__crate__api__transforms__column_add_scalar_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "column_add_scalar",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_table_id = <String>::sse_decode(&mut deserializer);
+            let api_col_index = <usize>::sse_decode(&mut deserializer);
+            let api_value = <f64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::transforms::column_add_scalar(
+                    api_table_id,
+                    api_col_index,
+                    api_value,
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__transforms__column_apply_expression_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "column_apply_expression",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_table_id = <String>::sse_decode(&mut deserializer);
+            let api_col_index = <usize>::sse_decode(&mut deserializer);
+            let api_expr = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::transforms::column_apply_expression(
+                    api_table_id,
+                    api_col_index,
+                    api_expr,
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__transforms__column_fill_linspace_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "column_fill_linspace",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_table_id = <String>::sse_decode(&mut deserializer);
+            let api_col_index = <usize>::sse_decode(&mut deserializer);
+            let api_start = <f64>::sse_decode(&mut deserializer);
+            let api_end = <f64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::transforms::column_fill_linspace(
+                    api_table_id,
+                    api_col_index,
+                    api_start,
+                    api_end,
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__transforms__column_multiply_scalar_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "column_multiply_scalar",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_table_id = <String>::sse_decode(&mut deserializer);
+            let api_col_index = <usize>::sse_decode(&mut deserializer);
+            let api_value = <f64>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::transforms::column_multiply_scalar(
+                    api_table_id,
+                    api_col_index,
+                    api_value,
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__transforms__column_normalize_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "column_normalize",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_table_id = <String>::sse_decode(&mut deserializer);
+            let api_col_index = <usize>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok =
+                    crate::api::transforms::column_normalize(api_table_id, api_col_index)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__project__delete_project_node_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -377,6 +555,38 @@ fn wire__crate__api__properties__function_properties_default_impl(
                     Ok(output_ok)
                 })())
             }
+        },
+    )
+}
+fn wire__crate__api__transforms__get_column_statistics_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_column_statistics",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_table_id = <String>::sse_decode(&mut deserializer);
+            let api_col_index = <usize>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok =
+                    crate::api::transforms::get_column_statistics(api_table_id, api_col_index)?;
+                Ok(output_ok)
+            })())
         },
     )
 }
@@ -1096,6 +1306,42 @@ fn wire__crate__api__data__parse_clipboard_table_impl(
         },
     )
 }
+fn wire__crate__api__transforms__preview_column_expression_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "preview_column_expression",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_table_id = <String>::sse_decode(&mut deserializer);
+            let api_col_index = <usize>::sse_decode(&mut deserializer);
+            let api_expr = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, String>((move || {
+                let output_ok = crate::api::transforms::preview_column_expression(
+                    api_table_id,
+                    api_col_index,
+                    api_expr,
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__project__remove_column_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -1720,6 +1966,26 @@ impl SseDecode for bool {
     }
 }
 
+impl SseDecode for crate::api::transforms::ColumnStatistics {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_min = <f64>::sse_decode(deserializer);
+        let mut var_max = <f64>::sse_decode(deserializer);
+        let mut var_mean = <f64>::sse_decode(deserializer);
+        let mut var_stdDev = <f64>::sse_decode(deserializer);
+        let mut var_count = <usize>::sse_decode(deserializer);
+        let mut var_nanCount = <usize>::sse_decode(deserializer);
+        return crate::api::transforms::ColumnStatistics {
+            min: var_min,
+            max: var_max,
+            mean: var_mean,
+            std_dev: var_stdDev,
+            count: var_count,
+            nan_count: var_nanCount,
+        };
+    }
+}
+
 impl SseDecode for crate::api::data::DTOColumnRole {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2047,32 +2313,32 @@ fn pde_ffi_dispatcher_primary_impl(
         5 => {
             wire__crate__api__prefs__app_preferences_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        9 => wire__crate__api__properties__folder_properties_default_impl(
+        14 => wire__crate__api__properties__folder_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__properties__function_properties_default_impl(
+        15 => wire__crate__api__properties__function_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__api__properties__graph_properties_default_impl(
+        31 => wire__crate__api__properties__graph_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__properties__shape_properties_default_impl(
+        33 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__properties__shape_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        49 => wire__crate__api__properties__table_properties_default_impl(
+        56 => wire__crate__api__properties__table_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2096,50 +2362,65 @@ fn pde_ffi_dispatcher_sync_impl(
         4 => wire__crate__api__project__add_table_from_raw_impl(ptr, rust_vec_len, data_len),
         6 => wire__crate__api__palettes__apply_palette_impl(ptr, rust_vec_len, data_len),
         7 => wire__crate__api__data__apply_scatter_rule_impl(ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__project__delete_project_node_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__data__get_empty_table_data_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__properties__get_folder_properties_impl(ptr, rust_vec_len, data_len),
-        13 => {
+        8 => wire__crate__api__transforms__column_add_scalar_impl(ptr, rust_vec_len, data_len),
+        9 => {
+            wire__crate__api__transforms__column_apply_expression_impl(ptr, rust_vec_len, data_len)
+        }
+        10 => wire__crate__api__transforms__column_fill_linspace_impl(ptr, rust_vec_len, data_len),
+        11 => {
+            wire__crate__api__transforms__column_multiply_scalar_impl(ptr, rust_vec_len, data_len)
+        }
+        12 => wire__crate__api__transforms__column_normalize_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__project__delete_project_node_impl(ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__transforms__get_column_statistics_impl(ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__data__get_empty_table_data_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__properties__get_folder_properties_impl(ptr, rust_vec_len, data_len),
+        19 => {
             wire__crate__api__functions__get_function_curve_data_impl(ptr, rust_vec_len, data_len)
         }
-        14 => {
+        20 => {
             wire__crate__api__properties__get_function_properties_impl(ptr, rust_vec_len, data_len)
         }
-        15 => wire__crate__api__properties__get_graph_properties_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__data__get_initial_table_data_impl(ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__data__get_mock_scientific_data_impl(ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__data__get_new_table_data_impl(ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__prefs__get_preferences_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__project__get_project_tree_impl(ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__properties__get_shape_properties_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__project__get_table_impl(ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__properties__get_table_properties_impl(ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__project__get_tables_for_graph_impl(ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__palettes__list_palettes_impl(ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__persistence__load_project_impl(ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__project__move_project_node_impl(ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__persistence__new_project_impl(ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__palettes__palette_colors_impl(ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__data__parse_clipboard_table_impl(ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__project__remove_column_impl(ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__project__rename_column_impl(ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__project__rename_project_node_impl(ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__project__reorder_column_impl(ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__project__reorder_project_children_impl(ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__persistence__save_project_impl(ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__project__save_table_impl(ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__project__set_column_role_impl(ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__properties__set_folder_properties_impl(ptr, rust_vec_len, data_len),
-        43 => {
+        21 => wire__crate__api__properties__get_graph_properties_impl(ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__data__get_initial_table_data_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__data__get_mock_scientific_data_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__data__get_new_table_data_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__prefs__get_preferences_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__project__get_project_tree_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__properties__get_shape_properties_impl(ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__project__get_table_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__properties__get_table_properties_impl(ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__project__get_tables_for_graph_impl(ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__palettes__list_palettes_impl(ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__persistence__load_project_impl(ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__project__move_project_node_impl(ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__persistence__new_project_impl(ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__palettes__palette_colors_impl(ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__data__parse_clipboard_table_impl(ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__transforms__preview_column_expression_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        41 => wire__crate__api__project__remove_column_impl(ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__project__rename_column_impl(ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__project__rename_project_node_impl(ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__project__reorder_column_impl(ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__project__reorder_project_children_impl(ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__persistence__save_project_impl(ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__project__save_table_impl(ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__project__set_column_role_impl(ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__properties__set_folder_properties_impl(ptr, rust_vec_len, data_len),
+        50 => {
             wire__crate__api__properties__set_function_properties_impl(ptr, rust_vec_len, data_len)
         }
-        44 => wire__crate__api__properties__set_graph_properties_impl(ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__prefs__set_preferences_impl(ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__properties__set_shape_properties_impl(ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__properties__set_table_properties_impl(ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__project__update_table_from_raw_impl(ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__functions__validate_function_expression_impl(
+        51 => wire__crate__api__properties__set_graph_properties_impl(ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__prefs__set_preferences_impl(ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__properties__set_shape_properties_impl(ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__properties__set_table_properties_impl(ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__project__update_table_from_raw_impl(ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__functions__validate_function_expression_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -2164,6 +2445,31 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::prefs::AppPreferences>
     for crate::api::prefs::AppPreferences
 {
     fn into_into_dart(self) -> crate::api::prefs::AppPreferences {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::transforms::ColumnStatistics {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.min.into_into_dart().into_dart(),
+            self.max.into_into_dart().into_dart(),
+            self.mean.into_into_dart().into_dart(),
+            self.std_dev.into_into_dart().into_dart(),
+            self.count.into_into_dart().into_dart(),
+            self.nan_count.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::transforms::ColumnStatistics
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::transforms::ColumnStatistics>
+    for crate::api::transforms::ColumnStatistics
+{
+    fn into_into_dart(self) -> crate::api::transforms::ColumnStatistics {
         self
     }
 }
@@ -2435,6 +2741,18 @@ impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_u8(self as _).unwrap();
+    }
+}
+
+impl SseEncode for crate::api::transforms::ColumnStatistics {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.min, serializer);
+        <f64>::sse_encode(self.max, serializer);
+        <f64>::sse_encode(self.mean, serializer);
+        <f64>::sse_encode(self.std_dev, serializer);
+        <usize>::sse_encode(self.count, serializer);
+        <usize>::sse_encode(self.nan_count, serializer);
     }
 }
 
