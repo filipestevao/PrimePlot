@@ -13,6 +13,7 @@ import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../components/panel_container.dart';
 import '../dialogs/about_dialog.dart';
+import '../dialogs/export_dialog.dart';
 import 'custom_title_bar.dart';
 import 'status_bar.dart';
 import '../panels/project_explorer.dart';
@@ -443,6 +444,13 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
           control: true,
           shift: true,
         ): () => FileActions.doSaveAs(context),
+        const SingleActivator(LogicalKeyboardKey.keyE, control: true): () =>
+            openExportDialog(context, 0),
+        const SingleActivator(
+          LogicalKeyboardKey.keyE,
+          control: true,
+          shift: true,
+        ): () => openExportDialog(context, 1),
         const SingleActivator(LogicalKeyboardKey.keyS): () =>
             _guardedText(() {
               ProjectState.instance.showStatsHud.value =
@@ -615,6 +623,47 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                   ),
                   ListTile(
                     leading: Icon(
+                      Icons.image_outlined,
+                      size: 18,
+                      color: PrimeTheme.textSecondary,
+                    ),
+                    title: Text(
+                      'Export Figure…',
+                      style: TextStyle(
+                        color: PrimeTheme.textPrimary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      openExportDialog(context, 0);
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.table_chart_outlined,
+                      size: 18,
+                      color: PrimeTheme.textSecondary,
+                    ),
+                    title: Text(
+                      'Export Data…',
+                      style: TextStyle(
+                        color: PrimeTheme.textPrimary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      openExportDialog(context, 1);
+                    },
+                  ),
+                  Divider(
+                    height: 16,
+                    thickness: 1,
+                    color: PrimeTheme.borderSide,
+                  ),
+                  ListTile(
+                    leading: Icon(
                       Icons.settings,
                       size: 18,
                       color: PrimeTheme.textSecondary,
@@ -777,6 +826,8 @@ class _ShortcutHelpCard extends StatelessWidget {
     ('Ctrl + O', 'Open project'),
     ('Ctrl + S', 'Save project'),
     ('Ctrl + Shift + S', 'Save project as…'),
+    ('Ctrl + E', 'Export figure'),
+    ('Ctrl + Shift + E', 'Export data'),
     ('S', 'Toggle series statistics'),
     ('R', 'Reset view to home ranges'),
     ('Esc', 'Clear selection'),

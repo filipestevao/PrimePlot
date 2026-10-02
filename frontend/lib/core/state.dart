@@ -30,6 +30,9 @@ class GraphHomeView {
   }
 }
 
+/// Figure background for PNG export / clipboard.
+enum CanvasExportBackground { theme, white, transparent }
+
 /// A lightweight, globally accessible state manager.
 class ProjectState {
   static final ProjectState instance = ProjectState._internal();
@@ -102,6 +105,15 @@ class ProjectState {
   /// Live cursor position in data coordinates (null when off-canvas).
   /// Mirrors the viewport crosshair readout for the status bar.
   final ValueNotifier<Offset?> cursorCoords = ValueNotifier(null);
+
+  /// Stable key for the exportable figure (RepaintBoundary around the
+  /// painted canvas, excluding crosshair/marquee overlays).
+  final GlobalKey canvasCaptureKey = GlobalKey();
+
+  /// Background used the next time the painter paints. Toggled transiently
+  /// during PNG export / clipboard copy, then restored.
+  final ValueNotifier<CanvasExportBackground> exportBackground =
+      ValueNotifier(CanvasExportBackground.theme);
 
   /// App version for the title bar / About dialog (loaded once at startup).
   String appVersion = '';

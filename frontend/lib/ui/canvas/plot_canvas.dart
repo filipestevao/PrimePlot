@@ -13,6 +13,7 @@ import '../../src/rust/api/functions.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
 import '../../src/rust/api/transforms.dart';
+import '../dialogs/export_dialog.dart';
 import 'plot_geometry.dart';
 import 'plot_viewport.dart';
 
@@ -66,8 +67,15 @@ class PlotCanvas extends StatelessWidget {
       listenable: Listenable.merge([
         ProjectState.instance.refreshCanvas,
         ProjectState.instance.projectTree,
+        ProjectState.instance.exportBackground,
       ]),
       builder: (context, _) {
+        final Color? backgroundFill =
+            switch (ProjectState.instance.exportBackground.value) {
+          CanvasExportBackground.transparent => null,
+          CanvasExportBackground.white => const Color(0xFFFFFFFF),
+          CanvasExportBackground.theme => PrimeTheme.canvasBackground,
+        };
         return ValueListenableBuilder<List<DTODataTable>>(
           valueListenable: ProjectState.instance.activeTables,
           builder: (context, tables, child) {
@@ -291,6 +299,7 @@ class PlotCanvas extends StatelessWidget {
                                   tableNames: tableNames,
                                   latexFields: latexFields,
                                   tableIds: tableIds,
+                                  backgroundFill: backgroundFill,
                                 ),
                                 child: Container(),
                               ),
@@ -309,6 +318,7 @@ class PlotCanvas extends StatelessWidget {
                           tableNames: tableNames,
                           latexFields: latexFields,
                           tableIds: tableIds,
+                          backgroundFill: backgroundFill,
                         ),
                         child: Container(),
                       );
@@ -319,7 +329,10 @@ class PlotCanvas extends StatelessWidget {
                       ySeries: seriesY,
                       graphProps: graphProps,
                       plotId: ProjectState.instance.activePlotId,
-                      child: baseCanvas,
+                      child: RepaintBoundary(
+                        key: ProjectState.instance.canvasCaptureKey,
+                        child: baseCanvas,
+                      ),
                     );
 
                     if (graphProps?.aspectRatio != null) {
@@ -335,22 +348,69 @@ class PlotCanvas extends StatelessWidget {
                       child: Stack(
                         children: [
                           canvas,
-                          // Statistics toggle (σ button + S hotkey).
+                          // Canvas menu (···) + statistics toggle (σ + S).
                           Positioned(
                             top: 6,
                             right: 6,
-                            child: ValueListenableBuilder<bool>(
-                              valueListenable:
-                                  ProjectState.instance.showStatsHud,
-                              builder: (context, show, _) {
-                                return Tooltip(
-                                  message: show
-                                      ? 'Hide series statistics (S)'
-                                      : 'Show series statistics (S)',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
+                                  message: 'Canvas options',
                                   child: InkWell(
-                                    onTap: () => ProjectState.instance
-                                        .showStatsHud
-                                        .value = !show,
+                                    onTapDown: (details) async {
+                                      final choice =
+                                          await showMenu<String>(
+                                        context: context,
+                                        position: RelativeRect.fromLTRB(
+                                          details.globalPosition.dx,
+                                          details.globalPosition.dy,
+                                          details.globalPosition.dx,
+                                          details.globalPosition.dy,
+                                        ),
+                                        color: PrimeTheme.backgroundDark,
+                                        elevation: 8,
+                                        items: [
+                                          PopupMenuItem<String>(
+                                            value: 'figure',
+                                            child: Text('Export Figure…',
+                                                style: TextStyle(
+                                                    color: PrimeTheme
+                                                        .textPrimary,
+                                                    fontSize: 12)),
+                                          ),
+                                          PopupMenuItem<String>(
+                                            value: 'data',
+                                            child: Text('Export Data…',
+                                                style: TextStyle(
+                                                    color: PrimeTheme
+                                                        .textPrimary,
+                                                    fontSize: 12)),
+                                          ),
+                                          const PopupMenuDivider(height: 8),
+                                          PopupMenuItem<String>(
+                                            value: 'copy',
+                                            child: Text(
+                                                'Copy Figure to Clipboard',
+                                                style: TextStyle(
+                                                    color: PrimeTheme
+                                                        .textPrimary,
+                                                    fontSize: 12)),
+                                          ),
+                                        ],
+                                      );
+                                      if (choice == null || !context.mounted) {
+                                        return;
+                                      }
+                                      if (choice == 'copy') {
+                                        await copyFigureToClipboard(context);
+                                      } else {
+                                        openExportDialog(
+                                          context,
+                                          choice == 'data' ? 1 : 0,
+                                        );
+                                      }
+                                    },
                                     borderRadius: BorderRadius.circular(4),
                                     child: Container(
                                       width: 26,
@@ -362,25 +422,62 @@ class PlotCanvas extends StatelessWidget {
                                         borderRadius:
                                             BorderRadius.circular(4),
                                         border: Border.all(
-                                          color: show
-                                              ? PrimeTheme.primaryAccent
-                                              : PrimeTheme.borderSide,
-                                        ),
+                                            color: PrimeTheme.borderSide),
                                       ),
-                                      child: Text(
-                                        'σ',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: show
-                                              ? PrimeTheme.primaryAccent
-                                              : PrimeTheme.textSecondary,
-                                        ),
+                                      child: Icon(
+                                        Icons.more_horiz,
+                                        size: 15,
+                                        color: PrimeTheme.textSecondary,
                                       ),
                                     ),
                                   ),
-                                );
-                              },
+                                ),
+                                const SizedBox(width: 6),
+                                ValueListenableBuilder<bool>(
+                                  valueListenable:
+                                      ProjectState.instance.showStatsHud,
+                                  builder: (context, show, _) {
+                                    return Tooltip(
+                                      message: show
+                                          ? 'Hide series statistics (S)'
+                                          : 'Show series statistics (S)',
+                                      child: InkWell(
+                                        onTap: () => ProjectState.instance
+                                            .showStatsHud
+                                            .value = !show,
+                                        borderRadius:
+                                            BorderRadius.circular(4),
+                                        child: Container(
+                                          width: 26,
+                                          height: 26,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: PrimeTheme.panelBackground
+                                                .withValues(alpha: 0.9),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                            border: Border.all(
+                                              color: show
+                                                  ? PrimeTheme.primaryAccent
+                                                  : PrimeTheme.borderSide,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'σ',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: show
+                                                  ? PrimeTheme.primaryAccent
+                                                  : PrimeTheme.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                           ValueListenableBuilder<bool>(
@@ -487,6 +584,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   final Set<String> latexFields;
   final List<String> tableIds;
 
+  /// Null skips the background fill (transparent export).
+  final Color? backgroundFill;
+
   _MultiSeriesPlotPainter({
     required this.xSeries,
     required this.ySeries,
@@ -495,6 +595,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     required this.tableNames,
     this.latexFields = const {},
     this.tableIds = const [],
+    this.backgroundFill,
   });
 
   @override
@@ -524,8 +625,10 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     final plotHeight = size.height - marginTop - marginBottom;
     if (plotWidth <= 0 || plotHeight <= 0) return;
 
-    final bgPaint = Paint()..color = PrimeTheme.canvasBackground;
-    canvas.drawRect(Offset.zero & size, bgPaint);
+    final bg = backgroundFill;
+    if (bg != null) {
+      canvas.drawRect(Offset.zero & size, Paint()..color = bg);
+    }
 
     final showGrid = graphProps?.showGrid ?? true;
     final showXAxis = graphProps?.xVisible ?? true;
@@ -982,6 +1085,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _MultiSeriesPlotPainter oldDelegate) {
     if (graphProps != oldDelegate.graphProps) return true;
+    if (backgroundFill != oldDelegate.backgroundFill) return true;
     if (tableProps.length != oldDelegate.tableProps.length) return true;
     if (tableNames.length != oldDelegate.tableNames.length) return true;
     for (var i = 0; i < tableProps.length; i++) {
