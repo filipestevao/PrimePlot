@@ -28,6 +28,12 @@ class MainLayout extends StatefulWidget {
   State<MainLayout> createState() => _MainLayoutState();
 }
 
+/// Hard floor for the whole window. Enforced twice: via
+/// `setMinimumSize` in `main()` (compositor hint) and via `onWindowResize`
+/// clamping below (some Wayland compositors ignore the hint while a
+/// divider/window drag is in flight).
+const kMinWindowSize = Size(1024, 600);
+
 class _MainLayoutState extends State<MainLayout> with WindowListener {
   late MultiSplitViewController _mainController;
   late MultiSplitViewController _leftController;
@@ -245,16 +251,22 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
       ],
     );
 
-    // Main Horizontal Split
+    // Main Horizontal Split. Pane minimums are resize STOPS (they sum to
+    // ~630px incl. dividers/padding, well under the 1024px window minimum,
+    // so dividers always have room and stop cleanly instead of fighting).
+    // Sides share flex 2/2 for visual symmetry. Do NOT remove the mins:
+    // without them panes shrink until inner Rows overflow and stripe.
     _mainController = MultiSplitViewController(
       areas: [
         Area(
           flex: 2,
+          min: 2,
           builder: (context, area) =>
               MultiSplitView(controller: _leftController, axis: Axis.vertical),
         ),
         Area(
           flex: 6,
+          min: 2,
           builder: (context, area) => MultiSplitView(
             controller: _centerController,
             axis: Axis.vertical,
@@ -262,6 +274,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
         ),
         Area(
           flex: 2,
+          min: 2,
           builder: (context, area) =>
               MultiSplitView(controller: _rightController, axis: Axis.vertical),
         ),
@@ -376,6 +389,23 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     _helpEntry = null;
   }
 
+  /// Runtime backstop for the minimum window size: if a resize lands below
+  /// the floor (hint ignored), snap back. Clamp-only, so no event loop.
+  @override
+  void onWindowResize() async {
+    if (!mounted) return;
+    final size = await windowManager.getSize();
+    final w = size.width < kMinWindowSize.width
+        ? kMinWindowSize.width
+        : size.width;
+    final h = size.height < kMinWindowSize.height
+        ? kMinWindowSize.height
+        : size.height;
+    if (w != size.width || h != size.height) {
+      await windowManager.setSize(Size(w, h));
+    }
+  }
+
   @override
   void dispose() {
     _hideShortcutHelp();
@@ -390,8 +420,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   /// Must call [WindowManager.destroy] (not `close`) to exit, since close
   /// is intercepted while prevent-close is set.
   @override
-  void onWindowClose() async {
-    var mayExit = true;
+  void onWindowClose() async {    var mayExit = true;
     if (mounted) {
       mayExit = await FileActions.confirmUnsavedChanges(context, 'exiting');
     }

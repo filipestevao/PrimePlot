@@ -98,10 +98,11 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   }
 
   void _onReorder(int oldIndex, int newIndex, List<_FlatNode> flatNodes, ProjectNode rootNode) {
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
+    // onReorderItem already compensates newIndex for the removed item —
+    // do NOT apply the legacy `newIndex -= 1` adjustment here.
+    if (oldIndex == newIndex) {
+      return;
     }
-    if (oldIndex == newIndex) return;
 
     final draggedItem = flatNodes[oldIndex];
     String targetParentId = '';
@@ -110,8 +111,9 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
     // If we dropped it at index 0, that's before root, invalid.
     if (newIndex == 0) return;
     
-    // Identify what item is just above our drop position
-    final prevNode = flatNodes[newIndex];
+    // Identify what item is just above our drop position. A drop past the
+    // last row reports newIndex == length — clamp to the final item.
+    final prevNode = flatNodes[newIndex.clamp(0, flatNodes.length - 1)];
 
     if (draggedItem.node.nodeType == NodeType.dataset || draggedItem.node.nodeType == NodeType.function || draggedItem.node.nodeType == NodeType.shape) {
       // Must go into a plot (chart)
@@ -219,7 +221,7 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
               final flatNode = flatNodes[index];
               return _dispatchFlatNode(flatNode, index);
             },
-            onReorder: (oldIndex, newIndex) => _onReorder(oldIndex, newIndex, flatNodes, rootNode),
+            onReorderItem: (oldIndex, newIndex) => _onReorder(oldIndex, newIndex, flatNodes, rootNode),
           ),
         );
       },

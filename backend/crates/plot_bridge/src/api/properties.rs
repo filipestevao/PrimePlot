@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
+use crate::api::sync::lock_or_recover;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -190,57 +191,57 @@ fn get_shape_store() -> &'static Mutex<HashMap<String, ShapeProperties>> {
 // APIs
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_folder_properties(node_id: String) -> FolderProperties {
-    let mut store = get_folder_store().lock().unwrap();
+    let mut store = lock_or_recover(get_folder_store());
     store.entry(node_id).or_default().clone()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_folder_properties(node_id: String, props: FolderProperties) {
-    get_folder_store().lock().unwrap().insert(node_id, props);
+    lock_or_recover(get_folder_store()).insert(node_id, props);
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_graph_properties(node_id: String) -> GraphProperties {
-    let mut store = get_graph_store().lock().unwrap();
+    let mut store = lock_or_recover(get_graph_store());
     store.entry(node_id).or_default().clone()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_graph_properties(node_id: String, props: GraphProperties) {
-    get_graph_store().lock().unwrap().insert(node_id, props);
+    lock_or_recover(get_graph_store()).insert(node_id, props);
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_table_properties(node_id: String) -> TableProperties {
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     store.entry(node_id).or_default().clone()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_table_properties(node_id: String, props: TableProperties) {
-    get_table_store().lock().unwrap().insert(node_id, props);
+    lock_or_recover(get_table_store()).insert(node_id, props);
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_function_properties(node_id: String) -> FunctionProperties {
-    let mut store = get_function_store().lock().unwrap();
+    let mut store = lock_or_recover(get_function_store());
     store.entry(node_id).or_default().clone()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_function_properties(node_id: String, props: FunctionProperties) {
-    get_function_store().lock().unwrap().insert(node_id, props);
+    lock_or_recover(get_function_store()).insert(node_id, props);
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_shape_properties(node_id: String) -> ShapeProperties {
-    let mut store = get_shape_store().lock().unwrap();
+    let mut store = lock_or_recover(get_shape_store());
     store.entry(node_id).or_default().clone()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn set_shape_properties(node_id: String, props: ShapeProperties) {
-    get_shape_store().lock().unwrap().insert(node_id, props);
+    lock_or_recover(get_shape_store()).insert(node_id, props);
 }
 
 // ---------------------------------------------------------------------------
@@ -249,51 +250,51 @@ pub fn set_shape_properties(node_id: String, props: ShapeProperties) {
 // ---------------------------------------------------------------------------
 
 pub(crate) fn snapshot_folder_props() -> HashMap<String, FolderProperties> {
-    get_folder_store().lock().unwrap().clone()
+    lock_or_recover(get_folder_store()).clone()
 }
 
 pub(crate) fn snapshot_graph_props() -> HashMap<String, GraphProperties> {
-    get_graph_store().lock().unwrap().clone()
+    lock_or_recover(get_graph_store()).clone()
 }
 
 pub(crate) fn snapshot_table_props() -> HashMap<String, TableProperties> {
-    get_table_store().lock().unwrap().clone()
+    lock_or_recover(get_table_store()).clone()
 }
 
 pub(crate) fn snapshot_function_props() -> HashMap<String, FunctionProperties> {
-    get_function_store().lock().unwrap().clone()
+    lock_or_recover(get_function_store()).clone()
 }
 
 pub(crate) fn snapshot_shape_props() -> HashMap<String, ShapeProperties> {
-    get_shape_store().lock().unwrap().clone()
+    lock_or_recover(get_shape_store()).clone()
 }
 
 pub(crate) fn restore_folder_props(map: HashMap<String, FolderProperties>) {
-    *get_folder_store().lock().unwrap() = map;
+    *lock_or_recover(get_folder_store()) = map;
 }
 
 pub(crate) fn restore_graph_props(map: HashMap<String, GraphProperties>) {
-    *get_graph_store().lock().unwrap() = map;
+    *lock_or_recover(get_graph_store()) = map;
 }
 
 pub(crate) fn restore_table_props(map: HashMap<String, TableProperties>) {
-    *get_table_store().lock().unwrap() = map;
+    *lock_or_recover(get_table_store()) = map;
 }
 
 pub(crate) fn restore_function_props(map: HashMap<String, FunctionProperties>) {
-    *get_function_store().lock().unwrap() = map;
+    *lock_or_recover(get_function_store()) = map;
 }
 
 pub(crate) fn restore_shape_props(map: HashMap<String, ShapeProperties>) {
-    *get_shape_store().lock().unwrap() = map;
+    *lock_or_recover(get_shape_store()) = map;
 }
 
 pub(crate) fn clear_all_property_stores() {
-    get_folder_store().lock().unwrap().clear();
-    get_graph_store().lock().unwrap().clear();
-    get_table_store().lock().unwrap().clear();
-    get_function_store().lock().unwrap().clear();
-    get_shape_store().lock().unwrap().clear();
+    lock_or_recover(get_folder_store()).clear();
+    lock_or_recover(get_graph_store()).clear();
+    lock_or_recover(get_table_store()).clear();
+    lock_or_recover(get_function_store()).clear();
+    lock_or_recover(get_shape_store()).clear();
 }
 
 /// Serializes tests that mutate global stores (Rust runs tests in parallel

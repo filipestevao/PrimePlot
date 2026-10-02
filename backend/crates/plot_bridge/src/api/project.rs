@@ -46,6 +46,7 @@ impl From<EngineProjectNode> for ProjectNode {
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::HashMap;
+use crate::api::sync::lock_or_recover;
 use data_engine::table::{DataTable as EngineDataTable, DataColumn as EngineDataColumn, ColumnRole as EngineColumnRole};
 use crate::api::data::{DTODataTable, DTOColumnRole};
 
@@ -63,7 +64,7 @@ pub(crate) fn get_state() -> &'static Mutex<EngineProjectNode> {
 
         // Also seed TABLE_STORE with the initial empty table so get_table / update_table_from_raw work.
         let initial = crate::api::data::get_empty_table_data();
-        let mut store = TABLE_STORE.get_or_init(|| Mutex::new(HashMap::new())).lock().unwrap();
+        let mut store = lock_or_recover(TABLE_STORE.get_or_init(|| Mutex::new(HashMap::new())));
         store.insert(initial.id.clone(), dto_to_engine_table(initial));
 
         Mutex::new(root)
@@ -77,13 +78,13 @@ fn generate_id(prefix: &str) -> String {
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_project_tree() -> ProjectNode {
-    let state = get_state().lock().unwrap();
+    let state = lock_or_recover(get_state());
     state.clone().into()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) -> ProjectNode {
-    let mut state = get_state().lock().unwrap();
+    let mut state = lock_or_recover(get_state());
     
     let engine_type = match node_type {
         NodeType::Folder => EngineNodeType::Folder,
@@ -126,7 +127,7 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
             role: EngineColumnRole::Y,
             data: Vec::new(),
         });
-        let mut store = get_table_store().lock().unwrap();
+        let mut store = lock_or_recover(get_table_store());
         store.insert(new_id.clone(), table);
         drop(store);
         // Display Name follows the node name; palette color skips colors
@@ -152,7 +153,7 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn move_project_node(node_id: String, new_parent_id: String) -> ProjectNode {
-    let mut state = get_state().lock().unwrap();
+    let mut state = lock_or_recover(get_state());
     
     if node_id == "root_1" {
         return state.clone().into();
@@ -172,21 +173,21 @@ pub fn move_project_node(node_id: String, new_parent_id: String) -> ProjectNode 
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn rename_project_node(node_id: String, new_name: String) -> ProjectNode {
-    let mut state = get_state().lock().unwrap();
+    let mut state = lock_or_recover(get_state());
     state.rename_node(&node_id, &new_name);
     state.clone().into()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn reorder_project_children(parent_id: String, old_index: usize, new_index: usize) -> ProjectNode {
-    let mut state = get_state().lock().unwrap();
+    let mut state = lock_or_recover(get_state());
     state.reorder_children(&parent_id, old_index, new_index);
     state.clone().into()
 }
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn delete_project_node(node_id: String) -> ProjectNode {
-    let mut state = get_state().lock().unwrap();
+    let mut state = lock_or_recover(get_state());
     
     if let Some(removed_node) = state.remove_node(&node_id) {
         let mut datasets_to_remove = Vec::new();
@@ -202,7 +203,7 @@ pub fn delete_project_node(node_id: String) -> ProjectNode {
         }
         collect_datasets(&removed_node, &mut datasets_to_remove);
         
-        let mut store = get_table_store().lock().unwrap();
+        let mut store = lock_or_recover(get_table_store());
         for id in datasets_to_remove {
             store.remove(&id);
         }
@@ -215,7 +216,7 @@ pub fn delete_project_node(node_id: String) -> ProjectNode {
 pub fn update_table_from_raw(table_id: String, raw: String) {
     let mut new_dto = crate::api::data::parse_clipboard_table(raw);
     
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     if let Some(existing_table) = store.get_mut(&table_id) {
         new_dto.name = existing_table.name.clone();
     }
@@ -232,7 +233,7 @@ fn get_table_store() -> &'static Mutex<HashMap<String, EngineDataTable>> {
 /// Crate-internal store access for table-mutating modules (transforms, …).
 /// Callers must not hold `PROJECT_STATE` while locking (lock ordering).
 pub(crate) fn lock_table_store() -> MutexGuard<'static, HashMap<String, EngineDataTable>> {
-    get_table_store().lock().unwrap()
+    lock_or_recover(get_table_store())
 }
 
 pub(crate) fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {
@@ -252,7 +253,7 @@ pub(crate) fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn save_table(table_id: String, columns: Vec<crate::api::data::DTODataColumn>) {
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     let name = store.get(&table_id).map(|t| t.name.clone()).unwrap_or_default();
     let mut et = EngineDataTable::new(&table_id, &name);
     for col in columns {
@@ -302,7 +303,7 @@ pub fn add_column(
     if clean.is_empty() {
         return Err("column name must not be empty".to_string());
     }
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
     let rows = table.row_count();
     table.add_column(EngineDataColumn {
@@ -319,7 +320,7 @@ pub fn remove_column(
     table_id: String,
     col_index: usize,
 ) -> Result<crate::api::data::DTODataTable, String> {
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
     table.remove_column(col_index)?;
     Ok(table.clone().into())
@@ -331,7 +332,7 @@ pub fn rename_column(
     col_index: usize,
     new_name: String,
 ) -> Result<crate::api::data::DTODataTable, String> {
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
     table.rename_column(col_index, &new_name)?;
     Ok(table.clone().into())
@@ -344,7 +345,7 @@ pub fn set_column_role(
     role: String,
 ) -> Result<crate::api::data::DTODataTable, String> {
     let role = parse_engine_role(&role)?;
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
     table.set_column_role(col_index, role)?;
     Ok(table.clone().into())
@@ -356,7 +357,7 @@ pub fn reorder_column(
     old_index: usize,
     new_index: usize,
 ) -> Result<crate::api::data::DTODataTable, String> {
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
     table.move_column(old_index, new_index)?;
     Ok(table.clone().into())
@@ -364,7 +365,7 @@ pub fn reorder_column(
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_count: usize) -> ProjectNode {
-    let mut state = get_state().lock().unwrap();
+    let mut state = lock_or_recover(get_state());
     let new_id = generate_id("table");
 
     let mut et = EngineDataTable::new(&new_id, &name);
@@ -381,7 +382,7 @@ pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_co
         });
     }
 
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     store.insert(new_id.clone(), et);
 
     let new_node = EngineProjectNode::new(&new_id, &name, EngineNodeType::Dataset);
@@ -403,7 +404,7 @@ pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_co
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn add_table_from_raw(parent_id: String, raw: String, display_name: String) -> ProjectNode {
-    let mut state = get_state().lock().unwrap();
+    let mut state = lock_or_recover(get_state());
     // Parse using existing parser
     let mut dto = crate::api::data::parse_clipboard_table(raw);
     // assign unique id and display name
@@ -413,7 +414,7 @@ pub fn add_table_from_raw(parent_id: String, raw: String, display_name: String) 
 
     // store engine table
     let engine_table = dto_to_engine_table(dto.clone());
-    let mut store = get_table_store().lock().unwrap();
+    let mut store = lock_or_recover(get_table_store());
     store.insert(new_id.clone(), engine_table);
 
     // insert project node
@@ -436,7 +437,7 @@ pub fn add_table_from_raw(parent_id: String, raw: String, display_name: String) 
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_table(table_id: String) -> crate::api::data::DTODataTable {
-    let store = get_table_store().lock().unwrap();
+    let store = lock_or_recover(get_table_store());
     if let Some(t) = store.get(&table_id) {
         t.clone().into()
     } else {
@@ -446,7 +447,7 @@ pub fn get_table(table_id: String) -> crate::api::data::DTODataTable {
 
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_tables_for_graph(graph_id: String) -> Vec<crate::api::data::DTODataTable> {
-    let state = get_state().lock().unwrap();
+    let state = lock_or_recover(get_state());
     let mut result = Vec::new();
     // find graph node
     fn find(node: &EngineProjectNode, target: &str, out: &mut Vec<String>) {
@@ -466,7 +467,7 @@ pub fn get_tables_for_graph(graph_id: String) -> Vec<crate::api::data::DTODataTa
     let mut ids = Vec::new();
     find(&state, &graph_id, &mut ids);
 
-    let store = get_table_store().lock().unwrap();
+    let store = lock_or_recover(get_table_store());
     for id in ids {
         if let Some(t) = store.get(&id) {
             result.push(t.clone().into());
@@ -534,19 +535,19 @@ fn child_ids_of_type(
 }
 
 pub(crate) fn snapshot_tree_engine() -> EngineProjectNode {
-    get_state().lock().unwrap().clone()
+    lock_or_recover(get_state()).clone()
 }
 
 pub(crate) fn restore_tree_engine(tree: EngineProjectNode) {
-    *get_state().lock().unwrap() = tree;
+    *lock_or_recover(get_state()) = tree;
 }
 
 pub(crate) fn snapshot_tables_engine() -> HashMap<String, EngineDataTable> {
-    get_table_store().lock().unwrap().clone()
+    lock_or_recover(get_table_store()).clone()
 }
 
 pub(crate) fn restore_tables_engine(map: HashMap<String, EngineDataTable>) {
-    *get_table_store().lock().unwrap() = map;
+    *lock_or_recover(get_table_store()) = map;
 }
 
 /// Builds the canonical empty project: Workspace > Project > Graph > Table.
@@ -652,9 +653,28 @@ mod tests {
         assert_eq!(t.columns.len(), 2);
 
         // unknown table is a clean error
-        assert!(get_table_store().lock().unwrap().get("nope").is_none());
+        assert!(lock_or_recover(get_table_store()).get("nope").is_none());
         assert!(add_column("nope".to_string(), "A".to_string(), "X".to_string()).is_err());
 
         restore_tables_engine(saved);
+    }
+
+    #[test]
+    fn recovers_from_poisoned_state_lock() {
+        use std::panic::AssertUnwindSafe;
+
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        // Deliberately poison PROJECT_STATE.
+        let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            let _guard = get_state().lock().unwrap();
+            panic!("deliberate poison for recovery test");
+        }));
+        // Subsequent FFI calls must succeed via lock recovery.
+        let tree = get_project_tree();
+        assert!(!tree.id.is_empty());
+        // And writes work too.
+        let renamed =
+            rename_project_node("root_1".to_string(), "Workspace".to_string());
+        assert_eq!(renamed.name, "Workspace");
     }
 }

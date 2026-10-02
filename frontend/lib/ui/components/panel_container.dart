@@ -45,14 +45,18 @@ class PanelContainer extends StatelessWidget {
                   Icon(icon, size: 14, color: PrimeTheme.textSecondary),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: PrimeTheme.textPrimary,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: PrimeTheme.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 4),
                 const Spacer(),
                 if (actions != null)
                   ...?actions

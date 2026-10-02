@@ -101,8 +101,40 @@ extension FunctionPropertiesExt on FunctionProperties {
   }
 }
 
-class PropertyInspector extends StatefulWidget {
-  const PropertyInspector({super.key});
+/// Min/Max field pair: side-by-side on wide panes, stacked vertically when
+/// narrow (prevents Row overflow at small window sizes).
+class _MinMaxPair extends StatelessWidget {
+  final Widget minField;
+  final Widget maxField;
+  const _MinMaxPair({required this.minField, required this.maxField});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 150) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              minField,
+              const SizedBox(height: 4),
+              maxField,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: minField),
+            const SizedBox(width: 6),
+            Expanded(child: maxField),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class PropertyInspector extends StatefulWidget {  const PropertyInspector({super.key});
   @override
   State<PropertyInspector> createState() => _PropertyInspectorState();
 }
@@ -284,36 +316,29 @@ class _FunctionInspector extends StatelessWidget {
               children: [
                 PropertyRow(
                   label: 'X Range',
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: PrimeNumberField(
-                          value: props.xMin,
-                          prefixText: 'Min: ',
-                          resetValue: -10.0,
-                          onChanged: (val) {
-                            ProjectState.instance.updateFunctionProperties(
-                              nodeId,
-                              props.copyWith(xMin: () => val),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: PrimeNumberField(
-                          value: props.xMax,
-                          prefixText: 'Max: ',
-                          resetValue: 10.0,
-                          onChanged: (val) {
-                            ProjectState.instance.updateFunctionProperties(
-                              nodeId,
-                              props.copyWith(xMax: () => val),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  child: _MinMaxPair(
+                    minField: PrimeNumberField(
+                      value: props.xMin,
+                      prefixText: 'Min: ',
+                      resetValue: -10.0,
+                      onChanged: (val) {
+                        ProjectState.instance.updateFunctionProperties(
+                          nodeId,
+                          props.copyWith(xMin: () => val),
+                        );
+                      },
+                    ),
+                    maxField: PrimeNumberField(
+                      value: props.xMax,
+                      prefixText: 'Max: ',
+                      resetValue: 10.0,
+                      onChanged: (val) {
+                        ProjectState.instance.updateFunctionProperties(
+                          nodeId,
+                          props.copyWith(xMax: () => val),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 PropertyRow(
@@ -523,38 +548,31 @@ class _GraphInspector extends StatelessWidget {
               children: [
                 PropertyRow(
                   label: 'X Range',
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: PrimeNumberField(
-                          value: props.xMin,
-                          prefixText: 'Min: ',
-                          allowAuto: true,
-                          onChanged: (val) {
-                            ProjectState.instance.updateGraphProperties(
-                              nodeId,
-                              props.copyWith(xMin: () => val),
-                              isHomeUpdate: true,
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: PrimeNumberField(
-                          value: props.xMax,
-                          prefixText: 'Max: ',
-                          allowAuto: true,
-                          onChanged: (val) {
-                            ProjectState.instance.updateGraphProperties(
-                              nodeId,
-                              props.copyWith(xMax: () => val),
-                              isHomeUpdate: true,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  child: _MinMaxPair(
+                    minField: PrimeNumberField(
+                      value: props.xMin,
+                      prefixText: 'Min: ',
+                      allowAuto: true,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(xMin: () => val),
+                          isHomeUpdate: true,
+                        );
+                      },
+                    ),
+                    maxField: PrimeNumberField(
+                      value: props.xMax,
+                      prefixText: 'Max: ',
+                      allowAuto: true,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(xMax: () => val),
+                          isHomeUpdate: true,
+                        );
+                      },
+                    ),
                   ),
                 ),
                 PropertyRow(
@@ -594,38 +612,31 @@ class _GraphInspector extends StatelessWidget {
                 const SizedBox(height: 6),
                 PropertyRow(
                   label: 'Y Range',
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: PrimeNumberField(
-                          value: props.yMin,
-                          prefixText: 'Min: ',
-                          allowAuto: true,
-                          onChanged: (val) {
-                            ProjectState.instance.updateGraphProperties(
-                              nodeId,
-                              props.copyWith(yMin: () => val),
-                              isHomeUpdate: true,
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: PrimeNumberField(
-                          value: props.yMax,
-                          prefixText: 'Max: ',
-                          allowAuto: true,
-                          onChanged: (val) {
-                            ProjectState.instance.updateGraphProperties(
-                              nodeId,
-                              props.copyWith(yMax: () => val),
-                              isHomeUpdate: true,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  child: _MinMaxPair(
+                    minField: PrimeNumberField(
+                      value: props.yMin,
+                      prefixText: 'Min: ',
+                      allowAuto: true,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(yMin: () => val),
+                          isHomeUpdate: true,
+                        );
+                      },
+                    ),
+                    maxField: PrimeNumberField(
+                      value: props.yMax,
+                      prefixText: 'Max: ',
+                      allowAuto: true,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(yMax: () => val),
+                          isHomeUpdate: true,
+                        );
+                      },
+                    ),
                   ),
                 ),
                 PropertyRow(
@@ -886,11 +897,15 @@ class _PaletteButton extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 8),
-                Text(
-                  paletteName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: PrimeTheme.textPrimary,
+                Expanded(
+                  child: Text(
+                    paletteName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: PrimeTheme.textPrimary,
+                    ),
                   ),
                 ),
               ],

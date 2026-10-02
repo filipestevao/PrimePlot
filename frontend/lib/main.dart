@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:frontend/src/rust/frb_generated.dart';
 import 'core/state.dart';
@@ -34,24 +33,22 @@ Future<void> main() async {
   // Initialize Window Manager for Frameless Desktop Window
   await windowManager.ensureInitialized();
 
-  final display = await screenRetriever.getPrimaryDisplay();
-  final logicalW = display.size.width;
-  final logicalH = display.size.height;
+  // Never shrink into overflow territory (compositor hint; MainLayout's
+  // onWindowResize clamps at runtime as a backstop).
+  await windowManager.setMinimumSize(kMinWindowSize);
 
-  final willFit = logicalW >= 1800 && logicalH >= 1024;
-
-  WindowOptions windowOptions = WindowOptions(
-    size: willFit ? const Size(1800, 1024) : const Size(1280, 720),
-    center: willFit,
+  // Always start maximized: every compositor (Xorg, Wayland, Windows,
+  // macOS) honors this natively — no size negotiation, no centering races.
+  WindowOptions windowOptions = const WindowOptions(
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
   );
-  
+
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
-    if (!willFit) await windowManager.maximize();
+    await windowManager.maximize();
   });
 
   runApp(const PrimePlotApp());

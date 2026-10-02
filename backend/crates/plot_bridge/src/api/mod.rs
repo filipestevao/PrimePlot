@@ -9,4 +9,5 @@ pub mod persistence;
 pub mod palettes;
 pub mod functions;
 pub mod transforms;
+pub(crate) mod sync;
 pub mod prefs;
