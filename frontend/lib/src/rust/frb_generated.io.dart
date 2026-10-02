@@ -105,6 +105,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProjectNode> dco_decode_list_project_node(dynamic raw);
 
   @protected
+  List<SeriesStatistics> dco_decode_list_series_statistics(dynamic raw);
+
+  @protected
   NodeType dco_decode_node_type(dynamic raw);
 
   @protected
@@ -115,6 +118,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProjectNode dco_decode_project_node(dynamic raw);
+
+  @protected
+  SeriesStatistics dco_decode_series_statistics(dynamic raw);
 
   @protected
   ShapeProperties dco_decode_shape_properties(dynamic raw);
@@ -228,6 +234,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProjectNode> sse_decode_list_project_node(SseDeserializer deserializer);
 
   @protected
+  List<SeriesStatistics> sse_decode_list_series_statistics(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NodeType sse_decode_node_type(SseDeserializer deserializer);
 
   @protected
@@ -238,6 +249,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ProjectNode sse_decode_project_node(SseDeserializer deserializer);
+
+  @protected
+  SeriesStatistics sse_decode_series_statistics(SseDeserializer deserializer);
 
   @protected
   ShapeProperties sse_decode_shape_properties(SseDeserializer deserializer);
@@ -381,6 +395,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_series_statistics(
+    List<SeriesStatistics> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_node_type(NodeType self, SseSerializer serializer);
 
   @protected
@@ -391,6 +411,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_project_node(ProjectNode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_series_statistics(
+    SeriesStatistics self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_shape_properties(

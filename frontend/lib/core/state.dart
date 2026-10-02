@@ -96,6 +96,30 @@ class ProjectState {
 
   final ValueNotifier<int> refreshCanvas = ValueNotifier(0);
 
+  /// Canvas statistics overlay visibility (σ button / S hotkey).
+  final ValueNotifier<bool> showStatsHud = ValueNotifier(false);
+
+  /// Live cursor position in data coordinates (null when off-canvas).
+  /// Mirrors the viewport crosshair readout for the status bar.
+  final ValueNotifier<Offset?> cursorCoords = ValueNotifier(null);
+
+  /// App version for the title bar / About dialog (loaded once at startup).
+  String appVersion = '';
+
+  /// Number of nodes in the project tree (status bar).
+  int get nodeCount {
+    int count(ProjectNode node) {
+      var n = 1;
+      for (final c in node.children) {
+        n += count(c);
+      }
+      return n;
+    }
+
+    final root = projectTree.value;
+    return root == null ? 0 : count(root);
+  }
+
   /// Path of the currently open `.primeplot` file (null = untitled).
   final ValueNotifier<String?> currentFilePath = ValueNotifier(null);
 
@@ -211,6 +235,40 @@ class ProjectState {
   /// Public ID of the plot governing the canvas (selected plot or parent
   /// of the selected dataset/function/shape). Null when no plot is active.
   String? get activePlotId => _getActivePlotId();
+
+  /// Restores the inspector-defined home view (R hotkey / double-click
+  /// equivalent). No-op when already home or no plot is active.
+  void resetActiveView() {
+    final id = activePlotId;
+    final gp = activeGraphProps.value;
+    if (id == null || gp == null) return;
+    final home = homeViewFor(id, gp);
+    if (home.matches(gp)) return;
+    updateGraphProperties(
+      id,
+      GraphProperties(
+        xMin: home.xMin,
+        xMax: home.xMax,
+        yMin: home.yMin,
+        yMax: home.yMax,
+        xVisible: gp.xVisible,
+        yVisible: gp.yVisible,
+        xScale: gp.xScale,
+        yScale: gp.yScale,
+        xLabel: gp.xLabel,
+        yLabel: gp.yLabel,
+        aspectRatio: gp.aspectRatio,
+        showGrid: gp.showGrid,
+        showLegend: gp.showLegend,
+        legendPosition: gp.legendPosition,
+      ),
+    );
+  }
+
+  /// Clears the explorer selection (Esc hotkey).
+  void clearSelection() {
+    selectedProjectNodeId.value = null;
+  }
 
   String? _getActivePlotId() {
     final root = projectTree.value;

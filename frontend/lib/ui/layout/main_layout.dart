@@ -12,7 +12,9 @@ import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../components/panel_container.dart';
+import '../dialogs/about_dialog.dart';
 import 'custom_title_bar.dart';
+import 'status_bar.dart';
 import '../panels/project_explorer.dart';
 import '../panels/property_inspector.dart';
 import '../panels/collapsible_data_panel.dart';
@@ -325,8 +327,58 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     });
   }
 
+  /// Single-key shortcuts must not fire while typing in a text field.
+  static void _guardedText(VoidCallback action) {
+    final focus = FocusManager.instance.primaryFocus;
+    final widget = focus?.context?.widget;
+    if (widget is EditableText) return;
+    action();
+  }
+
+  OverlayEntry? _helpEntry;
+
+  void _toggleShortcutHelp() {
+    if (_helpEntry != null) {
+      _hideShortcutHelp();
+      return;
+    }
+    _helpEntry = OverlayEntry(
+      builder: (ctx) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _hideShortcutHelp,
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          Center(
+            child: Focus(
+              autofocus: true,
+              onKeyEvent: (node, event) {
+                if (event is KeyDownEvent) {
+                  _hideShortcutHelp();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              child: const _ShortcutHelpCard(),
+            ),
+          ),
+        ],
+      ),
+    );
+    Overlay.of(context).insert(_helpEntry!);
+  }
+
+  void _hideShortcutHelp() {
+    _helpEntry?.remove();
+    _helpEntry = null;
+  }
+
   @override
   void dispose() {
+    _hideShortcutHelp();
     windowManager.removeListener(this);
     ProjectState.instance.selectedProjectNodeId.removeListener(
       _onSelectionChanged,
@@ -362,6 +414,26 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
           control: true,
           shift: true,
         ): () => FileActions.doSaveAs(context),
+        const SingleActivator(LogicalKeyboardKey.keyS): () =>
+            _guardedText(() {
+              ProjectState.instance.showStatsHud.value =
+                  !ProjectState.instance.showStatsHud.value;
+            }),
+        const SingleActivator(LogicalKeyboardKey.keyR): () =>
+            _guardedText(
+                () => ProjectState.instance.resetActiveView()),
+        const SingleActivator(LogicalKeyboardKey.slash, shift: true): () =>
+            _guardedText(() => _toggleShortcutHelp()),
+        const SingleActivator(LogicalKeyboardKey.slash, control: true): () =>
+            _toggleShortcutHelp(),
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            _guardedText(() {
+              if (_helpEntry != null) {
+                _hideShortcutHelp();
+              } else {
+                ProjectState.instance.clearSelection();
+              }
+            }),
       },
       child: Focus(
         autofocus: true,
@@ -547,8 +619,11 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                       ),
                     ),
                     onTap: () {
-                      debugPrint("Menu Selected: about");
                       Navigator.pop(context);
+                      showDialog(
+                        context: context,
+                        builder: (context) => const PrimeAboutDialog(),
+                      );
                     },
                   ),
                 ],
@@ -579,6 +654,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                     ),
                   ),
                 ),
+                const StatusBar(),
               ],
             ),
           ),
@@ -661,3 +737,89 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
 
 /// Actions for the Project Explorer "Add Item" popup menu.
 enum _ExplorerAction { addGraph, addTable, addFunction, addShape, addFolder }
+
+/// Non-modal keyboard shortcut reference (toggles with ? / Ctrl+/,
+/// dismisses on any key or click-away).
+class _ShortcutHelpCard extends StatelessWidget {
+  const _ShortcutHelpCard();
+
+  static const _rows = [
+    ('Ctrl + N', 'New project'),
+    ('Ctrl + O', 'Open project'),
+    ('Ctrl + S', 'Save project'),
+    ('Ctrl + Shift + S', 'Save project as…'),
+    ('S', 'Toggle series statistics'),
+    ('R', 'Reset view to home ranges'),
+    ('Esc', 'Clear selection'),
+    ('Ctrl + /  or  ?', 'This shortcut map'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 340,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: PrimeTheme.panelBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: PrimeTheme.borderSide),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'KEYBOARD SHORTCUTS',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: PrimeTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final (keys, action) in _rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 140,
+                    child: Text(
+                      keys,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontFamily: 'monospace',
+                        color: PrimeTheme.primaryAccent,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      action,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: PrimeTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            'Press any key to dismiss.',
+            style: TextStyle(fontSize: 11, color: PrimeTheme.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}

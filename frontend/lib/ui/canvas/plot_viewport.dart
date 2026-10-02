@@ -65,6 +65,19 @@ class _PlotViewportState extends State<PlotViewport> {
     return size;
   }
 
+  /// Mirrors the crosshair data position to the status bar.
+  void _publishCursor(Offset? local) {
+    final st = ProjectState.instance;
+    if (local == null) {
+      if (st.cursorCoords.value != null) st.cursorCoords.value = null;
+      return;
+    }
+    final view = _resolve();
+    final size = _boxSize();
+    if (view == null || size == null) return;
+    st.cursorCoords.value = screenToData(local, size, view);
+  }
+
   void _write(RawLimits raw) {
     final id = widget.plotId;
     final gp = widget.graphProps;
@@ -120,6 +133,7 @@ class _PlotViewportState extends State<PlotViewport> {
 
   void _onMove(PointerMoveEvent event) {
     setState(() => _hover = event.localPosition);
+    _publishCursor(event.localPosition);
     if (_marqueeStart != null) {
       setState(() {
         _marquee = Rect.fromPoints(_marqueeStart!, event.localPosition);
@@ -155,6 +169,7 @@ class _PlotViewportState extends State<PlotViewport> {
   }
 
   void _onCancel(PointerCancelEvent event) {
+    _publishCursor(null);
     setState(() {
       _panning = false;
       _panLast = null;
@@ -205,88 +220,48 @@ class _PlotViewportState extends State<PlotViewport> {
     );
   }
 
-  static String _fmt(double v) {
-    final a = v.abs();
-    if (a != 0 && (a >= 10000 || a < 0.001)) {
-      return v.toStringAsExponential(2);
-    }
-    return v.toStringAsFixed(4);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final view = _resolve();
-        final data = (_hover != null && view != null)
-            ? screenToData(_hover!, size, view)
-            : null;
-
-        return MouseRegion(
-          // Crosshair hints left-drag box zoom; grabber while right-panning.
-          cursor: _panning
-              ? SystemMouseCursors.grabbing
-              : SystemMouseCursors.precise,
-          onHover: (e) => setState(() => _hover = e.localPosition),
-          onExit: (_) => setState(() => _hover = null),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onDoubleTap: _autoscale,
-            child: Listener(
-              behavior: HitTestBehavior.opaque,
-              onPointerSignal: _onScroll,
-              onPointerDown: _onDown,
-              onPointerMove: _onMove,
-              onPointerUp: _onUp,
-              onPointerCancel: _onCancel,
-              child: Stack(
-                children: [
-                  widget.child,
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _ViewportOverlay(
-                        hover: _hover,
-                        marquee: _marquee,
-                      ),
-                    ),
-                  ),
-                  // Readout lives in the top margin strip, above the axes,
-                  // so it never covers data.
-                  if (data != null)
-                    Positioned(
-                      left: 8,
-                      top: 2,
-                      child: IgnorePointer(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: PrimeTheme.panelBackground.withValues(
-                              alpha: 0.92,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: PrimeTheme.borderSide),
-                          ),
-                          child: Text(
-                            'X: ${_fmt(data.dx)}   Y: ${_fmt(data.dy)}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: PrimeTheme.textPrimary,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
+    // Coordinates live only in the status bar; the canvas keeps the
+    // crosshair + marquee overlay.
+    return MouseRegion(
+      // Crosshair hints left-drag box zoom; grabber while right-panning.
+      cursor: _panning
+          ? SystemMouseCursors.grabbing
+          : SystemMouseCursors.precise,
+      onHover: (e) {
+        setState(() => _hover = e.localPosition);
+        _publishCursor(e.localPosition);
       },
+      onExit: (_) {
+        setState(() => _hover = null);
+        _publishCursor(null);
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onDoubleTap: _autoscale,
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerSignal: _onScroll,
+          onPointerDown: _onDown,
+          onPointerMove: _onMove,
+          onPointerUp: _onUp,
+          onPointerCancel: _onCancel,
+          child: Stack(
+            children: [
+              widget.child,
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _ViewportOverlay(
+                    hover: _hover,
+                    marquee: _marquee,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

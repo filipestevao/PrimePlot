@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1099810079;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -592471464;
 
 // Section: executor
 
@@ -745,6 +745,38 @@ fn wire__crate__api__properties__get_graph_properties_impl(
             transform_result_sse::<_, ()>((move || {
                 let output_ok =
                     Result::<_, ()>::Ok(crate::api::properties::get_graph_properties(api_node_id))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__transforms__get_graph_statistics_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_graph_statistics",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_graph_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::transforms::get_graph_statistics(
+                    api_graph_id,
+                ))?;
                 Ok(output_ok)
             })())
         },
@@ -2197,6 +2229,20 @@ impl SseDecode for Vec<crate::api::project::ProjectNode> {
     }
 }
 
+impl SseDecode for Vec<crate::api::transforms::SeriesStatistics> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::transforms::SeriesStatistics>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for crate::api::project::NodeType {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2244,6 +2290,28 @@ impl SseDecode for crate::api::project::ProjectNode {
             name: var_name,
             node_type: var_nodeType,
             children: var_children,
+        };
+    }
+}
+
+impl SseDecode for crate::api::transforms::SeriesStatistics {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_tableId = <String>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_minX = <f64>::sse_decode(deserializer);
+        let mut var_maxX = <f64>::sse_decode(deserializer);
+        let mut var_minY = <f64>::sse_decode(deserializer);
+        let mut var_maxY = <f64>::sse_decode(deserializer);
+        let mut var_nPoints = <usize>::sse_decode(deserializer);
+        return crate::api::transforms::SeriesStatistics {
+            table_id: var_tableId,
+            name: var_name,
+            min_x: var_minX,
+            max_x: var_maxX,
+            min_y: var_minY,
+            max_y: var_maxY,
+            n_points: var_nPoints,
         };
     }
 }
@@ -2325,20 +2393,20 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__properties__graph_properties_default_impl(
+        32 => wire__crate__api__properties__graph_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        55 => wire__crate__api__properties__shape_properties_default_impl(
+        34 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        56 => wire__crate__api__properties__shape_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        56 => wire__crate__api__properties__table_properties_default_impl(
+        57 => wire__crate__api__properties__table_properties_default_impl(
             port,
             ptr,
             rust_vec_len,
@@ -2382,45 +2450,46 @@ fn pde_ffi_dispatcher_sync_impl(
             wire__crate__api__properties__get_function_properties_impl(ptr, rust_vec_len, data_len)
         }
         21 => wire__crate__api__properties__get_graph_properties_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__data__get_initial_table_data_impl(ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__data__get_mock_scientific_data_impl(ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__data__get_new_table_data_impl(ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__prefs__get_preferences_impl(ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__project__get_project_tree_impl(ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__properties__get_shape_properties_impl(ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__project__get_table_impl(ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__properties__get_table_properties_impl(ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__project__get_tables_for_graph_impl(ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__palettes__list_palettes_impl(ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__persistence__load_project_impl(ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__project__move_project_node_impl(ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__persistence__new_project_impl(ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__palettes__palette_colors_impl(ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__data__parse_clipboard_table_impl(ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__transforms__preview_column_expression_impl(
+        22 => wire__crate__api__transforms__get_graph_statistics_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__data__get_initial_table_data_impl(ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__data__get_mock_scientific_data_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__data__get_new_table_data_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__prefs__get_preferences_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__project__get_project_tree_impl(ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__properties__get_shape_properties_impl(ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__project__get_table_impl(ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__properties__get_table_properties_impl(ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__project__get_tables_for_graph_impl(ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__palettes__list_palettes_impl(ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__persistence__load_project_impl(ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__project__move_project_node_impl(ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__persistence__new_project_impl(ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__palettes__palette_colors_impl(ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__data__parse_clipboard_table_impl(ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__transforms__preview_column_expression_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        41 => wire__crate__api__project__remove_column_impl(ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__project__rename_column_impl(ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__project__rename_project_node_impl(ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__project__reorder_column_impl(ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__project__reorder_project_children_impl(ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__persistence__save_project_impl(ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__project__save_table_impl(ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__project__set_column_role_impl(ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__properties__set_folder_properties_impl(ptr, rust_vec_len, data_len),
-        50 => {
+        42 => wire__crate__api__project__remove_column_impl(ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__project__rename_column_impl(ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__project__rename_project_node_impl(ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__project__reorder_column_impl(ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__project__reorder_project_children_impl(ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__persistence__save_project_impl(ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__project__save_table_impl(ptr, rust_vec_len, data_len),
+        49 => wire__crate__api__project__set_column_role_impl(ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__properties__set_folder_properties_impl(ptr, rust_vec_len, data_len),
+        51 => {
             wire__crate__api__properties__set_function_properties_impl(ptr, rust_vec_len, data_len)
         }
-        51 => wire__crate__api__properties__set_graph_properties_impl(ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__prefs__set_preferences_impl(ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__properties__set_shape_properties_impl(ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__properties__set_table_properties_impl(ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__project__update_table_from_raw_impl(ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__functions__validate_function_expression_impl(
+        52 => wire__crate__api__properties__set_graph_properties_impl(ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__prefs__set_preferences_impl(ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__properties__set_shape_properties_impl(ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__properties__set_table_properties_impl(ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__project__update_table_from_raw_impl(ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__functions__validate_function_expression_impl(
             ptr,
             rust_vec_len,
             data_len,
@@ -2679,6 +2748,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::project::ProjectNode>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::transforms::SeriesStatistics {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.table_id.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.min_x.into_into_dart().into_dart(),
+            self.max_x.into_into_dart().into_dart(),
+            self.min_y.into_into_dart().into_dart(),
+            self.max_y.into_into_dart().into_dart(),
+            self.n_points.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::transforms::SeriesStatistics
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::transforms::SeriesStatistics>
+    for crate::api::transforms::SeriesStatistics
+{
+    fn into_into_dart(self) -> crate::api::transforms::SeriesStatistics {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::properties::ShapeProperties {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [self.shape_type.into_into_dart().into_dart()].into_dart()
@@ -2918,6 +3013,16 @@ impl SseEncode for Vec<crate::api::project::ProjectNode> {
     }
 }
 
+impl SseEncode for Vec<crate::api::transforms::SeriesStatistics> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::transforms::SeriesStatistics>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::api::project::NodeType {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2962,6 +3067,19 @@ impl SseEncode for crate::api::project::ProjectNode {
         <String>::sse_encode(self.name, serializer);
         <crate::api::project::NodeType>::sse_encode(self.node_type, serializer);
         <Vec<crate::api::project::ProjectNode>>::sse_encode(self.children, serializer);
+    }
+}
+
+impl SseEncode for crate::api::transforms::SeriesStatistics {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.table_id, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <f64>::sse_encode(self.min_x, serializer);
+        <f64>::sse_encode(self.max_x, serializer);
+        <f64>::sse_encode(self.min_y, serializer);
+        <f64>::sse_encode(self.max_y, serializer);
+        <usize>::sse_encode(self.n_points, serializer);
     }
 }
 

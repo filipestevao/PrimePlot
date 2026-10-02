@@ -8,7 +8,7 @@ import 'data.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `column_mut`, `map_column`, `stats_of`, `table_not_found`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
 /// `y_i = y_i + value`.
 DTODataTable columnAddScalar({
@@ -85,6 +85,11 @@ ColumnStatistics getColumnStatistics({
   colIndex: colIndex,
 );
 
+/// Aggregates one entry per dataset under a graph, in tree order.
+/// Curves with no finite XY pairs are skipped.
+List<SeriesStatistics> getGraphStatistics({required String graphId}) =>
+    RustLib.instance.api.crateApiTransformsGetGraphStatistics(graphId: graphId);
+
 /// Per-column summary statistics (finite values only, except `nan_count`).
 class ColumnStatistics {
   final double min;
@@ -123,4 +128,48 @@ class ColumnStatistics {
           stdDev == other.stdDev &&
           count == other.count &&
           nanCount == other.nanCount;
+}
+
+/// Per-series extents for the canvas statistics HUD.
+class SeriesStatistics {
+  final String tableId;
+  final String name;
+  final double minX;
+  final double maxX;
+  final double minY;
+  final double maxY;
+  final BigInt nPoints;
+
+  const SeriesStatistics({
+    required this.tableId,
+    required this.name,
+    required this.minX,
+    required this.maxX,
+    required this.minY,
+    required this.maxY,
+    required this.nPoints,
+  });
+
+  @override
+  int get hashCode =>
+      tableId.hashCode ^
+      name.hashCode ^
+      minX.hashCode ^
+      maxX.hashCode ^
+      minY.hashCode ^
+      maxY.hashCode ^
+      nPoints.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SeriesStatistics &&
+          runtimeType == other.runtimeType &&
+          tableId == other.tableId &&
+          name == other.name &&
+          minX == other.minX &&
+          maxX == other.maxX &&
+          minY == other.minY &&
+          maxY == other.maxY &&
+          nPoints == other.nPoints;
 }

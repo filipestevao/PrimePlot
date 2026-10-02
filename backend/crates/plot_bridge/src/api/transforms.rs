@@ -225,6 +225,102 @@ pub fn get_column_statistics(
     Ok(stats_of(&data))
 }
 
+/// Per-series extents for the canvas statistics HUD.
+#[derive(Clone, Debug)]
+pub struct SeriesStatistics {
+    pub table_id: String,
+    pub name: String,
+    pub min_x: f64,
+    pub max_x: f64,
+    pub min_y: f64,
+    pub max_y: f64,
+    pub n_points: usize,
+}
+
+/// Aggregates one entry per dataset under a graph, in tree order.
+/// Curves with no finite XY pairs are skipped.
+#[flutter_rust_bridge::frb(sync)]
+pub fn get_graph_statistics(graph_id: String) -> Vec<SeriesStatistics> {
+    use data_engine::table::ColumnRole as EngineColumnRole;
+
+    let tree = crate::api::project::snapshot_tree_engine();
+    let store = crate::api::project::lock_table_store();
+    let mut out = Vec::new();
+
+    fn find<'a>(
+        node: &'a data_engine::ProjectNode,
+        target: &str,
+    ) -> Option<&'a data_engine::ProjectNode> {
+        if node.id == target {
+            return Some(node);
+        }
+        for c in &node.children {
+            if let Some(n) = find(c, target) {
+                return Some(n);
+            }
+        }
+        None
+    }
+    let graph = match find(&tree, &graph_id) {
+        Some(g) => g,
+        None => return out,
+    };
+
+    for child in &graph.children {
+        if !matches!(child.node_type, data_engine::NodeType::Dataset) {
+            continue;
+        }
+        let table = match store.get(&child.id) {
+            Some(t) => t,
+            None => continue,
+        };
+        let xcol = table
+            .columns
+            .iter()
+            .find(|c| matches!(c.role, EngineColumnRole::X))
+            .or(table.columns.first());
+        let ycol = table
+            .columns
+            .iter()
+            .find(|c| matches!(c.role, EngineColumnRole::Y))
+            .or(table.columns.get(1).or(table.columns.first()));
+        let (xcol, ycol) = match (xcol, ycol) {
+            (Some(x), Some(y)) => (x, y),
+            _ => continue,
+        };
+        let len = xcol.data.len().min(ycol.data.len());
+        let mut min_x = f64::INFINITY;
+        let mut max_x = f64::NEG_INFINITY;
+        let mut min_y = f64::INFINITY;
+        let mut max_y = f64::NEG_INFINITY;
+        let mut n = 0usize;
+        for i in 0..len {
+            let (x, y) = (xcol.data[i], ycol.data[i]);
+            if !x.is_finite() || !y.is_finite() {
+                continue;
+            }
+            n += 1;
+            if x < min_x { min_x = x; }
+            if x > max_x { max_x = x; }
+            if y < min_y { min_y = y; }
+            if y > max_y { max_y = y; }
+        }
+        if n == 0 {
+            continue;
+        }
+        out.push(SeriesStatistics {
+            table_id: child.id.clone(),
+            name: table.name.clone(),
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+            n_points: n,
+        });
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -309,5 +405,44 @@ mod tests {
         assert_eq!(col("tr_1", 0)[0], 0.0);
 
         crate::api::project::restore_tables_engine(saved);
+    }
+
+    #[test]
+    fn graph_statistics_aggregates_datasets() {
+        use data_engine::NodeType as EngineNodeType;
+        use data_engine::ProjectNode as EngineProjectNode;
+
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        let saved_tree = crate::api::project::snapshot_tree_engine();
+        let saved_tables = crate::api::project::snapshot_tables_engine();
+
+        let mut root = EngineProjectNode::new("root_1", "W", EngineNodeType::Folder);
+        let mut graph = EngineProjectNode::new("g_stats", "G", EngineNodeType::Plot);
+        graph.add_child(EngineProjectNode::new("t_stats", "Curve", EngineNodeType::Dataset));
+        root.add_child(graph);
+        crate::api::project::restore_tree_engine(root);
+
+        let mut t = EngineDataTable::new("t_stats", "Curve");
+        t.add_column(DataColumn {
+            name: "X".to_string(),
+            role: EngineColumnRole::X,
+            data: vec![0.0, 1.0, f64::NAN],
+        });
+        t.add_column(DataColumn {
+            name: "Y".to_string(),
+            role: EngineColumnRole::Y,
+            data: vec![10.0, 20.0, 30.0],
+        });
+        crate::api::project::lock_table_store().insert("t_stats".to_string(), t);
+
+        let stats = get_graph_statistics("g_stats".to_string());
+        assert_eq!(stats.len(), 1);
+        assert_eq!((stats[0].min_x, stats[0].max_x), (0.0, 1.0));
+        assert_eq!((stats[0].min_y, stats[0].max_y), (10.0, 20.0));
+        assert_eq!(stats[0].n_points, 2); // NaN row excluded
+        assert!(get_graph_statistics("missing".to_string()).is_empty());
+
+        crate::api::project::restore_tree_engine(saved_tree);
+        crate::api::project::restore_tables_engine(saved_tables);
     }
 }

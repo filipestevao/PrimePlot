@@ -33,7 +33,9 @@ class CustomTitleBar extends StatelessWidget {
                 Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent), // Placeholder logo
                 const SizedBox(width: 8),
                 Text(
-                  'PrimePlot',
+                  ProjectState.instance.appVersion.isEmpty
+                      ? 'PrimePlot'
+                      : 'PrimePlot ${ProjectState.instance.appVersion}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -51,9 +53,13 @@ class CustomTitleBar extends StatelessWidget {
                   builder: (context, _) {
                     final name = ProjectState.instance.displayFileName;
                     final dirty = ProjectState.instance.isDirty.value;
+                    final version = ProjectState.instance.appVersion;
+                    final brand = version.isEmpty
+                        ? 'PrimePlot'
+                        : 'PrimePlot $version';
                     final title = '— $name${dirty ? ' *' : ''}';
                     // Mirror into the OS/taskbar title (fire-and-forget).
-                    windowManager.setTitle('PrimePlot $title');
+                    windowManager.setTitle('$brand $title');
                     return Text(
                       title,
                       style: TextStyle(

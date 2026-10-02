@@ -12,6 +12,7 @@ import '../../src/rust/api/data.dart';
 import '../../src/rust/api/functions.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
+import '../../src/rust/api/transforms.dart';
 import 'plot_geometry.dart';
 import 'plot_viewport.dart';
 
@@ -330,7 +331,77 @@ class PlotCanvas extends StatelessWidget {
                       );
                     }
 
-                    return ClipRRect(child: canvas);
+                    return ClipRRect(
+                      child: Stack(
+                        children: [
+                          canvas,
+                          // Statistics toggle (σ button + S hotkey).
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: ValueListenableBuilder<bool>(
+                              valueListenable:
+                                  ProjectState.instance.showStatsHud,
+                              builder: (context, show, _) {
+                                return Tooltip(
+                                  message: show
+                                      ? 'Hide series statistics (S)'
+                                      : 'Show series statistics (S)',
+                                  child: InkWell(
+                                    onTap: () => ProjectState.instance
+                                        .showStatsHud
+                                        .value = !show,
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Container(
+                                      width: 26,
+                                      height: 26,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: PrimeTheme.panelBackground
+                                            .withValues(alpha: 0.9),
+                                        borderRadius:
+                                            BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: show
+                                              ? PrimeTheme.primaryAccent
+                                              : PrimeTheme.borderSide,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'σ',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: show
+                                              ? PrimeTheme.primaryAccent
+                                              : PrimeTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          ValueListenableBuilder<bool>(
+                            valueListenable:
+                                ProjectState.instance.showStatsHud,
+                            builder: (context, show, _) {
+                              if (!show) {
+                                return const SizedBox.shrink();
+                              }
+                              return Positioned(
+                                top: 38,
+                                right: 6,
+                                child: _StatsPanel(
+                                  graphId: ProjectState.instance.activePlotId,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    );
                   },
                 );
               },
@@ -940,8 +1011,92 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   }
 }
 
-class _LegendEntry {
-  final String name;
+/// Live per-series extents (top-right overlay, toggled by σ / S).
+/// Recomputed from Rust on every canvas rebuild, so it tracks edits.
+class _StatsPanel extends StatelessWidget {
+  final String? graphId;
+  const _StatsPanel({required this.graphId});
+
+  static String _fmt(double v) {
+    if (!v.isFinite) return '—';
+    final a = v.abs();
+    if (a != 0 && (a >= 100000 || a < 0.001)) {
+      return v.toStringAsExponential(1);
+    }
+    return v.toStringAsFixed(3);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<SeriesStatistics> entries = const [];
+    if (graphId != null) {
+      try {
+        entries = getGraphStatistics(graphId: graphId!);
+      } catch (_) {
+        entries = const [];
+      }
+    }
+    return IgnorePointer(
+      child: Container(
+        width: 216,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: PrimeTheme.panelBackground.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: PrimeTheme.borderSide),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'SERIES STATISTICS',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+                color: PrimeTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (entries.isEmpty)
+              Text(
+                'No plottable series.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: PrimeTheme.textSecondary,
+                ),
+              ),
+            for (final e in entries) ...[
+              Text(
+                e.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: PrimeTheme.textPrimary,
+                ),
+              ),
+              Text(
+                'X [${_fmt(e.minX)}, ${_fmt(e.maxX)}]  '
+                'Y [${_fmt(e.minY)}, ${_fmt(e.maxY)}]  n=${e.nPoints}',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontFamily: 'monospace',
+                  color: PrimeTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendEntry {  final String name;
   final Color lineColor;
   final Color markerColor;
   final String lineStyle;
