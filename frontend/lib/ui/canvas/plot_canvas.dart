@@ -13,7 +13,6 @@ import '../../src/rust/api/functions.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
 import '../../src/rust/api/transforms.dart';
-import '../dialogs/export_dialog.dart';
 import 'plot_geometry.dart';
 import 'plot_viewport.dart';
 
@@ -348,69 +347,23 @@ class PlotCanvas extends StatelessWidget {
                       child: Stack(
                         children: [
                           canvas,
-                          // Canvas menu (···) + statistics toggle (σ + S).
+                          // Statistics toggle (σ button + S hotkey). Export
+                          // lives in the Graph header ··· menu.
                           Positioned(
                             top: 6,
                             right: 6,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Tooltip(
-                                  message: 'Canvas options',
+                            child: ValueListenableBuilder<bool>(
+                              valueListenable:
+                                  ProjectState.instance.showStatsHud,
+                              builder: (context, show, _) {
+                                return Tooltip(
+                                  message: show
+                                      ? 'Hide series statistics (S)'
+                                      : 'Show series statistics (S)',
                                   child: InkWell(
-                                    onTapDown: (details) async {
-                                      final choice =
-                                          await showMenu<String>(
-                                        context: context,
-                                        position: RelativeRect.fromLTRB(
-                                          details.globalPosition.dx,
-                                          details.globalPosition.dy,
-                                          details.globalPosition.dx,
-                                          details.globalPosition.dy,
-                                        ),
-                                        color: PrimeTheme.backgroundDark,
-                                        elevation: 8,
-                                        items: [
-                                          PopupMenuItem<String>(
-                                            value: 'figure',
-                                            child: Text('Export Figure…',
-                                                style: TextStyle(
-                                                    color: PrimeTheme
-                                                        .textPrimary,
-                                                    fontSize: 12)),
-                                          ),
-                                          PopupMenuItem<String>(
-                                            value: 'data',
-                                            child: Text('Export Data…',
-                                                style: TextStyle(
-                                                    color: PrimeTheme
-                                                        .textPrimary,
-                                                    fontSize: 12)),
-                                          ),
-                                          const PopupMenuDivider(height: 8),
-                                          PopupMenuItem<String>(
-                                            value: 'copy',
-                                            child: Text(
-                                                'Copy Figure to Clipboard',
-                                                style: TextStyle(
-                                                    color: PrimeTheme
-                                                        .textPrimary,
-                                                    fontSize: 12)),
-                                          ),
-                                        ],
-                                      );
-                                      if (choice == null || !context.mounted) {
-                                        return;
-                                      }
-                                      if (choice == 'copy') {
-                                        await copyFigureToClipboard(context);
-                                      } else {
-                                        openExportDialog(
-                                          context,
-                                          choice == 'data' ? 1 : 0,
-                                        );
-                                      }
-                                    },
+                                    onTap: () => ProjectState.instance
+                                        .showStatsHud
+                                        .value = !show,
                                     borderRadius: BorderRadius.circular(4),
                                     child: Container(
                                       width: 26,
@@ -422,62 +375,25 @@ class PlotCanvas extends StatelessWidget {
                                         borderRadius:
                                             BorderRadius.circular(4),
                                         border: Border.all(
-                                            color: PrimeTheme.borderSide),
+                                          color: show
+                                              ? PrimeTheme.primaryAccent
+                                              : PrimeTheme.borderSide,
+                                        ),
                                       ),
-                                      child: Icon(
-                                        Icons.more_horiz,
-                                        size: 15,
-                                        color: PrimeTheme.textSecondary,
+                                      child: Text(
+                                        'σ',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: show
+                                              ? PrimeTheme.primaryAccent
+                                              : PrimeTheme.textSecondary,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                ValueListenableBuilder<bool>(
-                                  valueListenable:
-                                      ProjectState.instance.showStatsHud,
-                                  builder: (context, show, _) {
-                                    return Tooltip(
-                                      message: show
-                                          ? 'Hide series statistics (S)'
-                                          : 'Show series statistics (S)',
-                                      child: InkWell(
-                                        onTap: () => ProjectState.instance
-                                            .showStatsHud
-                                            .value = !show,
-                                        borderRadius:
-                                            BorderRadius.circular(4),
-                                        child: Container(
-                                          width: 26,
-                                          height: 26,
-                                          alignment: Alignment.center,
-                                          decoration: BoxDecoration(
-                                            color: PrimeTheme.panelBackground
-                                                .withValues(alpha: 0.9),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                            border: Border.all(
-                                              color: show
-                                                  ? PrimeTheme.primaryAccent
-                                                  : PrimeTheme.borderSide,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'σ',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: show
-                                                  ? PrimeTheme.primaryAccent
-                                                  : PrimeTheme.textSecondary,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                );
+                              },
                             ),
                           ),
                           ValueListenableBuilder<bool>(

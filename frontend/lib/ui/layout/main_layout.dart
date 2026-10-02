@@ -298,12 +298,55 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     final areas = <Area>[
       Area(
         flex: _isDataPanelCollapsed || !isTableSelected ? 1 : 3,
+        min: 2,
         builder: (context, area) => ValueListenableBuilder<String>(
           valueListenable: ProjectState.instance.graphName,
           builder: (context, graphName, child) {
             return PanelContainer(
               title: graphName,
               icon: Icons.show_chart,
+              actions: [
+                PopupMenuButton<String>(
+                  tooltip: 'Graph options',
+                  icon: Icon(
+                    Icons.more_horiz,
+                    size: 16,
+                    color: PrimeTheme.textSecondary,
+                  ),
+                  color: PrimeTheme.backgroundDark,
+                  elevation: 8,
+                  offset: const Offset(0, 30),
+                  onSelected: (String choice) async {
+                    if (choice == 'copy') {
+                      await copyFigureToClipboard(context);
+                    } else {
+                      openExportDialog(context, choice == 'data' ? 1 : 0);
+                    }
+                  },
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(
+                      value: 'figure',
+                      child: Text('Export Figure…',
+                          style: TextStyle(
+                              color: PrimeTheme.textPrimary, fontSize: 12)),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'data',
+                      child: Text('Export Data…',
+                          style: TextStyle(
+                              color: PrimeTheme.textPrimary, fontSize: 12)),
+                    ),
+                    const PopupMenuDivider(height: 8),
+                    PopupMenuItem<String>(
+                      value: 'copy',
+                      child: Text('Copy Figure to Clipboard',
+                          style: TextStyle(
+                              color: PrimeTheme.textPrimary, fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ],
               child: const PlotCanvas(),
             );
           },
@@ -316,7 +359,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
         Area(
           flex: _isDataPanelCollapsed ? null : 2,
           size: _isDataPanelCollapsed ? 46 : null,
-          min: _isDataPanelCollapsed ? 46 : null,
+          min: _isDataPanelCollapsed ? 46 : 2,
+          // Locked when collapsed: min == max pins the 46px strip so the
+          // divider can't drag it back open (toggle button only).
+          max: _isDataPanelCollapsed ? 46 : null,
           builder: (context, area) => CollapsibleDataPanel(
             isCollapsed: _isDataPanelCollapsed,
             onToggle: _toggleDataPanel,
