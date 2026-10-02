@@ -242,10 +242,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
       areas: [
         Area(
           flex: 3,
-          builder: (context, area) => const PanelContainer(
+          builder: (context, area) => PanelContainer(
             title: 'Property Inspector',
             icon: Icons.tune,
-            child: PropertyInspector(),
+            child: const PropertyInspector(),
           ),
         ),
       ],

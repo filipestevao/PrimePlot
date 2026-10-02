@@ -45,7 +45,11 @@ class PanelContainer extends StatelessWidget {
                   Icon(icon, size: 14, color: PrimeTheme.textSecondary),
                   const SizedBox(width: 8),
                 ],
-                Flexible(
+                // Expanded (tight) takes ALL free space so trailing actions
+                // always sit flush right. NOTE: Flexible defaults to flex:1
+                // and would steal half the free space, centering the dots —
+                // do not "simplify" this back to Flexible.
+                Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
@@ -57,7 +61,6 @@ class PanelContainer extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Spacer(),
                 if (actions != null)
                   ...?actions
                 else ...[
