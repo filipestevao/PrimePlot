@@ -14,6 +14,7 @@ import '../../src/rust/api/project.dart';
 import '../components/panel_container.dart';
 import '../dialogs/about_dialog.dart';
 import '../dialogs/export_dialog.dart';
+import '../panels/transform_panel.dart';
 import 'custom_title_bar.dart';
 import 'status_bar.dart';
 import '../panels/project_explorer.dart';
@@ -238,19 +239,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
 
     _centerController = MultiSplitViewController(areas: _buildCenterAreas());
 
-    // Right Vertical Split
-    _rightController = MultiSplitViewController(
-      areas: [
-        Area(
-          flex: 3,
-          builder: (context, area) => PanelContainer(
-            title: 'Property Inspector',
-            icon: Icons.tune,
-            child: const PropertyInspector(),
-          ),
-        ),
-      ],
-    );
+    // Right Vertical Split: inspector alone, or inspector (2/3) + transform
+    // dock (1/3) while a table column is focused.
+    _rightController = MultiSplitViewController(areas: _buildRightAreas());
+    ProjectState.instance.selectedColumn.addListener(_onColumnFocusChanged);
 
     // Main Horizontal Split. Pane minimums are resize STOPS (they sum to
     // ~630px incl. dividers/padding, well under the 1024px window minimum,
@@ -281,6 +273,36 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
         ),
       ],
     );
+  }
+
+  List<Area> _buildRightAreas() {
+    final areas = <Area>[
+      Area(
+        flex: 2,
+        min: 2,
+        builder: (context, area) => const PanelContainer(
+          title: 'Property Inspector',
+          icon: Icons.tune,
+          child: PropertyInspector(),
+        ),
+      ),
+    ];
+    if (ProjectState.instance.selectedColumn.value != null) {
+      areas.add(
+        Area(
+          flex: 1,
+          min: 2,
+          builder: (context, area) => const TransformPanel(),
+        ),
+      );
+    }
+    return areas;
+  }
+
+  void _onColumnFocusChanged() {
+    setState(() {
+      _rightController.areas = _buildRightAreas();
+    });
   }
 
   List<Area> _buildCenterAreas() {
@@ -459,6 +481,9 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     windowManager.removeListener(this);
     ProjectState.instance.selectedProjectNodeId.removeListener(
       _onSelectionChanged,
+    );
+    ProjectState.instance.selectedColumn.removeListener(
+      _onColumnFocusChanged,
     );
     super.dispose();
   }

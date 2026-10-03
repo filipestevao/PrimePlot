@@ -62,6 +62,35 @@ class ProjectState {
   final ValueNotifier<ProjectNode?> projectTree = ValueNotifier(null);
   final ValueNotifier<String?> selectedProjectNodeId = ValueNotifier(null);
 
+  /// Focused table column driving the Transform dock panel
+  /// (null = panel hidden). Set by header clicks, cleared on selection
+  /// change, project reload, or structural edits to that table.
+  final ValueNotifier<({String tableId, int colIndex})?> selectedColumn =
+      ValueNotifier(null);
+
+  /// Focuses a table column (opens the Transform panel).
+  void selectColumn(String tableId, int colIndex) {
+    selectedColumn.value = (tableId: tableId, colIndex: colIndex);
+  }
+
+  void clearSelectedColumn() {
+    if (selectedColumn.value != null) selectedColumn.value = null;
+  }
+
+  /// Drops the column focus when its table/column no longer exists.
+  void _pruneSelectedColumn() {
+    final sel = selectedColumn.value;
+    if (sel == null) return;
+    final root = projectTree.value;
+    final table = activeTable.value;
+    final nodeGone = root == null || findNodeById(root, sel.tableId) == null;
+    final colGone = table == null ||
+        table.id != sel.tableId ||
+        sel.colIndex < 0 ||
+        sel.colIndex >= table.columns.length;
+    if (nodeGone || colGone) selectedColumn.value = null;
+  }
+
   // Active Properties State
   final ValueNotifier<FolderProperties?> activeFolderProps = ValueNotifier(
     null,
@@ -416,6 +445,7 @@ class ProjectState {
     projectTree.value = getProjectTree();
     currentFilePath.value = null;
     _homeViews.clear();
+    clearSelectedColumn();
     markClean();
   }
 
@@ -562,6 +592,7 @@ class ProjectState {
 
   void selectProjectNode(String nodeId) {
     selectedProjectNodeId.value = nodeId;
+    clearSelectedColumn();
 
     // Attempt to resolve node type from current project tree and fetch tables
     final root = projectTree.value;
@@ -799,6 +830,7 @@ class ProjectState {
         fetchTablesForGraph(stillSelected.id);
       }
     }
+    _pruneSelectedColumn();
   }
 
   void renameProjectNodeWrapper(String nodeId, String newName) {
@@ -887,13 +919,18 @@ class ProjectState {
   }
 
   String? removeTableColumn(String tableId, int colIndex) {
+    String? err;
     try {
-      return _applyColumnUpdate(
+      err = _applyColumnUpdate(
         removeColumn(tableId: tableId, colIndex: BigInt.from(colIndex)),
       );
     } catch (e) {
-      return e.toString().replaceFirst('Exception: ', '');
+      err = e.toString().replaceFirst('Exception: ', '');
     }
+    if (err == null && selectedColumn.value?.tableId == tableId) {
+      clearSelectedColumn(); // indices shifted; focus would dangle
+    }
+    return err;
   }
 
   String? renameTableColumn(String tableId, int colIndex, String newName) {
@@ -925,8 +962,9 @@ class ProjectState {
   }
 
   String? moveTableColumn(String tableId, int oldIndex, int newIndex) {
+    String? err;
     try {
-      return _applyColumnUpdate(
+      err = _applyColumnUpdate(
         reorderColumn(
           tableId: tableId,
           oldIndex: BigInt.from(oldIndex),
@@ -934,8 +972,12 @@ class ProjectState {
         ),
       );
     } catch (e) {
-      return e.toString().replaceFirst('Exception: ', '');
+      err = e.toString().replaceFirst('Exception: ', '');
     }
+    if (err == null && selectedColumn.value?.tableId == tableId) {
+      clearSelectedColumn(); // indices shifted; focus would dangle
+    }
+    return err;
   }
 
   // ---------------------------------------------------------------------------
@@ -1047,6 +1089,7 @@ class ProjectState {
     projectTree.value = tree;
     currentFilePath.value = path;
     selectedProjectNodeId.value = null;
+    clearSelectedColumn();
     _homeViews.clear();
     activeTables.value = [];
     activeTable.value = null;

@@ -1,23 +1,85 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
-//! Column transform dialog: quick ops, scalar add/multiply, custom `y`/`i`
-//! expressions with live preview, linspace fill, and live statistics.
-//! Preview never mutates; Apply commits through `ProjectState` (dirty + repaint).
+//! Transform dock panel + shared form: quick ops, scalar add/multiply,
+//! custom `y`/`i` expressions with live preview, linspace fill, and live
+//! statistics. Preview never mutates; Apply commits through `ProjectState`
+//! (dirty + repaint).
+
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
 import '../../src/rust/api/transforms.dart' as tr;
+import '../components/panel_container.dart';
 import '../components/prime_number_field.dart';
 
-class ColumnTransformDialog extends StatefulWidget {
+/// Docked panel below the Property Inspector. Follows
+/// `ProjectState.selectedColumn` with a live table lookup, so renames and
+/// structural edits resolve (or hide the panel) gracefully.
+class TransformPanel extends StatelessWidget {
+  const TransformPanel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final st = ProjectState.instance;
+    return ListenableBuilder(
+      listenable: Listenable.merge([st.selectedColumn, st.activeTable]),
+      builder: (context, _) {
+        final sel = st.selectedColumn.value;
+        final table = st.activeTable.value;
+        if (sel == null ||
+            table == null ||
+            table.id != sel.tableId ||
+            sel.colIndex < 0 ||
+            sel.colIndex >= table.columns.length) {
+          return const SizedBox.shrink();
+        }
+        final col = table.columns[sel.colIndex];
+        final rows = table.columns
+            .map((c) => c.data.length)
+            .fold(0, (a, b) => math.max(a, b));
+        return PanelContainer(
+          title: 'Transform',
+          icon: Icons.calculate,
+          actions: [
+            Tooltip(
+              message: 'Close transform panel',
+              child: InkWell(
+                onTap: st.clearSelectedColumn,
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.close,
+                      size: 15, color: PrimeTheme.textSecondary),
+                ),
+              ),
+            ),
+          ],
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(10),
+            child: ColumnTransformForm(
+              key: ValueKey('${table.id}:${sel.colIndex}'),
+              tableId: table.id,
+              colIndex: sel.colIndex,
+              colName: col.name,
+              rowCount: rows,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class ColumnTransformForm extends StatefulWidget {
   final String tableId;
   final int colIndex;
   final String colName;
   final int rowCount;
 
-  const ColumnTransformDialog({
+  const ColumnTransformForm({
     super.key,
     required this.tableId,
     required this.colIndex,
@@ -26,10 +88,10 @@ class ColumnTransformDialog extends StatefulWidget {
   });
 
   @override
-  State<ColumnTransformDialog> createState() => _ColumnTransformDialogState();
+  State<ColumnTransformForm> createState() => _ColumnTransformFormState();
 }
 
-class _ColumnTransformDialogState extends State<ColumnTransformDialog> {
+class _ColumnTransformFormState extends State<ColumnTransformForm> {
   final TextEditingController _exprController =
       TextEditingController(text: 'y');
   double _scalar = 1.0;
@@ -113,23 +175,19 @@ class _ColumnTransformDialogState extends State<ColumnTransformDialog> {
   @override
   Widget build(BuildContext context) {
     final st = ProjectState.instance;
-    return AlertDialog(
-      backgroundColor: PrimeTheme.panelBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: PrimeTheme.borderSide),
-      ),
-      title: Text(
-        'Transform — ${widget.colName}',
-        style: TextStyle(fontSize: 14, color: PrimeTheme.textPrimary),
-      ),
-      content: SizedBox(
-        width: 340,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.colName,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: PrimeTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 8),
               _sectionLabel('Quick operations'),
               Wrap(
                 spacing: 6,
@@ -287,16 +345,6 @@ class _ColumnTransformDialogState extends State<ColumnTransformDialog> {
               _sectionLabel('Statistics'),
               _statsRow(),
             ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Close',
-              style: TextStyle(color: PrimeTheme.textSecondary)),
-        ),
-      ],
     );
   }
 

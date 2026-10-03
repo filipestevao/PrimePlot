@@ -9,7 +9,6 @@ import '../../core/state.dart';
 import '../../src/rust/api/data.dart';
 import '../../src/rust/api/project.dart';
 import '../components/prime_select.dart';
-import '../dialogs/column_transform_dialog.dart';
 
 class DataTablePanel extends StatefulWidget {
   const DataTablePanel({super.key});
@@ -544,7 +543,12 @@ class _DataTablePanelState extends State<DataTablePanel> {
         onPointerDown: (_) => _startColSelection(columnIndex),
         child: MouseRegion(
           onEnter: (_) => _continueColSelection(columnIndex),
-          child: GestureDetector(
+                child: GestureDetector(
+                  // Single click focuses the column (opens Transform panel).
+                  onTap: () => ProjectState.instance.selectColumn(
+                    tableData.id,
+                    columnIndex,
+                  ),
             onSecondaryTapDown: (details) => _showColumnMenu(
               details.globalPosition,
               tableData,
@@ -642,11 +646,6 @@ class _DataTablePanelState extends State<DataTablePanel> {
           child: Text('Rename',
               style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12)),
         ),
-        PopupMenuItem<String>(
-          value: 'transform',
-          child: Text('Apply Transform…',
-              style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 12)),
-        ),
         const PopupMenuDivider(height: 8),
         for (final role in DTOColumnRole.values)
           PopupMenuItem<String>(
@@ -676,21 +675,6 @@ class _DataTablePanelState extends State<DataTablePanel> {
       ],
     );
     if (choice == null || !mounted) return;
-    if (choice == 'transform') {
-      final rowCount = tableData.columns.isNotEmpty
-          ? tableData.columns.first.data.length
-          : 0;
-      showDialog(
-        context: context,
-        builder: (ctx) => ColumnTransformDialog(
-          tableId: tableData.id,
-          colIndex: columnIndex,
-          colName: tableData.columns[columnIndex].name,
-          rowCount: rowCount,
-        ),
-      );
-      return;
-    }
     final st = ProjectState.instance;
     String? err;
     switch (choice) {
