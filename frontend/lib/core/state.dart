@@ -137,7 +137,9 @@ class ProjectState {
 
   /// Snapshots pre-mutation state for undo, coalescing bursts (sliders,
   /// typing) into one step per 500 ms. Best-effort: never fails mutations.
-  void _checkpointCoalesced() {
+  /// Records an undo checkpoint now (coalesced; see Step G).
+  /// MUST run before the Rust mutation it guards.
+  void checkpointCoalesced() {
     final now = DateTime.now();
     if (_lastCheckpointAt != null &&
         now.difference(_lastCheckpointAt!) <
@@ -303,7 +305,7 @@ class ProjectState {
   }
 
   void updateFolderProperties(String nodeId, FolderProperties newProps) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     setFolderProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeFolderProps.value = newProps;
@@ -316,7 +318,7 @@ class ProjectState {
     GraphProperties newProps, {
     bool isHomeUpdate = false,
   }) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     setGraphProperties(nodeId: nodeId, props: newProps);
     // If it's the active plot, update the notifier
     final activePlotId = _getActivePlotId();
@@ -336,7 +338,7 @@ class ProjectState {
   }
 
   void updateTableProperties(String nodeId, TableProperties newProps) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     setTableProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeTableProps.value = newProps;
@@ -345,7 +347,7 @@ class ProjectState {
   }
 
   void updateFunctionProperties(String nodeId, FunctionProperties newProps) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     setFunctionProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeFunctionProps.value = newProps;
@@ -356,7 +358,7 @@ class ProjectState {
   }
 
   void updateShapeProperties(String nodeId, ShapeProperties newProps) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     setShapeProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeShapeProps.value = newProps;
@@ -452,7 +454,7 @@ class ProjectState {
   /// Parses a raw clipboard string via Rust and updates all dependent state.
   /// [displayName] is used when the data comes from a dropped file.
   void pasteTable(String rawText, {String? displayName}) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final parsed = parseClipboardTable(raw: rawText);
     activeTable.value = parsed;
     tableDisplayName.value = displayName ?? 'Table';
@@ -465,7 +467,7 @@ class ProjectState {
 
   /// Creates a new blank 10-row × 2-column table in the active graph.
   void newTable() {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final parentId = getValidParentGraphId();
     if (parentId == null) return;
 
@@ -507,7 +509,7 @@ class ProjectState {
 
   /// Clears all data rows, keeping the column schema, resetting to an empty table.
   void clearTableData() {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final active = activeTable.value;
     if (active == null) return;
     final newColumns = active.columns
@@ -528,7 +530,7 @@ class ProjectState {
   }
 
   void updateTable(DTODataTable newTable) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     activeTable.value = newTable;
     final tables = activeTables.value;
     if (tables.isNotEmpty) {
@@ -549,7 +551,7 @@ class ProjectState {
   }
 
   void addProjectNodeWrapper(String parentId, String name, NodeType type) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final newTree = addProjectNode(
       parentId: parentId,
       name: name,
@@ -565,7 +567,7 @@ class ProjectState {
     String name,
     NodeType type,
   ) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final newTree = addProjectNode(
       parentId: parentId,
       name: name,
@@ -584,7 +586,7 @@ class ProjectState {
   }
 
   void moveProjectNodeWrapper(String nodeId, String newParentId) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final newTree = moveProjectNode(nodeId: nodeId, newParentId: newParentId);
     projectTree.value = newTree;
     markDirty();
@@ -677,7 +679,7 @@ class ProjectState {
   }
 
   void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final newTree = reorderProjectChildren(
       parentId: parentId,
       oldIndex: BigInt.from(oldIndex),
@@ -747,7 +749,7 @@ class ProjectState {
   }
 
   void handleDataImport(String raw, String displayName) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final parentId = getValidParentGraphId();
     if (parentId == null) {
       debugPrint("No valid graph found to import data into.");
@@ -773,7 +775,7 @@ class ProjectState {
   /// Handles paste operations by either updating an existing selected table
   /// or creating a new table node within the currently active graph.
   void handlePaste(String rawText, {String? displayName}) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final root = projectTree.value;
 
     // 1. If an active table exists, update it.
@@ -805,7 +807,7 @@ class ProjectState {
   }
 
   void deleteProjectNodeWrapper(String nodeId) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final newTree = deleteProjectNode(nodeId: nodeId);
     projectTree.value = newTree;
     markDirty();
@@ -834,7 +836,7 @@ class ProjectState {
   }
 
   void renameProjectNodeWrapper(String nodeId, String newName) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final newTree = renameProjectNode(nodeId: nodeId, newName: newName);
     projectTree.value = newTree;
     // Also update legacy names if editing the default items
@@ -846,7 +848,7 @@ class ProjectState {
   /// Re-aligns a graph's curves to a palette (curve order → color order).
   /// Returns null on success, error message otherwise.
   String? applyPalette(String graphId, String palette) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     try {
       pal.applyPalette(graphId: graphId, palette: palette);
     } catch (e) {
@@ -891,7 +893,9 @@ class ProjectState {
   }
 
   String? _applyColumnUpdate(DTODataTable updated) {
-    _checkpointCoalesced();
+    // NOTE: no checkpoint here — callers snapshot BEFORE their FFI call,
+    // because the `updated` DTO is already post-mutation by the time it
+    // arrives. Checkpointing here would make undo a silent no-op.
     activeTable.value = updated;
     final list = activeTables.value;
     final idx = list.indexWhere((t) => t.id == updated.id);
@@ -909,6 +913,7 @@ class ProjectState {
   }
 
   String? addTableColumn(String tableId, String name, DTOColumnRole role) {
+    checkpointCoalesced();
     try {
       return _applyColumnUpdate(
         addColumn(tableId: tableId, name: name, role: columnRoleName(role)),
@@ -919,6 +924,7 @@ class ProjectState {
   }
 
   String? removeTableColumn(String tableId, int colIndex) {
+    checkpointCoalesced();
     String? err;
     try {
       err = _applyColumnUpdate(
@@ -934,6 +940,7 @@ class ProjectState {
   }
 
   String? renameTableColumn(String tableId, int colIndex, String newName) {
+    checkpointCoalesced();
     try {
       return _applyColumnUpdate(
         renameColumn(
@@ -948,6 +955,7 @@ class ProjectState {
   }
 
   String? setTableColumnRole(String tableId, int colIndex, DTOColumnRole role) {
+    checkpointCoalesced();
     try {
       return _applyColumnUpdate(
         setColumnRole(
@@ -962,6 +970,7 @@ class ProjectState {
   }
 
   String? moveTableColumn(String tableId, int oldIndex, int newIndex) {
+    checkpointCoalesced();
     String? err;
     try {
       err = _applyColumnUpdate(
@@ -986,6 +995,9 @@ class ProjectState {
   // ---------------------------------------------------------------------------
 
   String? _applyTransform(DTODataTable Function() call) {
+    // Snapshot BEFORE `call()` runs: argument evaluation would otherwise
+    // mutate Rust first and checkpoint post-mutation state (silent no-op undo).
+    checkpointCoalesced();
     try {
       return _applyColumnUpdate(call());
     } catch (e) {
@@ -1068,7 +1080,7 @@ class ProjectState {
 
   /// Loads bundle at [path], replacing all UI + Rust state.
   String? openFromPath(String path) {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     try {
       final tree = persist.loadProject(path: path);
       _applyRestoredTree(tree, path);
@@ -1080,7 +1092,7 @@ class ProjectState {
 
   /// Resets to the canonical empty project (Workspace > Project > Graph).
   void createNew() {
-    _checkpointCoalesced();
+    checkpointCoalesced();
     final tree = persist.newProject();
     _applyRestoredTree(tree, null);
   }

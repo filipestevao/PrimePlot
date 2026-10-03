@@ -852,6 +852,10 @@ class _DataTablePanelState extends State<DataTablePanel> {
     final double parsed =
         trimmed.isEmpty ? double.nan : (double.tryParse(trimmed) ?? double.nan);
 
+    // Snapshot BEFORE the Rust write (updateTable's own checkpoint would
+    // otherwise capture post-mutation state and make undo a no-op).
+    ProjectState.instance.checkpointCoalesced();
+
     final newData =
         Float64List.fromList(tableData.columns[colIndex].data.toList());
     newData[rowIndex] = parsed;
