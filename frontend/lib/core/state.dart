@@ -9,6 +9,7 @@ import '../src/rust/api/properties.dart';
 import '../src/rust/api/persistence.dart' as persist;
 import '../src/rust/api/palettes.dart' as pal;
 import '../src/rust/api/transforms.dart' as tr;
+import '../src/rust/api/history.dart' as hist;
 import '../src/rust/api/prefs.dart' as prefs;
 import 'theme.dart';
 
@@ -99,6 +100,91 @@ class ProjectState {
 
   final ValueNotifier<int> refreshCanvas = ValueNotifier(0);
 
+  /// Undo/redo availability (drives title-bar buttons).
+  final ValueNotifier<bool> canUndo = ValueNotifier(false);
+  final ValueNotifier<bool> canRedo = ValueNotifier(false);
+
+  DateTime? _lastCheckpointAt;
+
+  /// Snapshots pre-mutation state for undo, coalescing bursts (sliders,
+  /// typing) into one step per 500 ms. Best-effort: never fails mutations.
+  void _checkpointCoalesced() {
+    final now = DateTime.now();
+    if (_lastCheckpointAt != null &&
+        now.difference(_lastCheckpointAt!) <
+            const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastCheckpointAt = now;
+    try {
+      hist.checkpoint();
+      canUndo.value = true;
+      canRedo.value = false;
+    } catch (_) {}
+  }
+
+  void _refreshHistoryStatus() {
+    try {
+      final s = hist.historyStatus();
+      canUndo.value = s.canUndo;
+      canRedo.value = s.canRedo;
+    } catch (_) {}
+  }
+
+  /// Restores the last checkpoint. Returns null on success, error otherwise.
+  String? undo() {
+    try {
+      final tree = hist.undo();
+      projectTree.value = tree;
+      final sel = selectedProjectNodeId.value;
+      if (sel != null && findNodeById(tree, sel) != null) {
+        selectProjectNode(sel);
+      } else {
+        selectedProjectNodeId.value = null;
+        activeTables.value = [];
+        activeTable.value = null;
+        activeFolderProps.value = null;
+        activeGraphProps.value = null;
+        activeTableProps.value = null;
+        activeFunctionProps.value = null;
+        activeShapeProps.value = null;
+      }
+      _lastCheckpointAt = null;
+      markDirty();
+      _refreshHistoryStatus();
+      return null;
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  /// Re-applies an undone state. Returns null on success, error otherwise.
+  String? redo() {
+    try {
+      final tree = hist.redo();
+      projectTree.value = tree;
+      final sel = selectedProjectNodeId.value;
+      if (sel != null && findNodeById(tree, sel) != null) {
+        selectProjectNode(sel);
+      } else {
+        selectedProjectNodeId.value = null;
+        activeTables.value = [];
+        activeTable.value = null;
+        activeFolderProps.value = null;
+        activeGraphProps.value = null;
+        activeTableProps.value = null;
+        activeFunctionProps.value = null;
+        activeShapeProps.value = null;
+      }
+      _lastCheckpointAt = null;
+      markDirty();
+      _refreshHistoryStatus();
+      return null;
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
   /// Canvas statistics overlay visibility (σ button / S hotkey).
   final ValueNotifier<bool> showStatsHud = ValueNotifier(false);
 
@@ -188,6 +274,7 @@ class ProjectState {
   }
 
   void updateFolderProperties(String nodeId, FolderProperties newProps) {
+    _checkpointCoalesced();
     setFolderProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeFolderProps.value = newProps;
@@ -200,6 +287,7 @@ class ProjectState {
     GraphProperties newProps, {
     bool isHomeUpdate = false,
   }) {
+    _checkpointCoalesced();
     setGraphProperties(nodeId: nodeId, props: newProps);
     // If it's the active plot, update the notifier
     final activePlotId = _getActivePlotId();
@@ -219,6 +307,7 @@ class ProjectState {
   }
 
   void updateTableProperties(String nodeId, TableProperties newProps) {
+    _checkpointCoalesced();
     setTableProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeTableProps.value = newProps;
@@ -227,6 +316,7 @@ class ProjectState {
   }
 
   void updateFunctionProperties(String nodeId, FunctionProperties newProps) {
+    _checkpointCoalesced();
     setFunctionProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeFunctionProps.value = newProps;
@@ -237,6 +327,7 @@ class ProjectState {
   }
 
   void updateShapeProperties(String nodeId, ShapeProperties newProps) {
+    _checkpointCoalesced();
     setShapeProperties(nodeId: nodeId, props: newProps);
     if (selectedProjectNodeId.value == nodeId) {
       activeShapeProps.value = newProps;
@@ -331,6 +422,7 @@ class ProjectState {
   /// Parses a raw clipboard string via Rust and updates all dependent state.
   /// [displayName] is used when the data comes from a dropped file.
   void pasteTable(String rawText, {String? displayName}) {
+    _checkpointCoalesced();
     final parsed = parseClipboardTable(raw: rawText);
     activeTable.value = parsed;
     tableDisplayName.value = displayName ?? 'Table';
@@ -343,6 +435,7 @@ class ProjectState {
 
   /// Creates a new blank 10-row × 2-column table in the active graph.
   void newTable() {
+    _checkpointCoalesced();
     final parentId = getValidParentGraphId();
     if (parentId == null) return;
 
@@ -384,6 +477,7 @@ class ProjectState {
 
   /// Clears all data rows, keeping the column schema, resetting to an empty table.
   void clearTableData() {
+    _checkpointCoalesced();
     final active = activeTable.value;
     if (active == null) return;
     final newColumns = active.columns
@@ -404,6 +498,7 @@ class ProjectState {
   }
 
   void updateTable(DTODataTable newTable) {
+    _checkpointCoalesced();
     activeTable.value = newTable;
     final tables = activeTables.value;
     if (tables.isNotEmpty) {
@@ -424,6 +519,7 @@ class ProjectState {
   }
 
   void addProjectNodeWrapper(String parentId, String name, NodeType type) {
+    _checkpointCoalesced();
     final newTree = addProjectNode(
       parentId: parentId,
       name: name,
@@ -439,6 +535,7 @@ class ProjectState {
     String name,
     NodeType type,
   ) {
+    _checkpointCoalesced();
     final newTree = addProjectNode(
       parentId: parentId,
       name: name,
@@ -457,6 +554,7 @@ class ProjectState {
   }
 
   void moveProjectNodeWrapper(String nodeId, String newParentId) {
+    _checkpointCoalesced();
     final newTree = moveProjectNode(nodeId: nodeId, newParentId: newParentId);
     projectTree.value = newTree;
     markDirty();
@@ -548,6 +646,7 @@ class ProjectState {
   }
 
   void reorderGraphChildren(String parentId, int oldIndex, int newIndex) {
+    _checkpointCoalesced();
     final newTree = reorderProjectChildren(
       parentId: parentId,
       oldIndex: BigInt.from(oldIndex),
@@ -617,6 +716,7 @@ class ProjectState {
   }
 
   void handleDataImport(String raw, String displayName) {
+    _checkpointCoalesced();
     final parentId = getValidParentGraphId();
     if (parentId == null) {
       debugPrint("No valid graph found to import data into.");
@@ -642,6 +742,7 @@ class ProjectState {
   /// Handles paste operations by either updating an existing selected table
   /// or creating a new table node within the currently active graph.
   void handlePaste(String rawText, {String? displayName}) {
+    _checkpointCoalesced();
     final root = projectTree.value;
 
     // 1. If an active table exists, update it.
@@ -673,6 +774,7 @@ class ProjectState {
   }
 
   void deleteProjectNodeWrapper(String nodeId) {
+    _checkpointCoalesced();
     final newTree = deleteProjectNode(nodeId: nodeId);
     projectTree.value = newTree;
     markDirty();
@@ -700,6 +802,7 @@ class ProjectState {
   }
 
   void renameProjectNodeWrapper(String nodeId, String newName) {
+    _checkpointCoalesced();
     final newTree = renameProjectNode(nodeId: nodeId, newName: newName);
     projectTree.value = newTree;
     // Also update legacy names if editing the default items
@@ -711,6 +814,7 @@ class ProjectState {
   /// Re-aligns a graph's curves to a palette (curve order → color order).
   /// Returns null on success, error message otherwise.
   String? applyPalette(String graphId, String palette) {
+    _checkpointCoalesced();
     try {
       pal.applyPalette(graphId: graphId, palette: palette);
     } catch (e) {
@@ -755,6 +859,7 @@ class ProjectState {
   }
 
   String? _applyColumnUpdate(DTODataTable updated) {
+    _checkpointCoalesced();
     activeTable.value = updated;
     final list = activeTables.value;
     final idx = list.indexWhere((t) => t.id == updated.id);
@@ -921,6 +1026,7 @@ class ProjectState {
 
   /// Loads bundle at [path], replacing all UI + Rust state.
   String? openFromPath(String path) {
+    _checkpointCoalesced();
     try {
       final tree = persist.loadProject(path: path);
       _applyRestoredTree(tree, path);
@@ -932,6 +1038,7 @@ class ProjectState {
 
   /// Resets to the canonical empty project (Workspace > Project > Graph).
   void createNew() {
+    _checkpointCoalesced();
     final tree = persist.newProject();
     _applyRestoredTree(tree, null);
   }

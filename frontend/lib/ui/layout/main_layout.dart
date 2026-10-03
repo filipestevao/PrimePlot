@@ -497,6 +497,33 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
           control: true,
           shift: true,
         ): () => openExportDialog(context, 1),
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () =>
+            _guardedText(() {
+              final err = ProjectState.instance.undo();
+              if (err != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content:
+                        Text(err, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: const Color(0xFF7F1D1D),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }),
+        const SingleActivator(LogicalKeyboardKey.keyY, control: true): () =>
+            _guardedText(() {
+              final err = ProjectState.instance.redo();
+              if (err != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(err, style: const TextStyle(fontSize: 12)),
+                    backgroundColor: const Color(0xFF7F1D1D),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            }),
         const SingleActivator(LogicalKeyboardKey.keyS): () =>
             _guardedText(() {
               ProjectState.instance.showStatsHud.value =
@@ -874,6 +901,8 @@ class _ShortcutHelpCard extends StatelessWidget {
     ('Ctrl + Shift + S', 'Save project as…'),
     ('Ctrl + E', 'Export figure'),
     ('Ctrl + Shift + E', 'Export data'),
+    ('Ctrl + Z', 'Undo'),
+    ('Ctrl + Y', 'Redo'),
     ('S', 'Toggle series statistics'),
     ('R', 'Reset view to home ranges'),
     ('Esc', 'Clear selection'),

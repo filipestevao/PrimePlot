@@ -10,5 +10,6 @@ pub mod palettes;
 pub mod functions;
 pub mod transforms;
 pub mod export;
+pub mod history;
 pub(crate) mod sync;
 pub mod prefs;

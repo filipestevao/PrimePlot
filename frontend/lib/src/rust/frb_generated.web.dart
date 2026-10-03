@@ -9,6 +9,7 @@
 import 'api/data.dart';
 import 'api/export.dart';
 import 'api/functions.dart';
+import 'api/history.dart';
 import 'api/palettes.dart';
 import 'api/persistence.dart';
 import 'api/prefs.dart';
@@ -82,6 +83,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   GraphProperties dco_decode_graph_properties(dynamic raw);
+
+  @protected
+  HistoryStatus dco_decode_history_status(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -207,6 +211,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   GraphProperties sse_decode_graph_properties(SseDeserializer deserializer);
+
+  @protected
+  HistoryStatus sse_decode_history_status(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -357,6 +364,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     GraphProperties self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_history_status(HistoryStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);

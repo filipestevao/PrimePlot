@@ -29,7 +29,10 @@ class CustomTitleBar extends StatelessWidget {
                     Scaffold.of(context).openDrawer();
                   },
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 4),
+                _HistoryButton(isRedo: false),
+                _HistoryButton(isRedo: true),
+                const SizedBox(width: 12),
                 Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent), // Placeholder logo
                 const SizedBox(width: 8),
                 Text(
@@ -124,8 +127,57 @@ class CustomTitleBar extends StatelessWidget {
   }
 }
 
-class WindowButtons extends StatelessWidget {
-  const WindowButtons({super.key});
+/// Undo / redo title-bar button driven by history availability.
+class _HistoryButton extends StatelessWidget {
+  final bool isRedo;
+  const _HistoryButton({required this.isRedo});
+
+  @override
+  Widget build(BuildContext context) {
+    final st = ProjectState.instance;
+    return ValueListenableBuilder<bool>(
+      valueListenable: isRedo ? st.canRedo : st.canUndo,
+      builder: (context, can, _) {
+        final color = can
+            ? PrimeTheme.textSecondary
+            : PrimeTheme.textSecondary.withValues(alpha: 0.3);
+        return Tooltip(
+          message: isRedo ? 'Redo (Ctrl+Y)' : 'Undo (Ctrl+Z)',
+          child: InkWell(
+            onTap: can
+                ? () {
+                    final err =
+                        isRedo ? st.redo() : st.undo();
+                    if (err != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(err,
+                              style:
+                                  const TextStyle(fontSize: 12)),
+                          backgroundColor: const Color(0xFF7F1D1D),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                : null,
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Icon(
+                isRedo ? Icons.redo : Icons.undo,
+                size: 16,
+                color: color,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class WindowButtons extends StatelessWidget {  const WindowButtons({super.key});
 
   @override
   Widget build(BuildContext context) {
