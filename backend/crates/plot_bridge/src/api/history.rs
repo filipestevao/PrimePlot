@@ -37,7 +37,7 @@ pub struct HistoryStatus {
     pub can_redo: bool,
 }
 
-const HISTORY_CAP: usize = 50;
+const HISTORY_CAP: usize = 20;
 
 static UNDO_STACK: OnceLock<Mutex<Vec<HistorySnapshot>>> = OnceLock::new();
 static REDO_STACK: OnceLock<Mutex<Vec<HistorySnapshot>>> = OnceLock::new();
