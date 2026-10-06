@@ -297,6 +297,27 @@ pub(crate) fn clear_all_property_stores() {
     lock_or_recover(get_shape_store()).clear();
 }
 
+/// Single-entry inserts for node duplication (deep copy under fresh IDs).
+pub(crate) fn restore_single_folder(id: String, props: FolderProperties) {
+    lock_or_recover(get_folder_store()).insert(id, props);
+}
+
+pub(crate) fn restore_single_graph(id: String, props: GraphProperties) {
+    lock_or_recover(get_graph_store()).insert(id, props);
+}
+
+pub(crate) fn restore_single_table(id: String, props: TableProperties) {
+    lock_or_recover(get_table_store()).insert(id, props);
+}
+
+pub(crate) fn restore_single_function(id: String, props: FunctionProperties) {
+    lock_or_recover(get_function_store()).insert(id, props);
+}
+
+pub(crate) fn restore_single_shape(id: String, props: ShapeProperties) {
+    lock_or_recover(get_shape_store()).insert(id, props);
+}
+
 /// Serializes tests that mutate global stores (Rust runs tests in parallel
 /// threads; without this, store-backed tests flake against each other).
 #[cfg(test)]

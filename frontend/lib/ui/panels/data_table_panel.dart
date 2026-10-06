@@ -37,6 +37,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
   final TextEditingController _editController = TextEditingController();
   final TextEditingController _renameController = TextEditingController();
   final FocusNode _tableFocus = FocusNode();
+  final FocusNode _cellFocus = FocusNode();
 
   bool _isMouseDown = false;
 
@@ -66,6 +67,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
     _editController.dispose();
     _renameController.dispose();
     _tableFocus.dispose();
+    _cellFocus.dispose();
     super.dispose();
   }
 
@@ -113,6 +115,85 @@ class _DataTablePanelState extends State<DataTablePanel> {
     }
     ProjectState.instance.handlePaste(data.text!, displayName: 'Pasted Table');
     _isPasting = false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // TAB cell walk + scroll helpers
+  // ---------------------------------------------------------------------------
+
+  /// Fixed row stride used to keep the focused cell on screen.
+  static const double _estimatedRowHeight = 33.0;
+
+  /// Commits any in-progress edit, then moves the cell cursor forward
+  /// (TAB) or backward (Shift+TAB) with wraparound, scrolling into view.
+  void _moveCellFocus({required bool forward}) {
+    final tableData = ProjectState.instance.activeTable.value;
+    if (tableData == null || tableData.columns.isEmpty) return;
+    final colCount = tableData.columns.length;
+    final rowCount = tableData.columns.first.data.length;
+    if (rowCount == 0 || colCount == 0) return;
+
+    int r;
+    int c;
+    if (_editingRow != null &&
+        _editingCol != null &&
+        _validCell(tableData, _editingRow!, _editingCol!)) {
+      r = _editingRow!;
+      c = _editingCol!;
+      _commitEdit(tableData, r, c, _editController.text);
+      if (forward) {
+        c++;
+        if (c >= colCount) {
+          c = 0;
+          r++;
+        }
+        if (r >= rowCount) r = 0;
+      } else {
+        c--;
+        if (c < 0) {
+          c = colCount - 1;
+          r--;
+        }
+        if (r < 0) r = rowCount - 1;
+      }
+    } else {
+      r = forward ? 0 : rowCount - 1;
+      c = forward ? 0 : colCount - 1;
+    }
+
+    final targetValid = _validCell(tableData, r, c);
+    final raw = targetValid ? tableData.columns[c].data[r] : double.nan;
+    _editController.text = raw.isNaN ? '' : raw.toStringAsFixed(3);
+    _selectAllEditText();
+    setState(() {
+      _editingRow = r;
+      _editingCol = c;
+    });
+    // Focus can be lost across the rebuild (commit disposes the old field
+    // before the new one mounts): re-assert focus + full selection
+    // post-frame so typing replaces the content immediately.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_cellFocus.hasFocus) _cellFocus.requestFocus();
+      _selectAllEditText();
+    });
+
+    if (_verticalController.hasClients) {
+      final target = (r * _estimatedRowHeight - 100).clamp(
+          0.0, _verticalController.position.maxScrollExtent);
+      _verticalController.jumpTo(target);
+    }
+    if (_horizontalController.hasClients) {
+      final targetX = (c * 100.0 - 200).clamp(
+          0.0, _horizontalController.position.maxScrollExtent);
+      _horizontalController.jumpTo(targetX);
+    }
+  }
+
+  /// Selects the whole edit buffer (type-to-replace behavior).
+  void _selectAllEditText() {
+    _editController.selection = TextSelection(
+        baseOffset: 0, extentOffset: _editController.text.length);
   }
 
   // ---------------------------------------------------------------------------
@@ -172,6 +253,16 @@ class _DataTablePanelState extends State<DataTablePanel> {
               _handlePaste();
               return KeyEventResult.handled;
             }
+            // TAB / Shift+TAB cell walk (edit mode only, so field-local
+            // focus traversal elsewhere is unaffected).
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.tab &&
+                ProjectState.instance.isTableEditable.value) {
+              _moveCellFocus(
+                forward: !HardwareKeyboard.instance.isShiftPressed,
+              );
+              return KeyEventResult.handled;
+            }
             return KeyEventResult.ignored;
           },
           child: ValueListenableBuilder<DTODataTable?>(
@@ -225,6 +316,10 @@ class _DataTablePanelState extends State<DataTablePanel> {
                                   thumbVisibility: true,
                                   child: ListView.builder(
                                     controller: _verticalController,
+                                    // Scroll smoothness: no keep-alives, but
+                                    // repaint boundaries per row.
+                                    addAutomaticKeepAlives: false,
+                                    addRepaintBoundaries: true,
                                     itemCount: rowCount,
                                     itemBuilder: (context, rowIndex) {
                                       final isRowSelected =
@@ -811,6 +906,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
         child: isEditing
             ? TextFormField(
                 controller: _editController,
+                focusNode: _cellFocus,
                 autofocus: true,
                 style: TextStyle(
                     fontSize: 12, color: PrimeTheme.primaryAccent),
@@ -846,8 +942,23 @@ class _DataTablePanelState extends State<DataTablePanel> {
   // Commit edit: parse value, write NaN on empty/backspace, update state
   // ---------------------------------------------------------------------------
 
+  /// Cell bounds check: edit state can dangle across undo, column
+  /// add/remove/reorder, or table switches (stale indices → RangeError).
+  static bool _validCell(DTODataTable tableData, int rowIndex, int colIndex) {
+    if (colIndex < 0 || colIndex >= tableData.columns.length) return false;
+    return rowIndex >= 0 && rowIndex < tableData.columns[colIndex].data.length;
+  }
+
   void _commitEdit(DTODataTable tableData, int rowIndex, int colIndex,
       String newValue) {
+    // Stale edit position (see above): drop it silently instead of crashing.
+    if (!_validCell(tableData, rowIndex, colIndex)) {
+      setState(() {
+        _editingRow = null;
+        _editingCol = null;
+      });
+      return;
+    }
     final trimmed = newValue.trim();
     final double parsed =
         trimmed.isEmpty ? double.nan : (double.tryParse(trimmed) ?? double.nan);

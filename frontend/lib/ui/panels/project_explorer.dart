@@ -6,7 +6,7 @@ import '../../src/rust/api/project.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 
-enum TableAction { rename, delete }
+enum TableAction { rename, duplicate, delete }
 
 class _FlatNode {
   final ProjectNode node;
@@ -511,6 +511,10 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
           value: TableAction.rename,
           child: Text('Rename', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
         ),
+        PopupMenuItem(
+          value: TableAction.duplicate,
+          child: Text('Duplicate', style: TextStyle(color: PrimeTheme.textPrimary, fontSize: 13)),
+        ),
         const PopupMenuItem(
           value: TableAction.delete,
           child: Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
@@ -530,6 +534,18 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   void _onTableAction(TableAction action, ProjectNode node) {
     if (action == TableAction.rename) {
       _startEditing(node.id, node.name);
+    } else if (action == TableAction.duplicate) {
+      final err = ProjectState.instance.duplicateNodeWrapper(node.id);
+      if (err != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Duplicate failed: $err',
+                style: const TextStyle(fontSize: 12)),
+            backgroundColor: const Color(0xFF7F1D1D),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } else if (action == TableAction.delete) {
       _showDeleteConfirmationDialog(node);
     }
@@ -538,6 +554,18 @@ class _ProjectExplorerState extends State<ProjectExplorer> {
   void _onGraphAction(TableAction action, ProjectNode node) {
     if (action == TableAction.rename) {
       _startEditing(node.id, node.name);
+    } else if (action == TableAction.duplicate) {
+      final err = ProjectState.instance.duplicateNodeWrapper(node.id);
+      if (err != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Duplicate failed: $err',
+                style: const TextStyle(fontSize: 12)),
+            backgroundColor: const Color(0xFF7F1D1D),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } else if (action == TableAction.delete) {
       _showDeleteConfirmationDialog(node);
     }

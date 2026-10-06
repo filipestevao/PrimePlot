@@ -989,6 +989,60 @@ class ProjectState {
     return err;
   }
 
+  /// Appends `count` blank columns of `role` (single undo step).
+  String? addTableColumns(String tableId, int count, DTOColumnRole role) {
+    checkpointCoalesced();
+    try {
+      return _applyColumnUpdate(
+        addColumns(
+          tableId: tableId,
+          count: BigInt.from(count),
+          role: columnRoleName(role),
+        ),
+      );
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  /// Appends `count` blank rows to every column (single undo step).
+  String? addTableRows(String tableId, int count) {
+    checkpointCoalesced();
+    try {
+      return _applyColumnUpdate(
+        addRows(tableId: tableId, count: BigInt.from(count)),
+      );
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  /// Deep-copies a node beside the original and selects the copy.
+  /// Returns null on success, error message otherwise.
+  String? duplicateNodeWrapper(String nodeId) {
+    checkpointCoalesced();
+    try {
+      final root0 = projectTree.value;
+      final orig = root0 != null ? findNodeById(root0, nodeId) : null;
+      final newTree = duplicateNode(nodeId: nodeId);
+      projectTree.value = newTree;
+      if (orig != null) {
+        final parent = _findParentById(newTree, nodeId);
+        ProjectNode? copy;
+        if (parent != null) {
+          for (final c in parent.children) {
+            if (c.name == '${orig.name} copy') copy = c;
+          }
+        }
+        if (copy != null) selectProjectNode(copy.id);
+      }
+      markDirty();
+      return null;
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Column transforms (Step C): per-cell math on one column.
   // Each returns null on success, error message otherwise.

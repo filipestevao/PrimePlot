@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'data.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `child_ids_of_type`, `dataset_ids_in_order`, `default_project_tree_engine`, `dto_to_engine_table`, `function_ids_in_order`, `generate_id`, `get_state`, `get_table_store`, `lock_table_store`, `parse_engine_role`, `reset_next_id_from_tree`, `restore_tables_engine`, `restore_tree_engine`, `snapshot_tables_engine`, `snapshot_tree_engine`, `table_not_found`
+// These functions are ignored because they are not marked as `pub`: `child_ids_of_type`, `dataset_ids_in_order`, `default_project_tree_engine`, `dto_to_engine_table`, `function_ids_in_order`, `generate_id`, `get_state`, `get_table_store`, `id_prefix`, `lock_table_store`, `parse_engine_role`, `reset_next_id_from_tree`, `restore_tables_engine`, `restore_tree_engine`, `snapshot_tables_engine`, `snapshot_tree_engine`, `table_not_found`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`, `from`, `from`
 
 ProjectNode getProjectTree() =>
@@ -115,6 +115,28 @@ DTODataTable reorderColumn({
   oldIndex: oldIndex,
   newIndex: newIndex,
 );
+
+/// Appends `count` blank columns (NaN-filled to the current row count).
+/// Names continue the `Col N` sequence.
+DTODataTable addColumns({
+  required String tableId,
+  required BigInt count,
+  required String role,
+}) => RustLib.instance.api.crateApiProjectAddColumns(
+  tableId: tableId,
+  count: count,
+  role: role,
+);
+
+/// Appends `count` blank (NaN) rows to every column.
+DTODataTable addRows({required String tableId, required BigInt count}) =>
+    RustLib.instance.api.crateApiProjectAddRows(tableId: tableId, count: count);
+
+/// Deep-copies a node subtree beside the original with fresh IDs —
+/// tables and all property entries included. The top copy is suffixed
+/// with `" copy"` and its DTO tree is returned.
+ProjectNode duplicateNode({required String nodeId}) =>
+    RustLib.instance.api.crateApiProjectDuplicateNode(nodeId: nodeId);
 
 ProjectNode addEmptyTable({
   required String parentId,

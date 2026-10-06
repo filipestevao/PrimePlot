@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/state.dart';
 import '../../core/theme.dart';
+import '../../src/rust/api/data.dart';
+import '../components/prime_number_field.dart';
+import '../components/prime_select.dart';
 import 'data_table_panel.dart';
 
 class CollapsibleDataPanel extends StatelessWidget {
@@ -130,6 +133,9 @@ class _DataPanelHeader extends StatelessWidget {
                   ProjectState.instance.newTable();
                 } else if (choice == 'clear') {
                   ProjectState.instance.clearTableData();
+                } else if (choice == 'resize') {
+                  final t = ProjectState.instance.activeTable.value;
+                  if (t != null) showResizeTableDialog(context, t);
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -137,6 +143,13 @@ class _DataPanelHeader extends StatelessWidget {
                   value: 'new',
                   child: Text(
                     'New table',
+                    style: TextStyle(color: PrimeTheme.textPrimary),
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'resize',
+                  child: Text(
+                    'Resize table…',
                     style: TextStyle(color: PrimeTheme.textPrimary),
                   ),
                 ),
@@ -185,4 +198,121 @@ class _DataTab extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Table resize dialog: rows/columns to append (single undo step).
+/// New columns take `role` (default Y, or X when the table has none).
+void showResizeTableDialog(BuildContext context, DTODataTable table) {
+  var rows = 10.0;
+  var cols = 1.0;
+  var role = table.columns.any((c) => c.role == DTOColumnRole.x)
+      ? DTOColumnRole.y
+      : DTOColumnRole.x;
+
+  void snack(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontSize: 12)),
+        backgroundColor:
+            error ? const Color(0xFF7F1D1D) : const Color(0xFF1C2331),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  showDialog(
+    context: context,
+    builder: (ctx) {
+      return AlertDialog(
+        backgroundColor: PrimeTheme.panelBackground,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: PrimeTheme.borderSide),
+        ),
+        title: Text(
+          'Resize table',
+          style: TextStyle(fontSize: 14, color: PrimeTheme.textPrimary),
+        ),
+        content: StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return SizedBox(
+              width: 280,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Rows to add',
+                      style: TextStyle(
+                          fontSize: 11, color: PrimeTheme.textSecondary)),
+                  const SizedBox(height: 4),
+                  PrimeNumberField(
+                    value: rows,
+                    step: 10,
+                    min: 1,
+                    max: 100000,
+                    precision: 0,
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => rows = v);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Columns to add',
+                      style: TextStyle(
+                          fontSize: 11, color: PrimeTheme.textSecondary)),
+                  const SizedBox(height: 4),
+                  PrimeNumberField(
+                    value: cols,
+                    step: 1,
+                    min: 0,
+                    max: 100,
+                    precision: 0,
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => cols = v);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Text('New column role',
+                      style: TextStyle(
+                          fontSize: 11, color: PrimeTheme.textSecondary)),
+                  const SizedBox(height: 4),
+                  PrimeSelect<DTOColumnRole>(
+                    value: role,
+                    options: const {
+                      DTOColumnRole.x: 'X — horizontal axis',
+                      DTOColumnRole.y: 'Y — data series',
+                      DTOColumnRole.xError: '±X — horizontal error',
+                      DTOColumnRole.yError: '±Y — vertical error',
+                      DTOColumnRole.text: 'T — text / label',
+                    },
+                    onChanged: (v) => setDialogState(() => role = v),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: TextStyle(color: PrimeTheme.textSecondary)),
+          ),
+          FilledButton(
+            onPressed: () {
+              final st = ProjectState.instance;
+              String? err;
+              final nCols = cols.round();
+              if (nCols > 0) {
+                err = st.addTableColumns(table.id, nCols, role);
+              }
+              err ??= st.addTableRows(table.id, rows.round());
+              Navigator.pop(ctx);
+              if (err != null) snack('Resize failed: $err', error: true);
+            },
+            child: const Text('Resize'),
+          ),
+        ],
+      );
+    },
+  );
 }

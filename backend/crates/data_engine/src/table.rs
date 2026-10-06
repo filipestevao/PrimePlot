@@ -43,6 +43,15 @@ impl DataTable {
         self.columns.iter().map(|c| c.data.len()).max().unwrap_or(0)
     }
 
+    /// Extends every column with `NaN` to reach `row_count` rows total
+    /// (also normalizes ragged columns up to the longest one first).
+    pub fn add_rows(&mut self, count: usize) {
+        let target = self.row_count().saturating_add(count);
+        for col in &mut self.columns {
+            col.data.resize(target, f64::NAN);
+        }
+    }
+
     pub fn remove_column(&mut self, index: usize) -> Result<(), String> {
         if index >= self.columns.len() {
             return Err(format!("column index {index} out of range"));
@@ -137,8 +146,19 @@ mod tests {
     }
 
     #[test]
-    fn rename_move_role_round_trip() {
+    fn add_rows_pads_ragged_columns() {
         let mut t = two_col_table();
+        // Simulate raggedness, then grow: all columns reach the new total.
+        t.columns[1].data.push(5.0);
+        t.add_rows(2);
+        assert_eq!(t.columns[0].data.len(), 5);
+        assert_eq!(t.columns[1].data.len(), 5);
+        assert!(t.columns[0].data[2].is_nan());
+        assert_eq!(t.row_count(), 5);
+    }
+
+    #[test]
+    fn rename_move_role_round_trip() {        let mut t = two_col_table();
         assert!(t.rename_column(0, "  ").is_err());
         t.rename_column(0, "Pos").unwrap();
         assert_eq!(t.columns[0].name, "Pos");

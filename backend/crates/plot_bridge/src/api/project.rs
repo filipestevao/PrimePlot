@@ -363,6 +363,171 @@ pub fn reorder_column(
     Ok(table.clone().into())
 }
 
+/// Appends `count` blank columns (NaN-filled to the current row count).
+/// Names continue the `Col N` sequence.
+#[flutter_rust_bridge::frb(sync)]
+pub fn add_columns(
+    table_id: String,
+    count: usize,
+    role: String,
+) -> Result<crate::api::data::DTODataTable, String> {
+    if count == 0 || count > 100 {
+        return Err("column count must be 1..=100".to_string());
+    }
+    let role = parse_engine_role(&role)?;
+    let mut store = lock_or_recover(get_table_store());
+    let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
+    let rows = table.row_count();
+    let base = table.columns.len();
+    for i in 0..count {
+        table.add_column(EngineDataColumn {
+            name: format!("Col {}", base + i + 1),
+            role: role.clone(),
+            data: vec![f64::NAN; rows],
+        });
+    }
+    Ok(table.clone().into())
+}
+
+/// Appends `count` blank (NaN) rows to every column.
+#[flutter_rust_bridge::frb(sync)]
+pub fn add_rows(
+    table_id: String,
+    count: usize,
+) -> Result<crate::api::data::DTODataTable, String> {
+    if count == 0 || count > 100_000 {
+        return Err("row count must be 1..=100000".to_string());
+    }
+    let mut store = lock_or_recover(get_table_store());
+    let table = store.get_mut(&table_id).ok_or_else(|| table_not_found(&table_id))?;
+    if table.row_count().saturating_add(count) > 1_000_000 {
+        return Err("table would exceed 1000000 rows".to_string());
+    }
+    table.add_rows(count);
+    Ok(table.clone().into())
+}
+
+fn id_prefix(node_type: &EngineNodeType) -> &'static str {
+    match node_type {
+        EngineNodeType::Folder => "folder",
+        EngineNodeType::Dataset => "table",
+        EngineNodeType::Plot => "graph",
+        EngineNodeType::Function => "function",
+        EngineNodeType::Shape => "shape",
+    }
+}
+
+/// Deep-copies a node subtree beside the original with fresh IDs —
+/// tables and all property entries included. The top copy is suffixed
+/// with `" copy"` and its DTO tree is returned.
+#[flutter_rust_bridge::frb(sync)]
+pub fn duplicate_node(node_id: String) -> Result<ProjectNode, String> {
+    if node_id == "root_1" {
+        return Err("cannot duplicate the workspace root".to_string());
+    }
+    let mut state = lock_or_recover(get_state());
+
+    // Locate the parent by id (recursive, lock-free walk).
+    fn find_parent_id(node: &EngineProjectNode, target: &str) -> Option<String> {
+        for c in &node.children {
+            if c.id == target {
+                return Some(node.id.clone());
+            }
+            if let Some(p) = find_parent_id(c, target) {
+                return Some(p);
+            }
+        }
+        None
+    }
+    let parent_id =
+        find_parent_id(&state, &node_id).ok_or_else(|| format!("node '{node_id}' not found"))?;
+
+    // Snapshot the stores we need to copy from (released before writing).
+    let tables = snapshot_tables_engine();
+    let folder_props = crate::api::properties::snapshot_folder_props();
+    let graph_props = crate::api::properties::snapshot_graph_props();
+    let table_props = crate::api::properties::snapshot_table_props();
+    let function_props = crate::api::properties::snapshot_function_props();
+    let shape_props = crate::api::properties::snapshot_shape_props();
+
+    // Clone the subtree with fresh IDs, collecting (old, new) pairs.
+    fn clone_subtree(
+        node: &EngineProjectNode,
+        pairs: &mut Vec<(String, String)>,
+        top: bool,
+    ) -> EngineProjectNode {
+        let new_id = generate_id(id_prefix(&node.node_type));
+        pairs.push((node.id.clone(), new_id.clone()));
+        let new_name = if top {
+            format!("{} copy", node.name)
+        } else {
+            node.name.clone()
+        };
+        let mut out = EngineProjectNode::new(&new_id, &new_name, node.node_type.clone());
+        for c in &node.children {
+            out.add_child(clone_subtree(c, pairs, false));
+        }
+        out
+    }
+    // Splice the clone in right after the original.
+    fn splice_clone(
+        node: &mut EngineProjectNode,
+        parent_id: &str,
+        target: &str,
+        pairs: &mut Vec<(String, String)>,
+    ) -> bool {
+        if node.id == parent_id {
+            if let Some(pos) = node.children.iter().position(|c| c.id == target) {
+                let cloned = clone_subtree(&node.children[pos], pairs, true);
+                node.children.insert(pos + 1, cloned);
+                return true;
+            }
+            return false;
+        }
+        for c in &mut node.children {
+            if splice_clone(c, parent_id, target, pairs) {
+                return true;
+            }
+        }
+        false
+    }
+    let mut pairs: Vec<(String, String)> = Vec::new();
+    if !splice_clone(&mut state, &parent_id, &node_id, &mut pairs) {
+        return Err(format!("node '{node_id}' not found"));
+    }
+
+    // Deep-copy tables + property entries under the new IDs.
+    {
+        let mut store = lock_or_recover(get_table_store());
+        for (old, new) in &pairs {
+            if let Some(t) = tables.get(old) {
+                let mut copy = t.clone();
+                copy.id = new.clone();
+                store.insert(new.clone(), copy);
+            }
+        }
+    }
+    for (old, new) in &pairs {
+        if let Some(p) = folder_props.get(old) {
+            crate::api::properties::restore_single_folder(new.clone(), p.clone());
+        }
+        if let Some(p) = graph_props.get(old) {
+            crate::api::properties::restore_single_graph(new.clone(), p.clone());
+        }
+        if let Some(p) = table_props.get(old) {
+            crate::api::properties::restore_single_table(new.clone(), p.clone());
+        }
+        if let Some(p) = function_props.get(old) {
+            crate::api::properties::restore_single_function(new.clone(), p.clone());
+        }
+        if let Some(p) = shape_props.get(old) {
+            crate::api::properties::restore_single_shape(new.clone(), p.clone());
+        }
+    }
+
+    Ok(state.clone().into())
+}
+
 #[flutter_rust_bridge::frb(sync)]
 pub fn add_empty_table(parent_id: String, name: String, row_count: usize, col_count: usize) -> ProjectNode {
     let mut state = lock_or_recover(get_state());
@@ -676,5 +841,85 @@ mod tests {
         let renamed =
             rename_project_node("root_1".to_string(), "Workspace".to_string());
         assert_eq!(renamed.name, "Workspace");
+    }
+}
+
+#[cfg(test)]
+mod dup_tests {
+    use super::*;
+    use data_engine::table::DataColumn;
+
+    fn seed_tree() {
+        let mut root = EngineProjectNode::new("root_1", "W", EngineNodeType::Folder);
+        let mut graph = EngineProjectNode::new("dup_g", "G", EngineNodeType::Plot);
+        graph.add_child(EngineProjectNode::new("dup_t", "Curve", EngineNodeType::Dataset));
+        root.add_child(graph);
+        restore_tree_engine(root);
+        let mut t = EngineDataTable::new("dup_t", "Curve");
+        t.add_column(DataColumn {
+            name: "X".to_string(),
+            role: EngineColumnRole::X,
+            data: vec![1.0, 2.0],
+        });
+        lock_or_recover(get_table_store()).insert("dup_t".to_string(), t);
+        crate::api::properties::set_table_properties(
+            "dup_t".to_string(),
+            crate::api::properties::TableProperties {
+                legend_display_name: "Curve".to_string(),
+                line_color: "#FF7F0E".to_string(),
+                ..Default::default()
+            },
+        );
+    }
+
+    #[test]
+    fn duplicate_copies_deeply() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        let saved_tree = snapshot_tree_engine();
+        let saved_tables = snapshot_tables_engine();
+        let saved_tprops = crate::api::properties::snapshot_table_props();
+        seed_tree();
+
+        assert!(duplicate_node("root_1".to_string()).is_err());
+        assert!(duplicate_node("missing".to_string()).is_err());
+
+        // Duplicate a table: new id, " copy" name, same data + props.
+        let tree = duplicate_node("dup_t".to_string()).unwrap();
+        let graph = tree
+            .children
+            .iter()
+            .find(|n| matches!(n.node_type, NodeType::Plot))
+            .unwrap();
+        assert_eq!(graph.children.len(), 2);
+        let copy = &graph.children[1];
+        assert_ne!(copy.id, "dup_t");
+        assert_eq!(copy.name, "Curve copy");
+        let store = lock_or_recover(get_table_store());
+        assert_eq!(store[&copy.id].columns[0].data, vec![1.0, 2.0]);
+        drop(store);
+        assert_eq!(
+            crate::api::properties::get_table_properties(copy.id.clone()).line_color,
+            "#FF7F0E"
+        );
+
+        // Duplicate the graph: it lands beside the original with fresh ids.
+        let tree2 = duplicate_node("dup_g".to_string()).unwrap();
+        assert_eq!(tree2.children.len(), 2);
+        let graph_copy = &tree2.children[1];
+        assert_eq!(graph_copy.name, "G copy");
+        assert_ne!(graph_copy.id, "dup_g");
+        assert_eq!(graph_copy.children.len(), 2);
+        assert_ne!(graph_copy.children[0].id, "dup_t");
+
+        // Mutating the copy leaves the original alone.
+        rename_column(copy.id.clone(), 0, "Changed".to_string()).unwrap();
+        assert_eq!(
+            lock_or_recover(get_table_store())["dup_t"].columns[0].name,
+            "X"
+        );
+
+        restore_tree_engine(saved_tree);
+        restore_tables_engine(saved_tables);
+        crate::api::properties::restore_table_props(saved_tprops);
     }
 }
