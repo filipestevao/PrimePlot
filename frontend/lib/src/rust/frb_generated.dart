@@ -76,7 +76,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1136844066;
+  int get rustContentHash => -534836854;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -354,6 +354,10 @@ abstract class RustLibApi extends BaseApi {
   });
 
   void crateApiFunctionsValidateFunctionExpression({required String expr});
+
+  Future<String> crateApiPrefsValidatedDecimalSeparator({
+    required AppPreferences prefs,
+  });
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -2261,6 +2265,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["expr"],
       );
 
+  @override
+  Future<String> crateApiPrefsValidatedDecimalSeparator({
+    required AppPreferences prefs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_app_preferences(prefs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 69,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_Char,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiPrefsValidatedDecimalSeparatorConstMeta,
+        argValues: [prefs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiPrefsValidatedDecimalSeparatorConstMeta =>
+      const TaskConstMeta(
+        debugName: "validated_decimal_separator",
+        argNames: ["prefs"],
+      );
+
+  @protected
+  String dco_decode_Char(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return String.fromCharCode(raw);
+  }
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -2271,9 +2314,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AppPreferences dco_decode_app_preferences(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 1)
-      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
-    return AppPreferences(theme: dco_decode_String(arr[0]));
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return AppPreferences(
+      theme: dco_decode_String(arr[0]),
+      decimalSeparator: dco_decode_String(arr[1]),
+      thousandsSeparator: dco_decode_bool(arr[2]),
+    );
   }
 
   @protected
@@ -2593,6 +2640,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  String sse_decode_Char(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return inner;
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
@@ -2603,7 +2657,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AppPreferences sse_decode_app_preferences(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_theme = sse_decode_String(deserializer);
-    return AppPreferences(theme: var_theme);
+    var var_decimalSeparator = sse_decode_String(deserializer);
+    var var_thousandsSeparator = sse_decode_bool(deserializer);
+    return AppPreferences(
+      theme: var_theme,
+      decimalSeparator: var_decimalSeparator,
+      thousandsSeparator: var_thousandsSeparator,
+    );
   }
 
   @protected
@@ -2999,6 +3059,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_Char(String self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self, serializer);
+  }
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
@@ -3011,6 +3077,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.theme, serializer);
+    sse_encode_String(self.decimalSeparator, serializer);
+    sse_encode_bool(self.thousandsSeparator, serializer);
   }
 
   @protected

@@ -12,6 +12,7 @@ import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../components/panel_container.dart';
+import '../components/shortcut_map.dart';
 import '../dialogs/about_dialog.dart';
 import '../dialogs/export_dialog.dart';
 import '../panels/transform_panel.dart';
@@ -919,21 +920,6 @@ enum _ExplorerAction { addGraph, addTable, addFunction, addShape, addFolder }
 class _ShortcutHelpCard extends StatelessWidget {
   const _ShortcutHelpCard();
 
-  static const _rows = [
-    ('Ctrl + N', 'New project'),
-    ('Ctrl + O', 'Open project'),
-    ('Ctrl + S', 'Save project'),
-    ('Ctrl + Shift + S', 'Save project as…'),
-    ('Ctrl + E', 'Export figure'),
-    ('Ctrl + Shift + E', 'Export data'),
-    ('Ctrl + Z', 'Undo'),
-    ('Ctrl + Y', 'Redo'),
-    ('S', 'Toggle series statistics'),
-    ('R', 'Reset view to home ranges'),
-    ('Esc', 'Clear selection'),
-    ('Ctrl + /  or  ?', 'This shortcut map'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -965,34 +951,7 @@ class _ShortcutHelpCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          for (final (keys, action) in _rows)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 140,
-                    child: Text(
-                      keys,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontFamily: 'monospace',
-                        color: PrimeTheme.primaryAccent,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      action,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: PrimeTheme.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          const ShortcutMap(),
           const SizedBox(height: 8),
           Text(
             'Press any key to dismiss.',

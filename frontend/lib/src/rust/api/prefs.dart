@@ -6,8 +6,12 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `default_theme`, `get_config_dir`, `get_prefs_path`
+// These functions are ignored because they are not marked as `pub`: `default_decimal_separator`, `default_theme`, `get_config_dir`, `get_prefs_path`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `eq`, `fmt`
+
+/// Validated decimal separator (anything else falls back to dot).
+Future<String> validatedDecimalSeparator({required AppPreferences prefs}) =>
+    RustLib.instance.api.crateApiPrefsValidatedDecimalSeparator(prefs: prefs);
 
 AppPreferences getPreferences() =>
     RustLib.instance.api.crateApiPrefsGetPreferences();
@@ -18,18 +22,31 @@ void setPreferences({required AppPreferences prefs}) =>
 class AppPreferences {
   final String theme;
 
-  const AppPreferences({required this.theme});
+  /// Decimal separator for display/export: "." or ",".
+  final String decimalSeparator;
+
+  /// Thousands grouping in display (`,` for dot-decimals, `.` for comma).
+  final bool thousandsSeparator;
+
+  const AppPreferences({
+    required this.theme,
+    required this.decimalSeparator,
+    required this.thousandsSeparator,
+  });
 
   static Future<AppPreferences> default_() =>
       RustLib.instance.api.crateApiPrefsAppPreferencesDefault();
 
   @override
-  int get hashCode => theme.hashCode;
+  int get hashCode =>
+      theme.hashCode ^ decimalSeparator.hashCode ^ thousandsSeparator.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AppPreferences &&
           runtimeType == other.runtimeType &&
-          theme == other.theme;
+          theme == other.theme &&
+          decimalSeparator == other.decimalSeparator &&
+          thousandsSeparator == other.thousandsSeparator;
 }

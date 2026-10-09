@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/latex_symbols.dart';
+import '../../core/number_format.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
 import '../../src/rust/api/data.dart';
@@ -47,12 +48,17 @@ Color _parseColor(String value, Color fallback) {
 
 String _formatTick(double value) {
   final abs = value.abs();
+  String dotted;
   if (abs != 0 && (abs >= 10000 || abs < 0.001)) {
-    return value.toStringAsExponential(1);
+    dotted = value.toStringAsExponential(1);
+  } else if (abs >= 100) {
+    dotted = value.toStringAsFixed(0);
+  } else if (abs >= 10) {
+    dotted = value.toStringAsFixed(1);
+  } else {
+    dotted = value.toStringAsFixed(2);
   }
-  if (abs >= 100) return value.toStringAsFixed(0);
-  if (abs >= 10) return value.toStringAsFixed(1);
-  return value.toStringAsFixed(2);
+  return groupDotted(dotted);
 }
 
 class PlotCanvas extends StatelessWidget {
@@ -1041,9 +1047,9 @@ class _StatsPanel extends StatelessWidget {
     if (!v.isFinite) return '—';
     final a = v.abs();
     if (a != 0 && (a >= 100000 || a < 0.001)) {
-      return v.toStringAsExponential(1);
+      return groupDotted(v.toStringAsExponential(1));
     }
-    return v.toStringAsFixed(3);
+    return formatNumber(v);
   }
 
   @override

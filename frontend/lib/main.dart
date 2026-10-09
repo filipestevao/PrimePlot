@@ -59,18 +59,25 @@ class PrimePlotApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<String>(
-      valueListenable: ProjectState.instance.activeTheme,
-      builder: (context, themeId, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        ProjectState.instance.activeTheme,
+        ProjectState.instance.decimalSeparator,
+        ProjectState.instance.useThousands,
+      ]),
+      builder: (context, _) {
+        final themeId = ProjectState.instance.activeTheme.value;
+        final sep = ProjectState.instance.decimalSeparator.value;
+        final grp = ProjectState.instance.useThousands.value ? 'g' : '';
         return MaterialApp(
           title: 'PrimePlot',
           debugShowCheckedModeBanner: false,
           theme: PrimeTheme.themeDataFor(themeId),
-          // Keyed by theme: const widgets below would otherwise compare
-          // equal and skip rebuilding, leaving panels on the old palette.
+          // Keyed by theme + number format: const widgets below would otherwise
+          // compare equal and skip rebuilding, leaving panels stale.
           // Remount resets pane sizes/collapsed flags — acceptable on an
-          // explicit theme switch; project data lives in singletons + Rust.
-          home: MainLayout(key: ValueKey(themeId)),
+          // explicit settings change; project data lives in singletons + Rust.
+          home: MainLayout(key: ValueKey('${themeId}_$sep$grp')),
         );
       },
     );

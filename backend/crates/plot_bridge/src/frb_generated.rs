@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1136844066;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -534836854;
 
 // Section: executor
 
@@ -2260,8 +2260,51 @@ fn wire__crate__api__functions__validate_function_expression_impl(
         },
     )
 }
+fn wire__crate__api__prefs__validated_decimal_separator_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "validated_decimal_separator",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_prefs = <crate::api::prefs::AppPreferences>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(
+                        crate::api::prefs::validated_decimal_separator(&api_prefs),
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 
 // Section: dart2rust
+
+impl SseDecode for char {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return inner.chars().next().unwrap();
+    }
+}
 
 impl SseDecode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2275,7 +2318,13 @@ impl SseDecode for crate::api::prefs::AppPreferences {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_theme = <String>::sse_decode(deserializer);
-        return crate::api::prefs::AppPreferences { theme: var_theme };
+        let mut var_decimalSeparator = <String>::sse_decode(deserializer);
+        let mut var_thousandsSeparator = <bool>::sse_decode(deserializer);
+        return crate::api::prefs::AppPreferences {
+            theme: var_theme,
+            decimal_separator: var_decimalSeparator,
+            thousands_separator: var_thousandsSeparator,
+        };
     }
 }
 
@@ -2712,6 +2761,12 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
+        69 => wire__crate__api__prefs__validated_decimal_separator_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         _ => unreachable!(),
     }
 }
@@ -2812,7 +2867,12 @@ fn pde_ffi_dispatcher_sync_impl(
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::prefs::AppPreferences {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.theme.into_into_dart().into_dart()].into_dart()
+        [
+            self.theme.into_into_dart().into_dart(),
+            self.decimal_separator.into_into_dart().into_dart(),
+            self.thousands_separator.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -3148,6 +3208,13 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::properties::TableProperties>
     }
 }
 
+impl SseEncode for char {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.to_string(), serializer);
+    }
+}
+
 impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3159,6 +3226,8 @@ impl SseEncode for crate::api::prefs::AppPreferences {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.theme, serializer);
+        <String>::sse_encode(self.decimal_separator, serializer);
+        <bool>::sse_encode(self.thousands_separator, serializer);
     }
 }
 

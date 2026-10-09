@@ -9,16 +9,37 @@ use std::path::PathBuf;
 pub struct AppPreferences {
     #[serde(default = "default_theme")]
     pub theme: String, // "primeplot", "dark", "light"
+    /// Decimal separator for display/export: "." or ",".
+    #[serde(default = "default_decimal_separator")]
+    pub decimal_separator: String,
+    /// Thousands grouping in display (`,` for dot-decimals, `.` for comma).
+    #[serde(default)]
+    pub thousands_separator: bool,
 }
 
 fn default_theme() -> String {
     "primeplot".to_string()
 }
 
+fn default_decimal_separator() -> String {
+    ".".to_string()
+}
+
+/// Validated decimal separator (anything else falls back to dot).
+pub fn validated_decimal_separator(prefs: &AppPreferences) -> char {
+    if prefs.decimal_separator == "," {
+        ','
+    } else {
+        '.'
+    }
+}
+
 impl Default for AppPreferences {
     fn default() -> Self {
         Self {
             theme: default_theme(),
+            decimal_separator: default_decimal_separator(),
+            thousands_separator: false,
         }
     }
 }
@@ -88,7 +109,11 @@ mod tests {
         // SAFETY: TEST_MUTEX serializes all store-backed tests in this binary,
         // and no other test reads XDG_CONFIG_HOME.
         unsafe { std::env::set_var("XDG_CONFIG_HOME", &dir) };
-        set_preferences(AppPreferences { theme: "dark".to_string() });
+        set_preferences(AppPreferences {
+            theme: "dark".to_string(),
+            decimal_separator: ".".to_string(),
+            thousands_separator: false,
+        });
         assert_eq!(get_preferences().theme, "dark");
         // Corrupt file falls back to defaults instead of crashing.
         let _ = fs::write(get_prefs_path(), "{not json");
@@ -106,6 +131,8 @@ mod tests {
     fn test_serde_preferences() {
         let prefs = AppPreferences {
             theme: "light".to_string(),
+            decimal_separator: ".".to_string(),
+            thousands_separator: false,
         };
         let json = serde_json::to_string(&prefs).unwrap();
         let loaded: AppPreferences = serde_json::from_str(&json).unwrap();
@@ -114,5 +141,19 @@ mod tests {
         // Test fallback on empty json object
         let empty_loaded: AppPreferences = serde_json::from_str("{}").unwrap();
         assert_eq!(empty_loaded.theme, "primeplot");
+        assert_eq!(empty_loaded.decimal_separator, ".");
+        assert!(!empty_loaded.thousands_separator);
+    }
+
+    #[test]
+    fn test_decimal_separator_validation() {
+        let weird: AppPreferences = serde_json::from_str(r#"{"decimal_separator":";"}"#).unwrap();
+        assert_eq!(validated_decimal_separator(&weird), '.');
+        let comma = AppPreferences {
+            theme: "dark".to_string(),
+            decimal_separator: ",".to_string(),
+            thousands_separator: true,
+        };
+        assert_eq!(validated_decimal_separator(&comma), ',');
     }
 }

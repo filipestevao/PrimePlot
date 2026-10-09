@@ -2,11 +2,32 @@
 // This program is licensed under the GPLv3. See LICENSE for details.
 
 import 'package:flutter/material.dart';
+import '../../core/number_format.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
+import '../components/prime_switch.dart';
+import '../components/shortcut_map.dart';
 
-class SettingsDialog extends StatelessWidget {
+enum _SettingsTab {
+  appearance('Appearance', Icons.palette_outlined),
+  dataLocale('Data & Locale', Icons.language_outlined),
+  keyboard('Keyboard', Icons.keyboard_outlined),
+  advanced('Advanced', Icons.tune_outlined);
+
+  final String label;
+  final IconData icon;
+  const _SettingsTab(this.label, this.icon);
+}
+
+class SettingsDialog extends StatefulWidget {
   const SettingsDialog({super.key});
+
+  @override
+  State<SettingsDialog> createState() => _SettingsDialogState();
+}
+
+class _SettingsDialogState extends State<SettingsDialog> {
+  _SettingsTab _tab = _SettingsTab.appearance;
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +39,7 @@ class SettingsDialog extends StatelessWidget {
         valueListenable: ProjectState.instance.activeTheme,
         builder: (context, currentTheme, _) {
           return Container(
-            width: 580,
+            width: 640,
             constraints: const BoxConstraints(maxHeight: 520),
             decoration: BoxDecoration(
               color: PrimeTheme.panelBackground,
@@ -41,71 +62,40 @@ class SettingsDialog extends StatelessWidget {
 
                 Divider(height: 1, thickness: 1, color: PrimeTheme.borderSide),
 
-                // Content
+                // Content: sidebar + tab body.
                 Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionHeader(
-                          icon: Icons.palette_outlined,
-                          title: 'APPEARANCE & THEME',
-                          subtitle:
-                              'Choose your workspace color theme. Canvas, inspector, and tables adapt immediately.',
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 148,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Column(
+                            children: [
+                              for (final t in _SettingsTab.values)
+                                _SidebarEntry(
+                                  tab: t,
+                                  selected: _tab == t,
+                                  onTap: () =>
+                                      setState(() => _tab = t),
+                                ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 14),
-
-                        // Theme cards
-                        _ThemeOptionCard(
-                          themeId: 'primeplot',
-                          title: 'PrimePlot',
-                          tag: 'SIGNATURE',
-                          description: 'Signature bluish-slate dark palette designed for scientific data inspection.',
-                          accentColor: primeplotTokens.primaryAccent,
-                          panelColor: primeplotTokens.panelBackground,
-                          canvasColor: primeplotTokens.canvasBackground,
-                          textColor: primeplotTokens.textPrimary,
-                          isSelected: currentTheme == 'primeplot',
-                          onTap: () => ProjectState.instance.setTheme('primeplot'),
+                      ),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: PrimeTheme.borderSide,
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: _tabBody(currentTheme),
                         ),
-                        const SizedBox(height: 10),
-
-                        _ThemeOptionCard(
-                          themeId: 'dark',
-                          title: 'Dark',
-                          description: 'Neutral charcoal dark palette with high contrast and blue accents.',
-                          accentColor: darkTokens.primaryAccent,
-                          panelColor: darkTokens.panelBackground,
-                          canvasColor: darkTokens.canvasBackground,
-                          textColor: darkTokens.textPrimary,
-                          isSelected: currentTheme == 'dark',
-                          onTap: () => ProjectState.instance.setTheme('dark'),
-                        ),
-                        const SizedBox(height: 10),
-
-                        _ThemeOptionCard(
-                          themeId: 'light',
-                          title: 'Light',
-                          tag: 'PAPER / PRINT',
-                          description: 'Crisp white publication-ready light theme for paper figures and export.',
-                          accentColor: lightTokens.primaryAccent,
-                          panelColor: lightTokens.panelBackground,
-                          canvasColor: lightTokens.canvasBackground,
-                          textColor: lightTokens.textPrimary,
-                          isSelected: currentTheme == 'light',
-                          onTap: () => ProjectState.instance.setTheme('light'),
-                        ),
-
-                        const SizedBox(height: 20),
-                        _buildSectionHeader(
-                          icon: Icons.auto_awesome_mosaic_outlined,
-                          title: 'CANVAS PREVIEW',
-                          subtitle:
-                              'Canvas background, axes, and grid lines automatically sync with your selected theme.',
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -118,6 +108,182 @@ class SettingsDialog extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _tabBody(String currentTheme) {
+    switch (_tab) {
+      case _SettingsTab.appearance:
+        return _appearanceTab(currentTheme);
+      case _SettingsTab.dataLocale:
+        return _dataLocaleTab();
+      case _SettingsTab.keyboard:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(
+              icon: Icons.keyboard_outlined,
+              title: 'KEYBOARD SHORTCUTS',
+              subtitle:
+                  'Every shortcut, also available at any time with Ctrl + / or ?. Single-key shortcuts pause while typing.',
+            ),
+            const SizedBox(height: 14),
+            const ShortcutMap(),
+          ],
+        );
+      case _SettingsTab.advanced:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(
+              icon: Icons.tune_outlined,
+              title: 'ADVANCED',
+              subtitle: 'Power settings land here in a future update.',
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Nothing here yet.',
+              style: TextStyle(
+                fontSize: 12,
+                color: PrimeTheme.textSecondary,
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  Widget _appearanceTab(String currentTheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          icon: Icons.palette_outlined,
+          title: 'APPEARANCE & THEME',
+          subtitle:
+              'Choose your workspace color theme. Canvas, inspector, and tables adapt immediately.',
+        ),
+        const SizedBox(height: 14),
+        _ThemeOptionCard(
+          themeId: 'primeplot',
+          title: 'PrimePlot',
+          description: 'Bluish-slate dark interface — the PrimePlot look.',
+          accentColor: primeplotTokens.primaryAccent,
+          panelColor: primeplotTokens.panelBackground,
+          canvasColor: primeplotTokens.canvasBackground,
+          textColor: primeplotTokens.textPrimary,
+          isSelected: currentTheme == 'primeplot',
+          onTap: () => ProjectState.instance.setTheme('primeplot'),
+        ),
+        const SizedBox(height: 10),
+        _ThemeOptionCard(
+          themeId: 'dark',
+          title: 'Dark',
+          description: 'Neutral charcoal dark palette with high contrast and blue accents.',
+          accentColor: darkTokens.primaryAccent,
+          panelColor: darkTokens.panelBackground,
+          canvasColor: darkTokens.canvasBackground,
+          textColor: darkTokens.textPrimary,
+          isSelected: currentTheme == 'dark',
+          onTap: () => ProjectState.instance.setTheme('dark'),
+        ),
+        const SizedBox(height: 10),
+        _ThemeOptionCard(
+          themeId: 'light',
+          title: 'Light',
+          description: 'Crisp white theme for figures and print.',
+          accentColor: lightTokens.primaryAccent,
+          panelColor: lightTokens.panelBackground,
+          canvasColor: lightTokens.canvasBackground,
+          textColor: lightTokens.textPrimary,
+          isSelected: currentTheme == 'light',
+          onTap: () => ProjectState.instance.setTheme('light'),
+        ),
+        const SizedBox(height: 20),
+        _buildSectionHeader(
+          icon: Icons.auto_awesome_mosaic_outlined,
+          title: 'CANVAS PREVIEW',
+          subtitle:
+              'Canvas background, axes, and grid lines automatically sync with your selected theme.',
+        ),
+      ],
+    );
+  }
+
+  Widget _dataLocaleTab() {
+    final st = ProjectState.instance;
+    return ListenableBuilder(
+      listenable:
+          Listenable.merge([st.decimalSeparator, st.useThousands]),
+      builder: (context, _) {
+        final sep = st.decimalSeparator.value;
+        final grouped = st.useThousands.value;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(
+              icon: Icons.language_outlined,
+              title: 'DATA & LOCALE',
+              subtitle:
+                  'Decimal separator for tables, readouts, and statistics. Input always accepts both. Export follows the European convention (comma pairs with semicolons).',
+            ),
+            const SizedBox(height: 14),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: '.', label: Text('1.5 (dot)')),
+                ButtonSegment(value: ',', label: Text('1,5 (comma)')),
+              ],
+              selected: {sep},
+              // No checkmark: it resizes the selected segment on every tap.
+              showSelectedIcon: false,
+              onSelectionChanged: (selected) =>
+                  ProjectState.instance.setDecimalSeparator(selected.first),
+              style: SegmentedButton.styleFrom(
+                minimumSize: const Size(120, 34),
+                foregroundColor: PrimeTheme.textPrimary,
+                selectedForegroundColor: Colors.white,
+                selectedBackgroundColor: PrimeTheme.primaryAccent,
+                side: BorderSide(color: PrimeTheme.borderSide),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Sample: ${formatNumber(1234567.891, precision: 1)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: PrimeTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Thousands separator${grouped ? (sep == ',' ? ' (.)' : ' (,)') : ''}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: PrimeTheme.textPrimary,
+                    ),
+                  ),
+                ),
+                PrimeSwitch(
+                  value: grouped,
+                  onChanged: (v) =>
+                      ProjectState.instance.setThousandsSeparator(v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Display only — files export ungrouped so they stay machine-readable.',
+              style: TextStyle(
+                fontSize: 11,
+                color: PrimeTheme.textSecondary,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -221,10 +387,68 @@ class SettingsDialog extends StatelessWidget {
   }
 }
 
+class _SidebarEntry extends StatelessWidget {
+  final _SettingsTab tab;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SidebarEntry({
+    required this.tab,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? PrimeTheme.primaryAccent.withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                tab.icon,
+                size: 15,
+                color: selected
+                    ? PrimeTheme.primaryAccent
+                    : PrimeTheme.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  tab.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected
+                        ? PrimeTheme.primaryAccent
+                        : PrimeTheme.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ThemeOptionCard extends StatefulWidget {
   final String themeId;
   final String title;
-  final String? tag;
   final String description;
   final Color accentColor;
   final Color panelColor;
@@ -236,7 +460,6 @@ class _ThemeOptionCard extends StatefulWidget {
   const _ThemeOptionCard({
     required this.themeId,
     required this.title,
-    this.tag,
     required this.description,
     required this.accentColor,
     required this.panelColor,
@@ -328,44 +551,18 @@ class _ThemeOptionCardState extends State<_ThemeOptionCard> {
               ),
               const SizedBox(width: 14),
 
-              // Title, tag & description
+              // Title & description
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          widget.title,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: PrimeTheme.textPrimary,
-                          ),
-                        ),
-                        if (widget.tag != null) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: widget.accentColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(3),
-                              border: Border.all(
-                                color: widget.accentColor.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Text(
-                              widget.tag!,
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                color: widget.accentColor,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: PrimeTheme.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(

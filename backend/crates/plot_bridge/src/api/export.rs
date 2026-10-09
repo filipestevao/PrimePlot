@@ -15,10 +15,26 @@ fn check_delimiter(delimiter: &str) -> Result<char, String> {
     match delimiter {
         "," => Ok(','),
         "\t" | "\\t" => Ok('\t'),
+        ";" => Ok(';'),
+        "auto" => Ok(locale_delimiter()),
         other => Err(format!(
-            "unsupported delimiter '{other}' (expected ',' or tab)"
+            "unsupported delimiter '{other}' (expected ',', ';', tab or 'auto')"
         )),
     }
+}
+
+/// European convention: comma decimals pair with semicolon files.
+fn locale_delimiter() -> char {
+    if crate::api::prefs::validated_decimal_separator(&crate::api::prefs::get_preferences()) == ','
+    {
+        ';'
+    } else {
+        ','
+    }
+}
+
+fn locale_decimal() -> char {
+    crate::api::prefs::validated_decimal_separator(&crate::api::prefs::get_preferences())
 }
 
 fn write_text(path: &str, text: &str) -> Result<(), String> {
@@ -39,7 +55,8 @@ fn without_header(csv: &str) -> String {
     }
 }
 
-/// Exports one dataset. Delimiter `","` (CSV) or tab (TSV).
+/// Exports one dataset. Delimiter `","`, `";"`, tab, or `"auto"`
+/// (locale rule: comma decimals pair with semicolons).
 #[flutter_rust_bridge::frb(sync)]
 pub fn export_table_csv(
     table_id: String,
@@ -52,7 +69,7 @@ pub fn export_table_csv(
         .get(&table_id)
         .ok_or_else(|| format!("table '{table_id}' not found"))?;
     let delim = check_delimiter(&delimiter)?;
-    let text = table_to_delimited(table, delim, include_header);
+    let text = table_to_delimited(table, delim, include_header, locale_decimal());
     write_text(&path, &text)
 }
 
@@ -61,6 +78,7 @@ fn table_to_delimited(
     table: &EngineDataTable,
     delim: char,
     include_header: bool,
+    decimal: char,
 ) -> String {
     let sep = delim.to_string();
     let mut out = String::new();
@@ -69,17 +87,20 @@ fn table_to_delimited(
             .columns
             .iter()
             .map(|c| {
-                escape_field(&format!(
-                    "{}[{}]",
-                    c.name,
-                    match c.role {
-                        EngineColumnRole::X => "X",
-                        EngineColumnRole::Y => "Y",
-                        EngineColumnRole::XError => "XError",
-                        EngineColumnRole::YError => "YError",
-                        EngineColumnRole::Text => "Text",
-                    }
-                ))
+                escape_field(
+                    &format!(
+                        "{}[{}]",
+                        c.name,
+                        match c.role {
+                            EngineColumnRole::X => "X",
+                            EngineColumnRole::Y => "Y",
+                            EngineColumnRole::XError => "XError",
+                            EngineColumnRole::YError => "YError",
+                            EngineColumnRole::Text => "Text",
+                        }
+                    ),
+                    delim,
+                )
             })
             .collect();
         out.push_str(&heads.join(&sep));
@@ -90,7 +111,7 @@ fn table_to_delimited(
         let cells: Vec<String> = table
             .columns
             .iter()
-            .map(|c| format_cell(c.data.get(r).copied().unwrap_or(f64::NAN)))
+            .map(|c| format_cell(c.data.get(r).copied().unwrap_or(f64::NAN), decimal))
             .collect();
         out.push_str(&cells.join(&sep));
         out.push('\n');
@@ -115,7 +136,7 @@ fn pick_xy(table: &EngineDataTable) -> Option<(&[f64], &[f64])> {
     Some((&xcol.data, &ycol.data))
 }
 
-fn format_cell(v: f64) -> String {
+fn format_cell(v: f64, decimal: char) -> String {
     if v.is_nan() {
         String::new()
     } else if v.is_infinite() {
@@ -125,12 +146,17 @@ fn format_cell(v: f64) -> String {
             "-inf".to_string()
         }
     } else {
-        format!("{v}")
+        let s = format!("{v}");
+        if decimal == ',' {
+            s.replace('.', ",")
+        } else {
+            s
+        }
     }
 }
 
-fn escape_field(s: &str) -> String {
-    if s.contains(',') || s.contains('"') || s.contains('\n') || s.contains('\r') || s.contains('\t') {
+fn escape_field(s: &str, delim: char) -> String {
+    if s.contains(delim) || s.contains('"') || s.contains('\n') || s.contains('\r') {
         format!("\"{}\"", s.replace('"', "\"\""))
     } else {
         s.to_string()
@@ -148,6 +174,7 @@ pub fn export_graph_data_csv(
     include_header: bool,
 ) -> Result<(), String> {
     let delim = check_delimiter(&delimiter)?;
+    let decimal = locale_decimal();
     let sep = delim.to_string();
 
     let tree = crate::api::project::snapshot_tree_engine();
@@ -204,7 +231,7 @@ pub fn export_graph_data_csv(
     if include_header {
         let heads: Vec<String> = series
             .iter()
-            .flat_map(|(hx, hy, _, _)| [escape_field(hx), escape_field(hy)])
+            .flat_map(|(hx, hy, _, _)| [escape_field(hx, delim), escape_field(hy, delim)])
             .collect();
         out.push_str(&heads.join(&sep));
         out.push('\n');
@@ -215,7 +242,7 @@ pub fn export_graph_data_csv(
             .flat_map(|(_, _, xs, ys)| {
                 let x = xs.get(r).copied().unwrap_or(f64::NAN);
                 let y = ys.get(r).copied().unwrap_or(f64::NAN);
-                [format_cell(x), format_cell(y)]
+                [format_cell(x, decimal), format_cell(y, decimal)]
             })
             .collect();
         out.push_str(&cells.join(&sep));
@@ -303,7 +330,7 @@ mod tests {
         assert!(t2.lines().next().unwrap().contains('\t'));
         assert!(!t2.contains("[X]"));
         std::fs::remove_file(&p2).ok();
-        assert!(export_table_csv("ex_a".to_string(), tmp("x"), ";".to_string(), true).is_err());
+        assert!(export_table_csv("ex_a".to_string(), tmp("x"), "|".to_string(), true).is_err());
         assert!(export_table_csv("nope".to_string(), tmp("y"), ",".to_string(), true).is_err());
 
         crate::api::project::restore_tree_engine(saved_tree);
@@ -341,5 +368,55 @@ mod tests {
 
         crate::api::project::restore_tree_engine(saved_tree);
         crate::api::project::restore_tables_engine(saved_tables);
+    }
+}
+
+#[cfg(test)]
+mod locale_tests {
+    use super::*;
+
+    #[test]
+    fn auto_delimiter_follows_decimal_separator() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        let dir = std::env::temp_dir().join(format!("primeplot_loc_{}", std::process::id()));
+        let old = std::env::var("XDG_CONFIG_HOME").ok();
+        // SAFETY: serialized with all other store/env-touching tests.
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", &dir) };
+
+        crate::api::prefs::set_preferences(crate::api::prefs::AppPreferences {
+            theme: "dark".to_string(),
+            decimal_separator: ",".to_string(),
+            thousands_separator: false,
+        });
+        assert_eq!(locale_delimiter(), ';');
+        assert_eq!(locale_decimal(), ',');
+
+        let saved_tables = crate::api::project::snapshot_tables_engine();
+        let mut t = EngineDataTable::new("loc_t", "L");
+        t.add_column(data_engine::table::DataColumn {
+            name: "Y".to_string(),
+            role: EngineColumnRole::Y,
+            data: vec![1.5, f64::NAN],
+        });
+        crate::api::project::lock_table_store().insert("loc_t".to_string(), t);
+        let p = std::env::temp_dir()
+            .join(format!("primeplot_loc_{}.csv", std::process::id()))
+            .display()
+            .to_string();
+        export_table_csv("loc_t".to_string(), p.clone(), "auto".to_string(), true).unwrap();
+        let text = std::fs::read_to_string(&p).unwrap();
+        let mut lines = text.lines();
+        assert_eq!(lines.next().unwrap(), "Y[Y]");
+        assert_eq!(lines.next().unwrap(), "1,5");
+        std::fs::remove_file(&p).ok();
+
+        crate::api::project::restore_tables_engine(saved_tables);
+        let _ = std::fs::remove_dir_all(&dir);
+        unsafe {
+            match old {
+                Some(v) => std::env::set_var("XDG_CONFIG_HOME", v),
+                None => std::env::remove_var("XDG_CONFIG_HOME"),
+            }
+        }
     }
 }

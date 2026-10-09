@@ -10,6 +10,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../core/state.dart';
+import '../../core/number_format.dart';
 import '../../core/theme.dart';
 import '../../src/rust/api/transforms.dart' as tr;
 import '../components/panel_container.dart';
@@ -411,9 +412,9 @@ class _ColumnTransformFormState extends State<ColumnTransformForm> {
     if (v.isNaN) return '—';
     final a = v.abs();
     if (a != 0 && (a >= 100000 || a < 0.001)) {
-      return v.toStringAsExponential(1);
+      return groupDotted(v.toStringAsExponential(1));
     }
-    return v.toStringAsFixed(3);
+    return formatNumber(v);
   }
 
   Widget _statsRow() {

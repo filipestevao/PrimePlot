@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
+import '../../core/number_format.dart';
 import '../../src/rust/api/data.dart';
 import '../../src/rust/api/project.dart';
 import '../components/prime_select.dart';
@@ -163,7 +164,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
 
     final targetValid = _validCell(tableData, r, c);
     final raw = targetValid ? tableData.columns[c].data[r] : double.nan;
-    _editController.text = raw.isNaN ? '' : raw.toStringAsFixed(3);
+    _editController.text = raw.isNaN ? '' : formatNumber(raw);
     _selectAllEditText();
     setState(() {
       _editingRow = r;
@@ -869,8 +870,8 @@ class _DataTablePanelState extends State<DataTablePanel> {
     final bool isColSelected = _selectedCols.contains(colIndex);
     final bool isHighlighted = isRowSelected || isColSelected;
 
-    // Display string: empty for NaN, fixed-3 for numbers
-    final String displayText = isEmpty ? '' : rawValue.toStringAsFixed(3);
+    // Display string: empty for NaN, locale-formatted otherwise.
+    final String displayText = isEmpty ? '' : formatNumber(rawValue);
 
     return GestureDetector(
       onTap: () {
@@ -961,7 +962,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
     }
     final trimmed = newValue.trim();
     final double parsed =
-        trimmed.isEmpty ? double.nan : (double.tryParse(trimmed) ?? double.nan);
+        trimmed.isEmpty ? double.nan : (tryParseLocalized(trimmed) ?? double.nan);
 
     // Snapshot BEFORE the Rust write (updateTable's own checkpoint would
     // otherwise capture post-mutation state and make undo a no-op).

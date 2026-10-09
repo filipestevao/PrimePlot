@@ -103,25 +103,82 @@ class ProjectState {
   final ValueNotifier<ShapeProperties?> activeShapeProps = ValueNotifier(null);
   final ValueNotifier<String> activeTheme = ValueNotifier('primeplot');
 
+  /// Decimal separator for display (`.` or `,`). Parsing accepts both
+  /// everywhere; changing this remounts the shell (see `main.dart`).
+  final ValueNotifier<String> decimalSeparator = ValueNotifier('.');
+
+  /// Thousands grouping in display (`,` for dot-decimals, `.` for comma).
+  /// Export stays machine-readable (never grouped).
+  final ValueNotifier<bool> useThousands = ValueNotifier(false);
+
   /// Loads saved user preferences from the Rust backend.
   void initTheme() {
     try {
       final p = prefs.getPreferences();
       PrimeTheme.setTheme(p.theme);
       activeTheme.value = p.theme;
+      decimalSeparator.value = (p.decimalSeparator == ',') ? ',' : '.';
+      useThousands.value = p.thousandsSeparator;
     } catch (e) {
       debugPrint("Error loading preferences: $e");
     }
   }
 
-  /// Sets the active theme and persists it via Rust backend.
+  /// Sets the decimal separator and persists it (theme + grouping preserved).
+  void setDecimalSeparator(String separator) {
+    final sep = (separator == ',') ? ',' : '.';
+    if (decimalSeparator.value == sep) return;
+    try {
+      final p = prefs.getPreferences();
+      prefs.setPreferences(
+        prefs: prefs.AppPreferences(
+          theme: p.theme,
+          decimalSeparator: sep,
+          thousandsSeparator: p.thousandsSeparator,
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error saving preferences: $e");
+    }
+    decimalSeparator.value = sep;
+    refreshCanvas.value++;
+  }
+
+  /// Sets thousands grouping and persists it (theme + separator preserved).
+  void setThousandsSeparator(bool enabled) {
+    if (useThousands.value == enabled) return;
+    try {
+      final p = prefs.getPreferences();
+      prefs.setPreferences(
+        prefs: prefs.AppPreferences(
+          theme: p.theme,
+          decimalSeparator: p.decimalSeparator,
+          thousandsSeparator: enabled,
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error saving preferences: $e");
+    }
+    useThousands.value = enabled;
+    refreshCanvas.value++;
+  }
+
+  /// Sets the active theme and persists it via Rust backend (other prefs
+  /// such as the decimal separator are preserved).
   void setTheme(String themeId) {
     if (activeTheme.value == themeId) return;
     PrimeTheme.setTheme(themeId);
     activeTheme.value = themeId;
     refreshCanvas.value++;
     try {
-      prefs.setPreferences(prefs: prefs.AppPreferences(theme: themeId));
+      final current = prefs.getPreferences();
+      prefs.setPreferences(
+        prefs: prefs.AppPreferences(
+          theme: themeId,
+          decimalSeparator: current.decimalSeparator,
+          thousandsSeparator: current.thousandsSeparator,
+        ),
+      );
     } catch (e) {
       debugPrint("Error saving preferences: $e");
     }

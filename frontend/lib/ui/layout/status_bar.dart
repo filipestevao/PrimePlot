@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/state.dart';
 import '../../core/theme.dart';
+import '../../core/number_format.dart';
 
 class StatusBar extends StatelessWidget {
   const StatusBar({super.key});
@@ -15,9 +16,9 @@ class StatusBar extends StatelessWidget {
   static String _fmt(double v) {
     final a = v.abs();
     if (a != 0 && (a >= 10000 || a < 0.001)) {
-      return v.toStringAsExponential(2);
+      return groupDotted(v.toStringAsExponential(2));
     }
-    return v.toStringAsFixed(4);
+    return formatNumber(v, precision: 4);
   }
 
   @override

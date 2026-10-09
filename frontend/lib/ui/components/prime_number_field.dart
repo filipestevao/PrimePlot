@@ -2,6 +2,7 @@
 // This program is licensed under the GPLv3. See LICENSE for details.
 
 import 'package:flutter/material.dart';
+import '../../core/number_format.dart';
 import '../../core/theme.dart';
 import 'prime_text_field.dart';
 
@@ -45,7 +46,9 @@ class _PrimeNumberFieldState extends State<PrimeNumberField> {
   static String _format(double? v, int precision) {
     if (v == null) return '';
     if (v == v.truncateToDouble()) return v.toInt().toString();
-    return v.toStringAsFixed(precision).replaceAll(RegExp(r'\.?0+$'), '');
+    final dotted =
+        v.toStringAsFixed(precision).replaceAll(RegExp(r'\.?0+$'), '');
+    return groupDotted(dotted);
   }
 
   void _onTextSubmitted(String text) {
@@ -58,7 +61,7 @@ class _PrimeNumberFieldState extends State<PrimeNumberField> {
       }
       return;
     }
-    final parsed = double.tryParse(trimmed);
+    final parsed = tryParseLocalized(trimmed);
     if (parsed != null) {
       var clamped = parsed;
       if (widget.min != null && clamped < widget.min!) clamped = widget.min!;

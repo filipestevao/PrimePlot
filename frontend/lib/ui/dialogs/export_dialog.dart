@@ -139,8 +139,7 @@ class _ExportDialogState extends State<ExportDialog>
 
   // Data tab state.
   String _dataTarget = 'combined';
-  String _dataFormat = 'csv';
-  bool _includeHeader = true;
+  String _dataFormat = 'csv';  bool _includeHeader = true;
   late final TextEditingController _dataName;
 
   bool _busy = false;
@@ -386,7 +385,11 @@ class _ExportDialogState extends State<ExportDialog>
         _label('Format'),
         PrimeSelect<String>(
           value: _dataFormat,
-          options: const {'csv': 'CSV (comma)', 'tsv': 'TSV (tab)'},
+          options: const {
+            'csv': 'CSV (comma)',
+            'tsv': 'TSV (tab)',
+            'auto': 'Auto (locale)',
+          },
           onChanged: (v) => setState(() => _dataFormat = v),
         ),
         const SizedBox(height: 10),
@@ -405,7 +408,7 @@ class _ExportDialogState extends State<ExportDialog>
         ),
         const SizedBox(height: 10),
         _label('File name'),
-        _nameField(_dataName, _dataFormat),
+        _nameField(_dataName, _dataFormat == 'auto' ? 'csv' : _dataFormat),
         const SizedBox(height: 14),
         _exportButton('Export Data', _exportData),
       ],
@@ -418,18 +421,20 @@ class _ExportDialogState extends State<ExportDialog>
       _snack(context, 'Export failed: no active graph', error: true);
       return;
     }
-    final delim = _dataFormat == 'tsv' ? '\t' : ',';
+    // Auto delegates delimiter choice to the Rust locale rule.
+    final delim = _dataFormat == 'tsv'
+        ? '\t'
+        : (_dataFormat == 'auto' ? 'auto' : ',');
+    final fileExt = _dataFormat == 'auto' ? 'csv' : _dataFormat;
     var name = _dataName.text.trim();
     if (name.isEmpty) name = 'data';
-    if (!name.toLowerCase().endsWith('.$_dataFormat')) {
-      name = '$name.$_dataFormat';
+    if (!name.toLowerCase().endsWith('.$fileExt')) {
+      name = '$name.$fileExt';
     }
     final loc = await getSaveLocation(
       suggestedName: name,
       acceptedTypeGroups: [
-        XTypeGroup(
-            label: _dataFormat.toUpperCase(),
-            extensions: [_dataFormat])
+        XTypeGroup(label: fileExt.toUpperCase(), extensions: [fileExt])
       ],
     );
     final path = loc?.path;

@@ -6,9 +6,10 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `check_delimiter`, `escape_field`, `format_cell`, `pick_xy`, `table_to_delimited`, `without_header`, `write_text`
+// These functions are ignored because they are not marked as `pub`: `check_delimiter`, `escape_field`, `format_cell`, `locale_decimal`, `locale_delimiter`, `pick_xy`, `table_to_delimited`, `without_header`, `write_text`
 
-/// Exports one dataset. Delimiter `","` (CSV) or tab (TSV).
+/// Exports one dataset. Delimiter `","`, `";"`, tab, or `"auto"`
+/// (locale rule: comma decimals pair with semicolons).
 void exportTableCsv({
   required String tableId,
   required String path,
