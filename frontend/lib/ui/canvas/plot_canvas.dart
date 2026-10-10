@@ -73,6 +73,8 @@ class PlotCanvas extends StatelessWidget {
         ProjectState.instance.refreshCanvas,
         ProjectState.instance.projectTree,
         ProjectState.instance.exportBackground,
+        ProjectState.instance.decimalSeparator,
+        ProjectState.instance.useThousands,
       ]),
       builder: (context, _) {
         final Color? backgroundFill =
@@ -81,6 +83,10 @@ class PlotCanvas extends StatelessWidget {
           CanvasExportBackground.white => const Color(0xFFFFFFFF),
           CanvasExportBackground.theme => PrimeTheme.canvasBackground,
         };
+        // Locale fingerprint: forces painter repaint on separator/grouping
+        // changes even when every data value is identical.
+        final formatKey =
+            '${ProjectState.instance.decimalSeparator.value}_${ProjectState.instance.useThousands.value}';
         return ValueListenableBuilder<List<DTODataTable>>(
           valueListenable: ProjectState.instance.activeTables,
           builder: (context, tables, child) {
@@ -304,6 +310,7 @@ class PlotCanvas extends StatelessWidget {
                                   tableNames: tableNames,
                                   latexFields: latexFields,
                                   tableIds: tableIds,
+                                  formatKey: formatKey,
                                   backgroundFill: backgroundFill,
                                 ),
                                 child: Container(),
@@ -323,6 +330,7 @@ class PlotCanvas extends StatelessWidget {
                           tableNames: tableNames,
                           latexFields: latexFields,
                           tableIds: tableIds,
+                          formatKey: formatKey,
                           backgroundFill: backgroundFill,
                         ),
                         child: Container(),
@@ -506,6 +514,10 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   final Set<String> latexFields;
   final List<String> tableIds;
 
+  /// Locale fingerprint (`<sep>_<grouping>`): forces repaint when number
+  /// formatting changes even if all data is identical.
+  final String formatKey;
+
   /// Null skips the background fill (transparent export).
   final Color? backgroundFill;
 
@@ -517,6 +529,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     required this.tableNames,
     this.latexFields = const {},
     this.tableIds = const [],
+    this.formatKey = '._false',
     this.backgroundFill,
   });
 
@@ -1007,6 +1020,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _MultiSeriesPlotPainter oldDelegate) {
     if (graphProps != oldDelegate.graphProps) return true;
+    if (formatKey != oldDelegate.formatKey) return true;
     if (backgroundFill != oldDelegate.backgroundFill) return true;
     if (tableProps.length != oldDelegate.tableProps.length) return true;
     if (tableNames.length != oldDelegate.tableNames.length) return true;
