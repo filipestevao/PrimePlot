@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_function_xmax`, `default_function_xmin`, `default_legend_name`, `default_line_style`, `default_line_thickness`, `default_num_samples`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_single_folder`, `restore_single_function`, `restore_single_graph`, `restore_single_shape`, `restore_single_table`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
+// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_function_xmax`, `default_function_xmin`, `default_legend_name`, `default_line_style`, `default_line_thickness`, `default_num_samples`, `default_tick_font_size`, `default_title_font_size`, `default_title_padding`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_single_folder`, `restore_single_function`, `restore_single_graph`, `restore_single_shape`, `restore_single_table`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 FolderProperties getFolderProperties({required String nodeId}) =>
@@ -157,6 +157,22 @@ class GraphProperties {
   final bool showLegend;
   final String legendPosition;
 
+  /// Axis title font size in logical pixels.
+  final double titleFontSize;
+
+  /// Axis tick-number font size in logical pixels.
+  final double tickFontSize;
+
+  /// Gap between an axis title and its axis, in logical pixels.
+  final double titlePadding;
+
+  /// Full-spine frame (no ticks/titles of its own).
+  final bool showBorder;
+
+  /// Per-project overrides (`None` follows the active theme tokens).
+  final String? gridColor;
+  final String? axisColor;
+
   const GraphProperties({
     this.xMin,
     this.xMax,
@@ -172,6 +188,12 @@ class GraphProperties {
     required this.showGrid,
     required this.showLegend,
     required this.legendPosition,
+    required this.titleFontSize,
+    required this.tickFontSize,
+    required this.titlePadding,
+    required this.showBorder,
+    this.gridColor,
+    this.axisColor,
   });
 
   static Future<GraphProperties> default_() =>
@@ -192,7 +214,13 @@ class GraphProperties {
       aspectRatio.hashCode ^
       showGrid.hashCode ^
       showLegend.hashCode ^
-      legendPosition.hashCode;
+      legendPosition.hashCode ^
+      titleFontSize.hashCode ^
+      tickFontSize.hashCode ^
+      titlePadding.hashCode ^
+      showBorder.hashCode ^
+      gridColor.hashCode ^
+      axisColor.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -212,7 +240,13 @@ class GraphProperties {
           aspectRatio == other.aspectRatio &&
           showGrid == other.showGrid &&
           showLegend == other.showLegend &&
-          legendPosition == other.legendPosition;
+          legendPosition == other.legendPosition &&
+          titleFontSize == other.titleFontSize &&
+          tickFontSize == other.tickFontSize &&
+          titlePadding == other.titlePadding &&
+          showBorder == other.showBorder &&
+          gridColor == other.gridColor &&
+          axisColor == other.axisColor;
 }
 
 class ShapeProperties {

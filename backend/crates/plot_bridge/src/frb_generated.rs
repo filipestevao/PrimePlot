@@ -2456,6 +2456,12 @@ impl SseDecode for crate::api::properties::GraphProperties {
         let mut var_showGrid = <bool>::sse_decode(deserializer);
         let mut var_showLegend = <bool>::sse_decode(deserializer);
         let mut var_legendPosition = <String>::sse_decode(deserializer);
+        let mut var_titleFontSize = <f64>::sse_decode(deserializer);
+        let mut var_tickFontSize = <f64>::sse_decode(deserializer);
+        let mut var_titlePadding = <f64>::sse_decode(deserializer);
+        let mut var_showBorder = <bool>::sse_decode(deserializer);
+        let mut var_gridColor = <Option<String>>::sse_decode(deserializer);
+        let mut var_axisColor = <Option<String>>::sse_decode(deserializer);
         return crate::api::properties::GraphProperties {
             x_min: var_xMin,
             x_max: var_xMax,
@@ -2471,6 +2477,12 @@ impl SseDecode for crate::api::properties::GraphProperties {
             show_grid: var_showGrid,
             show_legend: var_showLegend,
             legend_position: var_legendPosition,
+            title_font_size: var_titleFontSize,
+            tick_font_size: var_tickFontSize,
+            title_padding: var_titlePadding,
+            show_border: var_showBorder,
+            grid_color: var_gridColor,
+            axis_color: var_axisColor,
         };
     }
 }
@@ -2604,6 +2616,17 @@ impl SseDecode for crate::api::project::NodeType {
             4 => crate::api::project::NodeType::Shape,
             _ => unreachable!("Invalid variant for NodeType: {}", inner),
         };
+    }
+}
+
+impl SseDecode for Option<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
     }
 }
 
@@ -3041,6 +3064,12 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::GraphProperties {
             self.show_grid.into_into_dart().into_dart(),
             self.show_legend.into_into_dart().into_dart(),
             self.legend_position.into_into_dart().into_dart(),
+            self.title_font_size.into_into_dart().into_dart(),
+            self.tick_font_size.into_into_dart().into_dart(),
+            self.title_padding.into_into_dart().into_dart(),
+            self.show_border.into_into_dart().into_dart(),
+            self.grid_color.into_into_dart().into_dart(),
+            self.axis_color.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3332,6 +3361,12 @@ impl SseEncode for crate::api::properties::GraphProperties {
         <bool>::sse_encode(self.show_grid, serializer);
         <bool>::sse_encode(self.show_legend, serializer);
         <String>::sse_encode(self.legend_position, serializer);
+        <f64>::sse_encode(self.title_font_size, serializer);
+        <f64>::sse_encode(self.tick_font_size, serializer);
+        <f64>::sse_encode(self.title_padding, serializer);
+        <bool>::sse_encode(self.show_border, serializer);
+        <Option<String>>::sse_encode(self.grid_color, serializer);
+        <Option<String>>::sse_encode(self.axis_color, serializer);
     }
 }
 
@@ -3446,6 +3481,16 @@ impl SseEncode for crate::api::project::NodeType {
             },
             serializer,
         );
+    }
+}
+
+impl SseEncode for Option<String> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <String>::sse_encode(value, serializer);
+        }
     }
 }
 

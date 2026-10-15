@@ -2456,8 +2456,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   GraphProperties dco_decode_graph_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
     return GraphProperties(
       xMin: dco_decode_opt_box_autoadd_f_64(arr[0]),
       xMax: dco_decode_opt_box_autoadd_f_64(arr[1]),
@@ -2473,6 +2473,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       showGrid: dco_decode_bool(arr[11]),
       showLegend: dco_decode_bool(arr[12]),
       legendPosition: dco_decode_String(arr[13]),
+      titleFontSize: dco_decode_f_64(arr[14]),
+      tickFontSize: dco_decode_f_64(arr[15]),
+      titlePadding: dco_decode_f_64(arr[16]),
+      showBorder: dco_decode_bool(arr[17]),
+      gridColor: dco_decode_opt_String(arr[18]),
+      axisColor: dco_decode_opt_String(arr[19]),
     );
   }
 
@@ -2546,6 +2552,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NodeType dco_decode_node_type(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return NodeType.values[raw as int];
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
   }
 
   @protected
@@ -2825,6 +2837,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_showGrid = sse_decode_bool(deserializer);
     var var_showLegend = sse_decode_bool(deserializer);
     var var_legendPosition = sse_decode_String(deserializer);
+    var var_titleFontSize = sse_decode_f_64(deserializer);
+    var var_tickFontSize = sse_decode_f_64(deserializer);
+    var var_titlePadding = sse_decode_f_64(deserializer);
+    var var_showBorder = sse_decode_bool(deserializer);
+    var var_gridColor = sse_decode_opt_String(deserializer);
+    var var_axisColor = sse_decode_opt_String(deserializer);
     return GraphProperties(
       xMin: var_xMin,
       xMax: var_xMax,
@@ -2840,6 +2858,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       showGrid: var_showGrid,
       showLegend: var_showLegend,
       legendPosition: var_legendPosition,
+      titleFontSize: var_titleFontSize,
+      tickFontSize: var_tickFontSize,
+      titlePadding: var_titlePadding,
+      showBorder: var_showBorder,
+      gridColor: var_gridColor,
+      axisColor: var_axisColor,
     );
   }
 
@@ -2954,6 +2978,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return NodeType.values[inner];
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
   }
 
   @protected
@@ -3240,6 +3275,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.showGrid, serializer);
     sse_encode_bool(self.showLegend, serializer);
     sse_encode_String(self.legendPosition, serializer);
+    sse_encode_f_64(self.titleFontSize, serializer);
+    sse_encode_f_64(self.tickFontSize, serializer);
+    sse_encode_f_64(self.titlePadding, serializer);
+    sse_encode_bool(self.showBorder, serializer);
+    sse_encode_opt_String(self.gridColor, serializer);
+    sse_encode_opt_String(self.axisColor, serializer);
   }
 
   @protected
@@ -3345,6 +3386,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_node_type(NodeType self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
   }
 
   @protected

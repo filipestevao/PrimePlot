@@ -46,8 +46,12 @@ Color _parseColor(String value, Color fallback) {
   }
 }
 
-String _formatTick(double value) {
-  final abs = value.abs();
+/// Single source for axis-title sizing, shared by the painter and the
+/// LaTeX overlay so toggling `$` never shifts titles.
+double _titleSizeOf(GraphProperties? graphProps) =>
+    (graphProps?.titleFontSize ?? 12.0).clamp(6.0, 32.0);
+
+String _formatTick(double value) {  final abs = value.abs();
   String dotted;
   if (abs != 0 && (abs >= 10000 || abs < 0.001)) {
     dotted = value.toStringAsExponential(1);
@@ -448,12 +452,20 @@ class PlotCanvas extends StatelessWidget {
     const marginBottom = kPlotMarginBottom;
     const marginTop = kPlotMarginTop;
     const marginRight = kPlotMarginRight;
+    final titleGap = graphProps.titlePadding.clamp(0.0, 80.0);
 
+    // Identical style AND metrics to the painter's titles: the overlay box
+    // coincides exactly with the painted text box, so `$` toggles glyphs
+    // without moving them.
     final labelStyle = TextStyle(
-      fontSize: 12,
+      fontSize: _titleSizeOf(graphProps),
       fontWeight: FontWeight.bold,
       color: PrimeTheme.textPrimary,
     );
+    final textH = TextPainter(
+      text: TextSpan(text: 'Hg', style: labelStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
 
     final overlays = <Widget>[];
 
@@ -462,9 +474,11 @@ class PlotCanvas extends StatelessWidget {
         Positioned(
           left: marginLeft,
           right: marginRight,
-          bottom: 20,
+          top: size.height - titleGap - textH.height,
+          height: textH.height,
           child: Center(
             child: RichText(
+              textAlign: TextAlign.center,
               text: TextSpan(
                 children: buildLatexSpans(
                   graphProps.xLabel,
@@ -480,7 +494,8 @@ class PlotCanvas extends StatelessWidget {
     if (latexFields.contains('yLabel')) {
       overlays.add(
         Positioned(
-          left: 0,
+          // Box centered on the painter's title x (== titleGap).
+          left: titleGap - marginLeft / 2,
           width: marginLeft,
           top: marginTop,
           bottom: marginBottom,
@@ -568,11 +583,23 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     final showGrid = graphProps?.showGrid ?? true;
     final showXAxis = graphProps?.xVisible ?? true;
     final showYAxis = graphProps?.yVisible ?? true;
+    final titleSize = _titleSizeOf(graphProps);
+    final tickSize = (graphProps?.tickFontSize ?? 10.0).clamp(6.0, 28.0);
+    final titleGap = (graphProps?.titlePadding ?? 20.0).clamp(0.0, 80.0);
+    final axisBase = PrimeTheme.canvasAxis;
+    final gridBase = PrimeTheme.canvasGrid;
+    final axisOverride = graphProps?.axisColor;
+    final gridOverride = graphProps?.gridColor;
     final paintAxis = Paint()
-      ..color = PrimeTheme.canvasAxis
+      ..color = axisOverride != null
+          ? _parseColor(axisOverride, axisBase)
+          : axisBase
       ..strokeWidth = 1.5;
     final paintGrid = Paint()
-      ..color = PrimeTheme.canvasGrid.withValues(alpha: 0.3)
+      ..color = (gridOverride != null
+              ? _parseColor(gridOverride, gridBase)
+              : gridBase)
+          .withValues(alpha: 0.3)
       ..strokeWidth = 1.0;
 
     Offset? mapToScreen(double x, double y) {
@@ -589,8 +616,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     void drawAxisAndGrid() {
       const ticks = 5;
       final textStyle = TextStyle(
-        color: PrimeTheme.canvasAxis,
-        fontSize: 10,
+        color: paintAxis.color,
+        fontSize: tickSize,
       );
       final bottom = size.height - marginBottom;
       final right = size.width - marginRight;
@@ -661,6 +688,15 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           paintAxis,
         );
       }
+      if (graphProps?.showBorder ?? false) {
+        canvas.drawRect(
+          Rect.fromLTWH(marginLeft, marginTop, plotWidth, plotHeight),
+          Paint()
+            ..color = paintAxis.color
+            ..strokeWidth = 1.5
+            ..style = PaintingStyle.stroke,
+        );
+      }
 
       if (showXAxis && !latexFields.contains('xLabel')) {
         final title = TextPainter(
@@ -668,7 +704,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
             text: graphProps?.xLabel ?? 'X',
             style: TextStyle(
               color: PrimeTheme.textPrimary,
-              fontSize: 12,
+              fontSize: titleSize,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -679,7 +715,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           canvas,
           Offset(
             marginLeft + plotWidth / 2 - title.width / 2,
-            size.height - 20,
+            size.height - titleGap,
           ),
         );
       }
@@ -690,7 +726,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
             text: graphProps?.yLabel ?? 'Y',
             style: TextStyle(
               color: PrimeTheme.textPrimary,
-              fontSize: 12,
+              fontSize: titleSize,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -698,7 +734,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         );
         title.layout();
         canvas.save();
-        canvas.translate(20, marginTop + plotHeight / 2 + title.width / 2);
+        canvas.translate(titleGap, marginTop + plotHeight / 2 + title.width / 2);
         canvas.rotate(-math.pi / 2);
         title.paint(canvas, Offset.zero);
         canvas.restore();

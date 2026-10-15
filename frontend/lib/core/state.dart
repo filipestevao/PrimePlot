@@ -452,6 +452,12 @@ class ProjectState {
         showGrid: gp.showGrid,
         showLegend: gp.showLegend,
         legendPosition: gp.legendPosition,
+        titleFontSize: gp.titleFontSize,
+        tickFontSize: gp.tickFontSize,
+        titlePadding: gp.titlePadding,
+        showBorder: gp.showBorder,
+        gridColor: gp.gridColor,
+        axisColor: gp.axisColor,
       ),
     );
   }

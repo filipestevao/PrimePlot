@@ -33,6 +33,12 @@ extension GraphPropertiesExt on GraphProperties {
     bool? showGrid,
     bool? showLegend,
     String? legendPosition,
+    double? titleFontSize,
+    double? tickFontSize,
+    double? titlePadding,
+    bool? showBorder,
+    String? Function()? gridColor,
+    String? Function()? axisColor,
   }) {
     return GraphProperties(
       xMin: xMin != null ? xMin() : this.xMin,
@@ -49,6 +55,12 @@ extension GraphPropertiesExt on GraphProperties {
       showGrid: showGrid ?? this.showGrid,
       showLegend: showLegend ?? this.showLegend,
       legendPosition: legendPosition ?? this.legendPosition,
+      titleFontSize: titleFontSize ?? this.titleFontSize,
+      tickFontSize: tickFontSize ?? this.tickFontSize,
+      titlePadding: titlePadding ?? this.titlePadding,
+      showBorder: showBorder ?? this.showBorder,
+      gridColor: gridColor != null ? gridColor() : this.gridColor,
+      axisColor: axisColor != null ? axisColor() : this.axisColor,
     );
   }
 }
@@ -703,6 +715,122 @@ class _GraphInspector extends StatelessWidget {
                     ),
                   ),
                 ),
+                PropertyRow(
+                  label: 'Title Size',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                            activeTrackColor: PrimeTheme.primaryAccent,
+                            inactiveTrackColor: PrimeTheme.borderSide,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: props.titleFontSize.clamp(8.0, 20.0),
+                            min: 8.0,
+                            max: 20.0,
+                            onChanged: (val) {
+                              ProjectState.instance.updateGraphProperties(
+                                nodeId,
+                                props.copyWith(titleFontSize: val),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 58,
+                        child: PrimeNumberField(
+                          value: props.titleFontSize,
+                          step: 0.5,
+                          min: 8.0,
+                          max: 20.0,
+                          precision: 1,
+                          onChanged: (val) {
+                            if (val != null) {
+                              ProjectState.instance.updateGraphProperties(
+                                nodeId,
+                                props.copyWith(titleFontSize: val),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Numbers Size',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                            activeTrackColor: PrimeTheme.primaryAccent,
+                            inactiveTrackColor: PrimeTheme.borderSide,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: props.tickFontSize.clamp(6.0, 18.0),
+                            min: 6.0,
+                            max: 18.0,
+                            onChanged: (val) {
+                              ProjectState.instance.updateGraphProperties(
+                                nodeId,
+                                props.copyWith(tickFontSize: val),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 58,
+                        child: PrimeNumberField(
+                          value: props.tickFontSize,
+                          step: 0.5,
+                          min: 6.0,
+                          max: 18.0,
+                          precision: 1,
+                          onChanged: (val) {
+                            if (val != null) {
+                              ProjectState.instance.updateGraphProperties(
+                                nodeId,
+                                props.copyWith(tickFontSize: val),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Title Gap',
+                  child: PrimeNumberField(
+                    value: props.titlePadding,
+                    step: 1.0,
+                    min: 0.0,
+                    max: 60.0,
+                    precision: 0,
+                    onChanged: (val) {
+                      if (val != null) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(titlePadding: val),
+                        );
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
 
@@ -741,6 +869,47 @@ class _GraphInspector extends StatelessWidget {
                       ProjectState.instance.updateGraphProperties(
                         nodeId,
                         props.copyWith(aspectRatio: () => val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Show Border',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.showBorder,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(showBorder: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Grid Color',
+                  child: _ThemeColorRow(
+                    value: props.gridColor,
+                    label: 'Grid Color',
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(gridColor: () => val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Axes Color',
+                  child: _ThemeColorRow(
+                    value: props.axisColor,
+                    label: 'Axes Color',
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(axisColor: () => val),
                       );
                     },
                   ),
@@ -818,6 +987,50 @@ class _GraphInspector extends StatelessWidget {
       onChanged: onChanged,
       useLatex: useLatex,
       onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+    );
+  }
+}
+
+/// Color picker with a "follow theme" reset: a null value renders the
+/// theme token and shows no reset affordance.
+class _ThemeColorRow extends StatelessWidget {
+  final String? value;
+  final String label;
+  final ValueChanged<String?> onChanged;
+  const _ThemeColorRow({
+    required this.value,
+    required this.label,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        PrimeColorPicker(
+          hexColor: value ?? '#808080',
+          label: label,
+          onChanged: (c) => onChanged(c),
+        ),
+        if (value != null) ...[
+          const SizedBox(width: 6),
+          Tooltip(
+            message: 'Follow theme',
+            child: InkWell(
+              onTap: () => onChanged(null),
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  Icons.restart_alt,
+                  size: 13,
+                  color: PrimeTheme.primaryAccent.withValues(alpha: 0.8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
