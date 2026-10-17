@@ -2459,6 +2459,7 @@ impl SseDecode for crate::api::properties::GraphProperties {
         let mut var_titleFontSize = <f64>::sse_decode(deserializer);
         let mut var_tickFontSize = <f64>::sse_decode(deserializer);
         let mut var_titlePadding = <f64>::sse_decode(deserializer);
+        let mut var_titlePaddingY = <f64>::sse_decode(deserializer);
         let mut var_showBorder = <bool>::sse_decode(deserializer);
         let mut var_gridColor = <Option<String>>::sse_decode(deserializer);
         let mut var_axisColor = <Option<String>>::sse_decode(deserializer);
@@ -2480,6 +2481,7 @@ impl SseDecode for crate::api::properties::GraphProperties {
             title_font_size: var_titleFontSize,
             tick_font_size: var_tickFontSize,
             title_padding: var_titlePadding,
+            title_padding_y: var_titlePaddingY,
             show_border: var_showBorder,
             grid_color: var_gridColor,
             axis_color: var_axisColor,
@@ -3067,6 +3069,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::GraphProperties {
             self.title_font_size.into_into_dart().into_dart(),
             self.tick_font_size.into_into_dart().into_dart(),
             self.title_padding.into_into_dart().into_dart(),
+            self.title_padding_y.into_into_dart().into_dart(),
             self.show_border.into_into_dart().into_dart(),
             self.grid_color.into_into_dart().into_dart(),
             self.axis_color.into_into_dart().into_dart(),
@@ -3364,6 +3367,7 @@ impl SseEncode for crate::api::properties::GraphProperties {
         <f64>::sse_encode(self.title_font_size, serializer);
         <f64>::sse_encode(self.tick_font_size, serializer);
         <f64>::sse_encode(self.title_padding, serializer);
+        <f64>::sse_encode(self.title_padding_y, serializer);
         <bool>::sse_encode(self.show_border, serializer);
         <Option<String>>::sse_encode(self.grid_color, serializer);
         <Option<String>>::sse_encode(self.axis_color, serializer);

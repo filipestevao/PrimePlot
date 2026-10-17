@@ -255,6 +255,7 @@ class _PlotViewportState extends State<PlotViewport> {
                   painter: _ViewportOverlay(
                     hover: _hover,
                     marquee: _marquee,
+                    margins: _resolve()?.margins ?? PlotMargins.fallback,
                   ),
                 ),
               ),
@@ -269,8 +270,13 @@ class _PlotViewportState extends State<PlotViewport> {
 class _ViewportOverlay extends CustomPainter {
   final Offset? hover;
   final Rect? marquee;
+  final PlotMargins margins;
 
-  const _ViewportOverlay({required this.hover, required this.marquee});
+  const _ViewportOverlay({
+    required this.hover,
+    required this.marquee,
+    required this.margins,
+  });
 
   void _dashLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
     const dash = 5.0;
@@ -289,10 +295,10 @@ class _ViewportOverlay extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(
-      kPlotMarginLeft,
-      kPlotMarginTop,
-      size.width - kPlotMarginLeft - kPlotMarginRight,
-      size.height - kPlotMarginTop - kPlotMarginBottom,
+      margins.left,
+      margins.top,
+      size.width - margins.left - margins.right,
+      size.height - margins.top - margins.bottom,
     );
     if (rect.width <= 0 || rect.height <= 0) return;
 
@@ -327,6 +333,8 @@ class _ViewportOverlay extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ViewportOverlay old) {
-    return hover != old.hover || marquee != old.marquee;
+    return hover != old.hover ||
+        marquee != old.marquee ||
+        margins != old.margins;
   }
 }

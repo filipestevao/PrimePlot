@@ -36,6 +36,7 @@ extension GraphPropertiesExt on GraphProperties {
     double? titleFontSize,
     double? tickFontSize,
     double? titlePadding,
+    double? titlePaddingY,
     bool? showBorder,
     String? Function()? gridColor,
     String? Function()? axisColor,
@@ -58,6 +59,7 @@ extension GraphPropertiesExt on GraphProperties {
       titleFontSize: titleFontSize ?? this.titleFontSize,
       tickFontSize: tickFontSize ?? this.tickFontSize,
       titlePadding: titlePadding ?? this.titlePadding,
+      titlePaddingY: titlePaddingY ?? this.titlePaddingY,
       showBorder: showBorder ?? this.showBorder,
       gridColor: gridColor != null ? gridColor() : this.gridColor,
       axisColor: axisColor != null ? axisColor() : this.axisColor,
@@ -819,18 +821,36 @@ class _GraphInspector extends StatelessWidget {
                   ),
                 ),
                 PropertyRow(
-                  label: 'Title Gap',
+                  label: 'X Title Gap',
                   child: PrimeNumberField(
                     value: props.titlePadding,
                     step: 1.0,
                     min: 0.0,
-                    max: 60.0,
+                    max: 80.0,
                     precision: 0,
                     onChanged: (val) {
                       if (val != null) {
                         ProjectState.instance.updateGraphProperties(
                           nodeId,
                           props.copyWith(titlePadding: val),
+                        );
+                      }
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Y Title Gap',
+                  child: PrimeNumberField(
+                    value: props.titlePaddingY,
+                    step: 1.0,
+                    min: 0.0,
+                    max: 80.0,
+                    precision: 0,
+                    onChanged: (val) {
+                      if (val != null) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(titlePaddingY: val),
                         );
                       }
                     },

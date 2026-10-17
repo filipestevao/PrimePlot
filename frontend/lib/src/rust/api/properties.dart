@@ -163,8 +163,11 @@ class GraphProperties {
   /// Axis tick-number font size in logical pixels.
   final double tickFontSize;
 
-  /// Gap between an axis title and its axis, in logical pixels.
+  /// Gap between the X axis title and the X axis, in logical pixels.
   final double titlePadding;
+
+  /// Gap between the Y axis title and the Y axis, in logical pixels.
+  final double titlePaddingY;
 
   /// Full-spine frame (no ticks/titles of its own).
   final bool showBorder;
@@ -191,6 +194,7 @@ class GraphProperties {
     required this.titleFontSize,
     required this.tickFontSize,
     required this.titlePadding,
+    required this.titlePaddingY,
     required this.showBorder,
     this.gridColor,
     this.axisColor,
@@ -218,6 +222,7 @@ class GraphProperties {
       titleFontSize.hashCode ^
       tickFontSize.hashCode ^
       titlePadding.hashCode ^
+      titlePaddingY.hashCode ^
       showBorder.hashCode ^
       gridColor.hashCode ^
       axisColor.hashCode;
@@ -244,6 +249,7 @@ class GraphProperties {
           titleFontSize == other.titleFontSize &&
           tickFontSize == other.tickFontSize &&
           titlePadding == other.titlePadding &&
+          titlePaddingY == other.titlePaddingY &&
           showBorder == other.showBorder &&
           gridColor == other.gridColor &&
           axisColor == other.axisColor;

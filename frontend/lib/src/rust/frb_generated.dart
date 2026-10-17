@@ -2456,8 +2456,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   GraphProperties dco_decode_graph_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 20)
-      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    if (arr.length != 21)
+      throw Exception('unexpected arr length: expect 21 but see ${arr.length}');
     return GraphProperties(
       xMin: dco_decode_opt_box_autoadd_f_64(arr[0]),
       xMax: dco_decode_opt_box_autoadd_f_64(arr[1]),
@@ -2476,9 +2476,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       titleFontSize: dco_decode_f_64(arr[14]),
       tickFontSize: dco_decode_f_64(arr[15]),
       titlePadding: dco_decode_f_64(arr[16]),
-      showBorder: dco_decode_bool(arr[17]),
-      gridColor: dco_decode_opt_String(arr[18]),
-      axisColor: dco_decode_opt_String(arr[19]),
+      titlePaddingY: dco_decode_f_64(arr[17]),
+      showBorder: dco_decode_bool(arr[18]),
+      gridColor: dco_decode_opt_String(arr[19]),
+      axisColor: dco_decode_opt_String(arr[20]),
     );
   }
 
@@ -2840,6 +2841,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_titleFontSize = sse_decode_f_64(deserializer);
     var var_tickFontSize = sse_decode_f_64(deserializer);
     var var_titlePadding = sse_decode_f_64(deserializer);
+    var var_titlePaddingY = sse_decode_f_64(deserializer);
     var var_showBorder = sse_decode_bool(deserializer);
     var var_gridColor = sse_decode_opt_String(deserializer);
     var var_axisColor = sse_decode_opt_String(deserializer);
@@ -2861,6 +2863,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       titleFontSize: var_titleFontSize,
       tickFontSize: var_tickFontSize,
       titlePadding: var_titlePadding,
+      titlePaddingY: var_titlePaddingY,
       showBorder: var_showBorder,
       gridColor: var_gridColor,
       axisColor: var_axisColor,
@@ -3278,6 +3281,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_f_64(self.titleFontSize, serializer);
     sse_encode_f_64(self.tickFontSize, serializer);
     sse_encode_f_64(self.titlePadding, serializer);
+    sse_encode_f_64(self.titlePaddingY, serializer);
     sse_encode_bool(self.showBorder, serializer);
     sse_encode_opt_String(self.gridColor, serializer);
     sse_encode_opt_String(self.axisColor, serializer);

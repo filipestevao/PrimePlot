@@ -42,9 +42,12 @@ pub struct GraphProperties {
     /// Axis tick-number font size in logical pixels.
     #[serde(default = "default_tick_font_size")]
     pub tick_font_size: f64,
-    /// Gap between an axis title and its axis, in logical pixels.
+    /// Gap between the X axis title and the X axis, in logical pixels.
     #[serde(default = "default_title_padding")]
     pub title_padding: f64,
+    /// Gap between the Y axis title and the Y axis, in logical pixels.
+    #[serde(default = "default_title_padding")]
+    pub title_padding_y: f64,
     /// Full-spine frame (no ticks/titles of its own).
     #[serde(default)]
     pub show_border: bool,
@@ -87,6 +90,7 @@ impl Default for GraphProperties {
             title_font_size: default_title_font_size(),
             tick_font_size: default_tick_font_size(),
             title_padding: default_title_padding(),
+            title_padding_y: default_title_padding(),
             show_border: false,
             grid_color: None,
             axis_color: None,
@@ -364,7 +368,7 @@ mod tests {
 
     #[test]
     fn legacy_graph_props_migrate_with_defaults() {
-        // Pre-Step-K bundles have all legacy fields but none of the six new ones.
+        // Pre-Step-K bundles have all legacy fields but none of the newer ones.
         let legacy: GraphProperties = serde_json::from_str(
             r#"{"x_min":null,"x_max":null,"y_min":null,"y_max":null,"x_visible":true,"y_visible":true,"x_scale":"Linear","y_scale":"Linear","x_label":"T","y_label":"Y","aspect_ratio":null,"show_grid":false,"show_legend":true,"legend_position":"Top Right"}"#,
         )
@@ -374,6 +378,7 @@ mod tests {
         assert_eq!(legacy.title_font_size, 12.0);
         assert_eq!(legacy.tick_font_size, 10.0);
         assert_eq!(legacy.title_padding, 20.0);
+        assert_eq!(legacy.title_padding_y, 20.0);
         assert!(!legacy.show_border);
         assert_eq!(legacy.grid_color, None);
         assert_eq!(legacy.axis_color, None);

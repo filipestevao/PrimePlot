@@ -10,15 +10,49 @@
 //! aware); values written back to Rust `GraphProperties` are raw data values.
 
 import 'dart:math' as math;
-import 'dart:ui';
 
+import 'package:flutter/material.dart';
+
+import '../../core/number_format.dart';
 import '../../src/rust/api/properties.dart';
 
-// Must match the painter layout in `plot_canvas.dart`.
+// Fallback layout before any data resolves (viewport overlay with no view).
 const double kPlotMarginLeft = 60.0;
 const double kPlotMarginBottom = 44.0;
 const double kPlotMarginTop = 24.0;
 const double kPlotMarginRight = 24.0;
+
+/// Gap between an axis line and its tick-number labels (painter and margin
+/// measurement must agree).
+const double kAxisLabelGap = 10.0;
+
+/// Breathing room between an axis title and the canvas edge.
+const double kAxisTitlePad = 6.0;
+
+/// Single source for axis-title sizing, shared by the painter, the LaTeX
+/// overlay, and the margin computation.
+double axisTitleSize(GraphProperties? graphProps) =>
+    (graphProps?.titleFontSize ?? 12.0).clamp(6.0, 32.0);
+
+/// Single source for tick-number sizing.
+double axisTickSize(GraphProperties? graphProps) =>
+    (graphProps?.tickFontSize ?? 10.0).clamp(6.0, 28.0);
+
+/// Axis tick label under the active locale (same rules as the painter).
+String formatTickLabel(double value) {
+  final abs = value.abs();
+  String dotted;
+  if (abs != 0 && (abs >= 10000 || abs < 0.001)) {
+    dotted = value.toStringAsExponential(1);
+  } else if (abs >= 100) {
+    dotted = value.toStringAsFixed(0);
+  } else if (abs >= 10) {
+    dotted = value.toStringAsFixed(1);
+  } else {
+    dotted = value.toStringAsFixed(2);
+  }
+  return groupDotted(dotted);
+}
 
 enum PlotAxisScale { linear, log, sqrt }
 
@@ -53,6 +87,123 @@ double inverseTransformValue(double value, PlotAxisScale scale) {
   }
 }
 
+/// Resolved canvas margins in logical pixels.
+///
+/// Tick numbers keep a fixed [kAxisLabelGap] band next to their axis; each
+/// title sits `max(band, gap)` away from the axis so it never overlaps the
+/// numbers, and the margin grows to fit it (titles never clip). The title
+/// gaps come from `GraphProperties.titlePadding` (X) and `titlePaddingY` (Y).
+class PlotMargins {
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+
+  /// Distance from the X axis line to the top of the X title box.
+  final double xTitleTop;
+
+  /// Distance from the Y axis line to the right edge of the Y title box.
+  final double yTitleFromAxis;
+
+  const PlotMargins({
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+    required this.xTitleTop,
+    required this.yTitleFromAxis,
+  });
+
+  /// Pre-data layout matching the historical fixed margins.
+  static const fallback = PlotMargins(
+    left: kPlotMarginLeft,
+    top: kPlotMarginTop,
+    right: kPlotMarginRight,
+    bottom: kPlotMarginBottom,
+    xTitleTop: 24.0,
+    yTitleFromAxis: 42.0,
+  );
+
+  @override
+  bool operator ==(Object other) {
+    return other is PlotMargins &&
+        other.left == left &&
+        other.top == top &&
+        other.right == right &&
+        other.bottom == bottom &&
+        other.xTitleTop == xTitleTop &&
+        other.yTitleFromAxis == yTitleFromAxis;
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(left, top, right, bottom, xTitleTop, yTitleFromAxis);
+}
+
+Size _measureTickText(String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  return Size(painter.width, painter.height);
+}
+
+/// Resolves the canvas margins for the current fonts and title gaps.
+PlotMargins computePlotMargins(
+  GraphProperties? graphProps, {
+  required double minY,
+  required double maxY,
+  required PlotAxisScale yScale,
+}) {
+  final titleLineHeight = _measureTickText(
+    'Hg',
+    TextStyle(fontSize: axisTitleSize(graphProps), fontWeight: FontWeight.bold),
+  ).height;
+
+  final fallback = PlotMargins.fallback;
+  var bottom = fallback.bottom;
+  var xTitleTop = fallback.xTitleTop;
+  if (graphProps?.xVisible ?? true) {
+    final tickLineHeight = _measureTickText(
+      'Hg',
+      TextStyle(fontSize: axisTickSize(graphProps)),
+    ).height;
+    final bandX = kAxisLabelGap + tickLineHeight;
+    final gapX = (graphProps?.titlePadding ?? 20.0).clamp(0.0, 80.0);
+    xTitleTop = math.max(bandX, gapX);
+    bottom = xTitleTop + titleLineHeight + kAxisTitlePad;
+  }
+
+  var left = fallback.left;
+  var yTitleFromAxis = fallback.yTitleFromAxis;
+  if (graphProps?.yVisible ?? true) {
+    final tickStyle = TextStyle(fontSize: axisTickSize(graphProps));
+    var tickWidth = 0.0;
+    const ticks = 5;
+    for (var i = 0; i <= ticks; i++) {
+      final rawY = inverseTransformValue(
+        minY + (maxY - minY) * i / ticks,
+        yScale,
+      );
+      final width = _measureTickText(formatTickLabel(rawY), tickStyle).width;
+      if (width > tickWidth) tickWidth = width;
+    }
+    final bandY = kAxisLabelGap + tickWidth;
+    final gapY = (graphProps?.titlePaddingY ?? 20.0).clamp(0.0, 80.0);
+    yTitleFromAxis = math.max(bandY, gapY) + titleLineHeight;
+    left = yTitleFromAxis + kAxisTitlePad;
+  }
+
+  return PlotMargins(
+    left: left,
+    top: kPlotMarginTop,
+    right: kPlotMarginRight,
+    bottom: bottom,
+    xTitleTop: xTitleTop,
+    yTitleFromAxis: yTitleFromAxis,
+  );
+}
+
 /// Resolved viewport limits in *transformed* space.
 class PlotView {
   final double minX;
@@ -61,6 +212,7 @@ class PlotView {
   final double maxY;
   final PlotAxisScale xScale;
   final PlotAxisScale yScale;
+  final PlotMargins margins;
 
   const PlotView({
     required this.minX,
@@ -69,6 +221,7 @@ class PlotView {
     required this.maxY,
     required this.xScale,
     required this.yScale,
+    required this.margins,
   });
 
   double get spanX => maxX - minX;
@@ -76,10 +229,10 @@ class PlotView {
 
   Rect plotRect(Size size) {
     return Rect.fromLTWH(
-      kPlotMarginLeft,
-      kPlotMarginTop,
-      size.width - kPlotMarginLeft - kPlotMarginRight,
-      size.height - kPlotMarginTop - kPlotMarginBottom,
+      margins.left,
+      margins.top,
+      size.width - margins.left - margins.right,
+      size.height - margins.top - margins.bottom,
     );
   }
 }
@@ -159,6 +312,12 @@ PlotView? resolvePlotView({
     maxY: maxY,
     xScale: xScale,
     yScale: yScale,
+    margins: computePlotMargins(
+      graphProps,
+      minY: minY,
+      maxY: maxY,
+      yScale: yScale,
+    ),
   );
 }
 

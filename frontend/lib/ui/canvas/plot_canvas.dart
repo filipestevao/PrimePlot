@@ -46,25 +46,6 @@ Color _parseColor(String value, Color fallback) {
   }
 }
 
-/// Single source for axis-title sizing, shared by the painter and the
-/// LaTeX overlay so toggling `$` never shifts titles.
-double _titleSizeOf(GraphProperties? graphProps) =>
-    (graphProps?.titleFontSize ?? 12.0).clamp(6.0, 32.0);
-
-String _formatTick(double value) {  final abs = value.abs();
-  String dotted;
-  if (abs != 0 && (abs >= 10000 || abs < 0.001)) {
-    dotted = value.toStringAsExponential(1);
-  } else if (abs >= 100) {
-    dotted = value.toStringAsFixed(0);
-  } else if (abs >= 10) {
-    dotted = value.toStringAsFixed(1);
-  } else {
-    dotted = value.toStringAsFixed(2);
-  }
-  return groupDotted(dotted);
-}
-
 class PlotCanvas extends StatelessWidget {
   const PlotCanvas({super.key});
 
@@ -302,6 +283,13 @@ class PlotCanvas extends StatelessWidget {
                       baseCanvas = LayoutBuilder(
                         builder: (context, constraints) {
                           final size = Size(constraints.maxWidth, constraints.maxHeight);
+                          final margins =
+                              resolvePlotView(
+                                xSeries: seriesX,
+                                ySeries: seriesY,
+                                graphProps: gp,
+                              )?.margins ??
+                              PlotMargins.fallback;
                           return Stack(
                             clipBehavior: Clip.none,
                             children: [
@@ -319,7 +307,7 @@ class PlotCanvas extends StatelessWidget {
                                 ),
                                 child: Container(),
                               ),
-                              ..._buildLatexOverlays(gp, size, latexFields),
+                              ..._buildLatexOverlays(gp, size, latexFields, margins),
                             ],
                           );
                         },
@@ -447,18 +435,13 @@ class PlotCanvas extends StatelessWidget {
     GraphProperties graphProps,
     Size size,
     Set<String> latexFields,
+    PlotMargins margins,
   ) {
-    const marginLeft = kPlotMarginLeft;
-    const marginBottom = kPlotMarginBottom;
-    const marginTop = kPlotMarginTop;
-    const marginRight = kPlotMarginRight;
-    final titleGap = graphProps.titlePadding.clamp(0.0, 80.0);
-
     // Identical style AND metrics to the painter's titles: the overlay box
     // coincides exactly with the painted text box, so `$` toggles glyphs
     // without moving them.
     final labelStyle = TextStyle(
-      fontSize: _titleSizeOf(graphProps),
+      fontSize: axisTitleSize(graphProps),
       fontWeight: FontWeight.bold,
       color: PrimeTheme.textPrimary,
     );
@@ -472,17 +455,25 @@ class PlotCanvas extends StatelessWidget {
     if (latexFields.contains('xLabel')) {
       overlays.add(
         Positioned(
-          left: marginLeft,
-          right: marginRight,
-          top: size.height - titleGap,
+          left: margins.left,
+          right: margins.right,
+          top: size.height - margins.bottom + margins.xTitleTop,
           height: textH.height,
           child: Center(
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                children: buildLatexSpans(
-                  graphProps.xLabel,
-                  style: labelStyle,
+            // RichText gets unbounded width inside the (possibly narrow)
+            // overlay strip so a title never wraps; it paints outside the
+            // box instead.
+            child: OverflowBox(
+              maxWidth: double.infinity,
+              maxHeight: double.infinity,
+              alignment: Alignment.center,
+              child: RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  children: buildLatexSpans(
+                    graphProps.xLabel,
+                    style: labelStyle,
+                  ),
                 ),
               ),
             ),
@@ -494,19 +485,24 @@ class PlotCanvas extends StatelessWidget {
     if (latexFields.contains('yLabel')) {
       overlays.add(
         Positioned(
-          // Same strip as the painter's rotated title: [titleGap, +lineHeight].
-          left: titleGap,
+          // Same strip as the painter's rotated title: [axis - gap - lineH].
+          left: margins.left - margins.yTitleFromAxis,
           width: textH.height,
-          top: marginTop,
-          bottom: marginBottom,
+          top: margins.top,
+          bottom: margins.bottom,
           child: Center(
             child: Transform.rotate(
               angle: -math.pi / 2,
-              child: RichText(
-                text: TextSpan(
-                  children: buildLatexSpans(
-                    graphProps.yLabel,
-                    style: labelStyle,
+              child: OverflowBox(
+                maxWidth: double.infinity,
+                maxHeight: double.infinity,
+                alignment: Alignment.center,
+                child: RichText(
+                  text: TextSpan(
+                    children: buildLatexSpans(
+                      graphProps.yLabel,
+                      style: labelStyle,
+                    ),
                   ),
                 ),
               ),
@@ -567,10 +563,11 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     var minY = resolved.minY;
     var maxY = resolved.maxY;
 
-    const marginLeft = kPlotMarginLeft;
-    const marginBottom = kPlotMarginBottom;
-    const marginTop = kPlotMarginTop;
-    const marginRight = kPlotMarginRight;
+    final margins = resolved.margins;
+    final marginLeft = margins.left;
+    final marginBottom = margins.bottom;
+    final marginTop = margins.top;
+    final marginRight = margins.right;
     final plotWidth = size.width - marginLeft - marginRight;
     final plotHeight = size.height - marginTop - marginBottom;
     if (plotWidth <= 0 || plotHeight <= 0) return;
@@ -583,9 +580,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     final showGrid = graphProps?.showGrid ?? true;
     final showXAxis = graphProps?.xVisible ?? true;
     final showYAxis = graphProps?.yVisible ?? true;
-    final titleSize = _titleSizeOf(graphProps);
-    final tickSize = (graphProps?.tickFontSize ?? 10.0).clamp(6.0, 28.0);
-    final titleGap = (graphProps?.titlePadding ?? 20.0).clamp(0.0, 80.0);
+    final titleSize = axisTitleSize(graphProps);
+    final tickSize = axisTickSize(graphProps);
     final axisBase = PrimeTheme.canvasAxis;
     final gridBase = PrimeTheme.canvasGrid;
     final axisOverride = graphProps?.axisColor;
@@ -648,11 +644,14 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           );
           final rawX = inverseTransformValue(minX + (maxX - minX) * t, xScale);
           final label = TextPainter(
-            text: TextSpan(text: _formatTick(rawX), style: textStyle),
+            text: TextSpan(text: formatTickLabel(rawX), style: textStyle),
             textDirection: TextDirection.ltr,
           );
           label.layout();
-          label.paint(canvas, Offset(screenX - label.width / 2, bottom + 10));
+          label.paint(
+            canvas,
+            Offset(screenX - label.width / 2, bottom + kAxisLabelGap),
+          );
         }
 
         if (showYAxis) {
@@ -663,13 +662,16 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           );
           final rawY = inverseTransformValue(minY + (maxY - minY) * t, yScale);
           final label = TextPainter(
-            text: TextSpan(text: _formatTick(rawY), style: textStyle),
+            text: TextSpan(text: formatTickLabel(rawY), style: textStyle),
             textDirection: TextDirection.ltr,
           );
           label.layout();
           label.paint(
             canvas,
-            Offset(marginLeft - label.width - 10, screenY - label.height / 2),
+            Offset(
+              marginLeft - label.width - kAxisLabelGap,
+              screenY - label.height / 2,
+            ),
           );
         }
       }
@@ -715,7 +717,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           canvas,
           Offset(
             marginLeft + plotWidth / 2 - title.width / 2,
-            size.height - titleGap,
+            size.height - marginBottom + margins.xTitleTop,
           ),
         );
       }
@@ -734,7 +736,10 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         );
         title.layout();
         canvas.save();
-        canvas.translate(titleGap, marginTop + plotHeight / 2 + title.width / 2);
+        canvas.translate(
+          marginLeft - margins.yTitleFromAxis,
+          marginTop + plotHeight / 2 + title.width / 2,
+        );
         canvas.rotate(-math.pi / 2);
         title.paint(canvas, Offset.zero);
         canvas.restore();
@@ -816,7 +821,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
     canvas.restore();
 
-    _drawLegend(canvas, size, marginTop, marginRight);
+    _drawLegend(canvas, size, margins);
   }
 
   void _drawStyledPath(
@@ -936,12 +941,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     canvas.drawCircle(point, radius, fill);
   }
 
-  void _drawLegend(
-    Canvas canvas,
-    Size size,
-    double marginTop,
-    double marginRight,
-  ) {
+  void _drawLegend(Canvas canvas, Size size, PlotMargins margins) {
     if (!(graphProps?.showLegend ?? true)) return;
 
     final entries = <_LegendEntry>[];
@@ -988,11 +988,11 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     final legendHeight = padding * 2 + rowHeight * entries.length;
     final position = (graphProps?.legendPosition ?? 'Top Right').toLowerCase();
     final left = position.contains('left')
-        ? 72.0
-        : size.width - marginRight - legendWidth;
+        ? margins.left + 12.0
+        : size.width - margins.right - legendWidth;
     final top = position.contains('bottom')
-        ? size.height - 56.0 - legendHeight
-        : marginTop + 8.0;
+        ? size.height - margins.bottom - 12.0 - legendHeight
+        : margins.top + 8.0;
     final rect = Rect.fromLTWH(left, top, legendWidth, legendHeight);
 
     canvas.drawRRect(

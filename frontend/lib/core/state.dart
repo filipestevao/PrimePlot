@@ -455,6 +455,7 @@ class ProjectState {
         titleFontSize: gp.titleFontSize,
         tickFontSize: gp.tickFontSize,
         titlePadding: gp.titlePadding,
+        titlePaddingY: gp.titlePaddingY,
         showBorder: gp.showBorder,
         gridColor: gp.gridColor,
         axisColor: gp.axisColor,
