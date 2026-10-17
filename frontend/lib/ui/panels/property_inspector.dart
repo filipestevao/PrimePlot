@@ -479,13 +479,18 @@ class _FunctionInspector extends StatelessWidget {
     ValueChanged<String> onChanged,
   ) {
     final state = ProjectState.instance;
-    final useLatex = state.getLatexMode(nodeId, field);
-    return LatexTextField(
-      label: label,
-      value: value,
-      onChanged: onChanged,
-      useLatex: useLatex,
-      onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+    return ValueListenableBuilder<int>(
+      valueListenable: state.refreshCanvas,
+      builder: (context, _, child) {
+        final useLatex = state.getLatexMode(nodeId, field);
+        return LatexTextField(
+          label: label,
+          value: value,
+          onChanged: onChanged,
+          useLatex: useLatex,
+          onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+        );
+      },
     );
   }
 }
@@ -980,13 +985,18 @@ class _GraphInspector extends StatelessWidget {
     ValueChanged<String> onChanged,
   ) {
     final state = ProjectState.instance;
-    final useLatex = state.getLatexMode(nodeId, field);
-    return LatexTextField(
-      label: label,
-      value: value,
-      onChanged: onChanged,
-      useLatex: useLatex,
-      onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+    return ValueListenableBuilder<int>(
+      valueListenable: state.refreshCanvas,
+      builder: (context, _, child) {
+        final useLatex = state.getLatexMode(nodeId, field);
+        return LatexTextField(
+          label: label,
+          value: value,
+          onChanged: onChanged,
+          useLatex: useLatex,
+          onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+        );
+      },
     );
   }
 }
@@ -1344,13 +1354,18 @@ class _TableInspector extends StatelessWidget {
     ValueChanged<String> onChanged,
   ) {
     final state = ProjectState.instance;
-    final useLatex = state.getLatexMode(nodeId, field);
-    return LatexTextField(
-      label: label,
-      value: value,
-      onChanged: onChanged,
-      useLatex: useLatex,
-      onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+    return ValueListenableBuilder<int>(
+      valueListenable: state.refreshCanvas,
+      builder: (context, _, child) {
+        final useLatex = state.getLatexMode(nodeId, field);
+        return LatexTextField(
+          label: label,
+          value: value,
+          onChanged: onChanged,
+          useLatex: useLatex,
+          onLatexToggle: () => state.toggleLatexMode(nodeId, field),
+        );
+      },
     );
   }
 }

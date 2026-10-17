@@ -474,7 +474,7 @@ class PlotCanvas extends StatelessWidget {
         Positioned(
           left: marginLeft,
           right: marginRight,
-          top: size.height - titleGap - textH.height,
+          top: size.height - titleGap,
           height: textH.height,
           child: Center(
             child: RichText(
@@ -494,9 +494,9 @@ class PlotCanvas extends StatelessWidget {
     if (latexFields.contains('yLabel')) {
       overlays.add(
         Positioned(
-          // Box centered on the painter's title x (== titleGap).
-          left: titleGap - marginLeft / 2,
-          width: marginLeft,
+          // Same strip as the painter's rotated title: [titleGap, +lineHeight].
+          left: titleGap,
+          width: textH.height,
           top: marginTop,
           bottom: marginBottom,
           child: Center(
