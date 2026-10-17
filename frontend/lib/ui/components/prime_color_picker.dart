@@ -103,6 +103,12 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final activeColor = _parse(hexInput);
+            void pick(Color c) {
+              final h = _toHex(c);
+              widget.onChanged(h);
+              _rememberColor(h);
+              Navigator.pop(ctx);
+            }
             return Dialog(
               backgroundColor: PrimeTheme.panelBackground,
               shape: RoundedRectangleBorder(
@@ -149,18 +155,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: AcademicPalettes.tab10.map((c) {
-                        return _swatchTile(c, activeColor, () {
-                          final h = _toHex(c);
-                          widget.onChanged(h);
-                          _rememberColor(h);
-                          Navigator.pop(ctx);
-                        });
-                      }).toList(),
-                    ),
+                    _swatchRow(AcademicPalettes.tab10, activeColor, pick),
                     const SizedBox(height: 12),
                     Text(
                       'COLORBREWER (Set 1)',
@@ -172,18 +167,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: AcademicPalettes.colorBrewerSet1.map((c) {
-                        return _swatchTile(c, activeColor, () {
-                          final h = _toHex(c);
-                          widget.onChanged(h);
-                          _rememberColor(h);
-                          Navigator.pop(ctx);
-                        });
-                      }).toList(),
-                    ),
+                    _swatchRow(AcademicPalettes.colorBrewerSet1, activeColor, pick),
                     const SizedBox(height: 12),
                     Text(
                       'SCIENTIFIC NEON',
@@ -195,18 +179,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: AcademicPalettes.neonScientific.map((c) {
-                        return _swatchTile(c, activeColor, () {
-                          final h = _toHex(c);
-                          widget.onChanged(h);
-                          _rememberColor(h);
-                          Navigator.pop(ctx);
-                        });
-                      }).toList(),
-                    ),
+                    _swatchRow(AcademicPalettes.neonScientific, activeColor, pick),
                     const SizedBox(height: 12),
                     Text(
                       'CUSTOM',
@@ -268,18 +241,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: recents.map((h) {
-                          final c = _parse(h);
-                          return _swatchTile(c, activeColor, () {
-                            widget.onChanged(h);
-                            _rememberColor(h);
-                            Navigator.pop(ctx);
-                          });
-                        }).toList(),
-                      ),
+                      _swatchRow(recents.map(_parse).toList(), activeColor, pick),
                     ],
                     const SizedBox(height: 16),
                     Row(
@@ -386,14 +348,50 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
     if (paletteCtx.mounted) Navigator.pop(paletteCtx);
   }
 
-  Widget _swatchTile(Color color, Color selectedColor, VoidCallback onTap) {
+  /// One line of swatches that always fits: sizes shrink (never wrap) when
+  /// the dialog is narrower than the fixed 24px tiles plus gaps.
+  Widget _swatchRow(
+    List<Color> colors,
+    Color selectedColor,
+    ValueChanged<Color> onPick,
+  ) {
+    const gap = 6.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final n = colors.length;
+        if (n == 0) return const SizedBox.shrink();
+        var size = ((constraints.maxWidth - gap * (n - 1)) / n).clamp(8.0, 24.0);
+        size = (size * 100).floorToDouble() / 100;
+        return Row(
+          children: [
+            for (var i = 0; i < n; i++) ...[
+              if (i > 0) const SizedBox(width: gap),
+              _swatchTile(
+                colors[i],
+                selectedColor,
+                () => onPick(colors[i]),
+                size: size,
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _swatchTile(
+    Color color,
+    Color selectedColor,
+    VoidCallback onTap, {
+    double size = 24,
+  }) {
     final isSelected = color.toARGB32() == selectedColor.toARGB32();
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
       child: Container(
-        width: 24,
-        height: 24,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(4),
