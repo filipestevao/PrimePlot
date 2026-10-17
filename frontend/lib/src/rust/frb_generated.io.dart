@@ -14,6 +14,7 @@ import 'api/project.dart';
 import 'api/properties.dart';
 import 'api/simple.dart';
 import 'api/transforms.dart';
+import 'api/user_palettes.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
@@ -101,6 +102,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<DTODataTable> dco_decode_list_dto_data_table(dynamic raw);
 
   @protected
+  List<PaletteInfo> dco_decode_list_palette_info(dynamic raw);
+
+  @protected
   List<Point2D> dco_decode_list_point_2_d(dynamic raw);
 
   @protected
@@ -123,6 +127,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  PaletteInfo dco_decode_palette_info(dynamic raw);
 
   @protected
   Point2D dco_decode_point_2_d(dynamic raw);
@@ -239,6 +246,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<PaletteInfo> sse_decode_list_palette_info(SseDeserializer deserializer);
+
+  @protected
   List<Point2D> sse_decode_list_point_2_d(SseDeserializer deserializer);
 
   @protected
@@ -263,6 +273,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  PaletteInfo sse_decode_palette_info(SseDeserializer deserializer);
 
   @protected
   Point2D sse_decode_point_2_d(SseDeserializer deserializer);
@@ -400,6 +413,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_palette_info(
+    List<PaletteInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_point_2_d(List<Point2D> self, SseSerializer serializer);
 
   @protected
@@ -434,6 +453,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_palette_info(PaletteInfo self, SseSerializer serializer);
 
   @protected
   void sse_encode_point_2_d(Point2D self, SseSerializer serializer);

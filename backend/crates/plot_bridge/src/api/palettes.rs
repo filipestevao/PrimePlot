@@ -39,20 +39,92 @@ pub(crate) fn palette_by_name(name: &str) -> Option<&'static [&'static str]> {
     }
 }
 
-/// Palette names for building UI buttons.
+/// Is `name` (lowercased) one of the built-in palettes?
+pub(crate) fn is_builtin_name(lower_name: &str) -> bool {
+    palette_by_name(lower_name).is_some()
+}
+
+/// Resolved colors for any palette, built-in or user custom.
+pub(crate) fn colors_by_name(name: &str) -> Option<Vec<String>> {
+    if let Some(p) = palette_by_name(name) {
+        return Some(p.iter().map(|s| s.to_string()).collect());
+    }
+    crate::api::user_palettes::find_custom_palette(name).map(|p| p.colors)
+}
+
+/// One palette as seen by the inspector (customs are flagged for badge /
+/// delete affordances).
+#[derive(Clone, Debug, PartialEq)]
+pub struct PaletteInfo {
+    pub name: String,
+    pub colors: Vec<String>,
+    pub builtin: bool,
+}
+
+/// All palettes for the inspector: built-ins first, then user customs.
+#[flutter_rust_bridge::frb(sync)]
+pub fn list_palette_infos() -> Vec<PaletteInfo> {
+    let mut infos: Vec<PaletteInfo> = PALETTE_NAMES
+        .iter()
+        .map(|name| PaletteInfo {
+            name: name.to_string(),
+            colors: palette_by_name(name)
+                .unwrap()
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            builtin: true,
+        })
+        .collect();
+    for custom in crate::api::user_palettes::load_custom_palettes() {
+        infos.push(PaletteInfo {
+            name: custom.name,
+            colors: custom.colors,
+            builtin: false,
+        });
+    }
+    infos
+}
+
+/// Palette names for building UI buttons (built-ins + customs).
 #[flutter_rust_bridge::frb(sync)]
 pub fn list_palettes() -> Vec<String> {
-    PALETTE_NAMES.iter().map(|s| s.to_string()).collect()
+    list_palette_infos().into_iter().map(|p| p.name).collect()
 }
 
 /// Hex colors of one palette (for swatch previews). Err on unknown name.
 #[flutter_rust_bridge::frb(sync)]
 pub fn palette_colors(palette: String) -> Result<Vec<String>, String> {
-    palette_by_name(&palette)
-        .map(|p| p.iter().map(|s| s.to_string()).collect())
-        .ok_or_else(|| {
-            format!("unknown palette '{palette}' (expected Tab10, Set1 or Scientific Neon)")
-        })
+    colors_by_name(&palette).ok_or_else(|| {
+        format!("unknown palette '{palette}' (expected a built-in or saved custom palette)")
+    })
+}
+
+/// Current curve colors of a graph in tree order (datasets and functions
+/// share one index; defaults included) — source for "Save current as
+/// palette". Err on unknown graph.
+#[flutter_rust_bridge::frb(sync)]
+pub fn graph_curve_colors(graph_id: String) -> Result<Vec<String>, String> {
+    let tree = crate::api::project::snapshot_tree_engine();
+    let graph =
+        find_graph(&tree, &graph_id).ok_or_else(|| format!("graph '{graph_id}' not found"))?;
+    let mut colors = Vec::new();
+    for child in &graph.children {
+        match child.node_type {
+            data_engine::NodeType::Dataset => {
+                colors.push(
+                    crate::api::properties::get_table_properties(child.id.clone()).line_color,
+                );
+            }
+            data_engine::NodeType::Function => {
+                colors.push(
+                    crate::api::properties::get_function_properties(child.id.clone()).line_color,
+                );
+            }
+            _ => {}
+        }
+    }
+    Ok(colors)
 }
 
 /// Re-aligns a graph's curves to a palette: tree order → color sequence
@@ -61,8 +133,8 @@ pub fn palette_colors(palette: String) -> Result<Vec<String>, String> {
 /// properties are preserved.
 #[flutter_rust_bridge::frb(sync)]
 pub fn apply_palette(graph_id: String, palette: String) -> Result<(), String> {
-    let colors = palette_by_name(&palette).ok_or_else(|| {
-        format!("unknown palette '{palette}' (expected Tab10, Set1 or Scientific Neon)")
+    let colors = colors_by_name(&palette).ok_or_else(|| {
+        format!("unknown palette '{palette}' (expected a built-in or saved custom palette)")
     })?;
 
     // Snapshot + release before touching property stores (lock ordering).
@@ -280,6 +352,17 @@ mod tests {
 
     #[test]
     fn list_reports_all_palettes() {
+        // Custom palettes merge in from the config dir, so isolate from the
+        // developer's real config file while serialized on TEST_MUTEX.
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        let dir = std::env::temp_dir().join(format!("primeplot_palette_list_{}", std::process::id()));
+        let old = std::env::var("XDG_CONFIG_HOME").ok();
+        // SAFETY: TEST_MUTEX serializes store-backed tests in this binary.
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", &dir) };
+
+        let infos = list_palette_infos();
+        assert_eq!(infos.len(), 3);
+        assert!(infos.iter().all(|p| p.builtin));
         assert_eq!(
             list_palettes(),
             vec![
@@ -291,6 +374,99 @@ mod tests {
         assert_eq!(palette_colors("Tab10".to_string()).unwrap().len(), 10);
         assert_eq!(palette_colors("neon".to_string()).unwrap()[0], "#00C3FF");
         assert!(palette_colors("Nope".to_string()).is_err());
+
+        // Customs resolve and list after the built-ins.
+        crate::api::user_palettes::create_user_palette(
+            "Extra".to_string(),
+            vec!["#000001".to_string(), "#000002".to_string()],
+        )
+        .unwrap();
+        let infos = list_palette_infos();
+        assert_eq!(infos.len(), 4);
+        assert!(!infos[3].builtin);
+        assert_eq!(infos[3].name, "Extra");
+        assert_eq!(
+            palette_colors("extra".to_string()).unwrap(),
+            vec!["#000001".to_string(), "#000002".to_string()]
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+        unsafe {
+            match old {
+                Some(v) => std::env::set_var("XDG_CONFIG_HOME", v),
+                None => std::env::remove_var("XDG_CONFIG_HOME"),
+            }
+        }
+    }
+
+    #[test]
+    fn custom_palette_applies_to_graph() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        let dir =
+            std::env::temp_dir().join(format!("primeplot_palette_apply_{}", std::process::id()));
+        let old = std::env::var("XDG_CONFIG_HOME").ok();
+        // SAFETY: TEST_MUTEX serializes store-backed tests in this binary.
+        unsafe { std::env::set_var("XDG_CONFIG_HOME", &dir) };
+
+        let saved_tree = crate::api::project::snapshot_tree_engine();
+        let saved_tables = crate::api::project::snapshot_tables_engine();
+        crate::api::project::restore_tree_engine(mixed_curve_tree());
+        crate::api::properties::clear_all_property_stores();
+
+        crate::api::user_palettes::create_user_palette(
+            "Mine".to_string(),
+            vec!["#010203".to_string(), "#040506".to_string()],
+        )
+        .unwrap();
+        apply_palette("graph_1".to_string(), "Mine".to_string()).unwrap();
+        assert_eq!(
+            crate::api::properties::get_table_properties("table_1".to_string()).line_color,
+            "#010203"
+        );
+        assert_eq!(
+            crate::api::properties::get_function_properties("fn_1".to_string()).line_color,
+            "#040506"
+        );
+        // Two colors, three curves: the sequence cycles.
+        assert_eq!(
+            crate::api::properties::get_table_properties("table_2".to_string()).line_color,
+            "#010203"
+        );
+
+        crate::api::project::restore_tree_engine(saved_tree);
+        crate::api::project::restore_tables_engine(saved_tables);
+        crate::api::properties::clear_all_property_stores();
+        let _ = std::fs::remove_dir_all(&dir);
+        unsafe {
+            match old {
+                Some(v) => std::env::set_var("XDG_CONFIG_HOME", v),
+                None => std::env::remove_var("XDG_CONFIG_HOME"),
+            }
+        }
+    }
+
+    #[test]
+    fn graph_curve_colors_follow_tree_order() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        let saved_tree = crate::api::project::snapshot_tree_engine();
+        let saved_tables = crate::api::project::snapshot_tables_engine();
+        crate::api::project::restore_tree_engine(mixed_curve_tree());
+        crate::api::properties::clear_all_property_stores();
+
+        let mut t1 = crate::api::properties::get_table_properties("table_1".to_string());
+        t1.line_color = "#111111".to_string();
+        crate::api::properties::set_table_properties("table_1".to_string(), t1);
+        let mut f1 = crate::api::properties::get_function_properties("fn_1".to_string());
+        f1.line_color = "#222222".to_string();
+        crate::api::properties::set_function_properties("fn_1".to_string(), f1);
+
+        let colors = graph_curve_colors("graph_1".to_string()).unwrap();
+        assert_eq!(colors, vec!["#111111", "#222222", "#1F77B4"]);
+        assert!(graph_curve_colors("graph_9".to_string()).is_err());
+
+        crate::api::project::restore_tree_engine(saved_tree);
+        crate::api::project::restore_tables_engine(saved_tables);
+        crate::api::properties::clear_all_property_stores();
     }
 
     fn mixed_curve_tree() -> data_engine::ProjectNode {

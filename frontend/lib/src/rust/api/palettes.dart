@@ -6,15 +6,26 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `find_graph`, `init_curve_props`, `init_function_props`, `next_color_for_siblings`, `next_combined_color`, `palette_by_name`
+// These functions are ignored because they are not marked as `pub`: `colors_by_name`, `find_graph`, `init_curve_props`, `init_function_props`, `is_builtin_name`, `next_color_for_siblings`, `next_combined_color`, `palette_by_name`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `eq`, `fmt`
 
-/// Palette names for building UI buttons.
+/// All palettes for the inspector: built-ins first, then user customs.
+List<PaletteInfo> listPaletteInfos() =>
+    RustLib.instance.api.crateApiPalettesListPaletteInfos();
+
+/// Palette names for building UI buttons (built-ins + customs).
 List<String> listPalettes() =>
     RustLib.instance.api.crateApiPalettesListPalettes();
 
 /// Hex colors of one palette (for swatch previews). Err on unknown name.
 List<String> paletteColors({required String palette}) =>
     RustLib.instance.api.crateApiPalettesPaletteColors(palette: palette);
+
+/// Current curve colors of a graph in tree order (datasets and functions
+/// share one index; defaults included) — source for "Save current as
+/// palette". Err on unknown graph.
+List<String> graphCurveColors({required String graphId}) =>
+    RustLib.instance.api.crateApiPalettesGraphCurveColors(graphId: graphId);
 
 /// Re-aligns a graph's curves to a palette: tree order → color sequence
 /// (datasets and functions share one index, so deleting/reordering is fixed
@@ -24,3 +35,29 @@ void applyPalette({required String graphId, required String palette}) => RustLib
     .instance
     .api
     .crateApiPalettesApplyPalette(graphId: graphId, palette: palette);
+
+/// One palette as seen by the inspector (customs are flagged for badge /
+/// delete affordances).
+class PaletteInfo {
+  final String name;
+  final List<String> colors;
+  final bool builtin;
+
+  const PaletteInfo({
+    required this.name,
+    required this.colors,
+    required this.builtin,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ colors.hashCode ^ builtin.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PaletteInfo &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          colors == other.colors &&
+          builtin == other.builtin;
+}

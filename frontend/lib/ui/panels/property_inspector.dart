@@ -1,12 +1,16 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
+import 'dart:math' as math;
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/properties.dart';
 import '../../src/rust/api/palettes.dart';
+import '../../src/rust/api/user_palettes.dart';
 import '../../src/rust/api/functions.dart';
 import '../components/latex_text_field.dart';
 import '../components/prime_color_picker.dart';
@@ -988,8 +992,7 @@ class _GraphInspector extends StatelessWidget {
               title: 'Palette',
               icon: Icons.palette,
               children: [
-                for (final name in listPalettes())
-                  _PaletteButton(graphId: nodeId, paletteName: name),
+                _PaletteSection(graphId: nodeId),
               ],
             ),
           ],
@@ -1065,30 +1068,250 @@ class _ThemeColorRow extends StatelessWidget {
   }
 }
 
-/// One palette row: swatch dots + name. Tap re-aligns this graph's curves
-/// (in tree order) to the palette sequence, overwriting per-curve colors.
-class _PaletteButton extends StatelessWidget {
-  final String graphId;
-  final String paletteName;
-  const _PaletteButton({required this.graphId, required this.paletteName});
+/// Hex color from a stored `#RRGGBB`/`#AARRGGBB` string.
+Color _paletteHexColor(String hex) {
+  var h = hex.trim().replaceFirst('#', '');
+  if (h.length == 6) h = 'FF$h';
+  final v = int.tryParse(h, radix: 16);
+  if (v == null) return const Color(0xFF808080);
+  return Color(v);
+}
 
-  static Color _hex(String hex) {
-    var h = hex.trim().replaceFirst('#', '');
-    if (h.length == 6) h = 'FF$h';
-    final v = int.tryParse(h, radix: 16);
-    if (v == null) return const Color(0xFF808080);
-    return Color(v);
+const _paletteFileType = XTypeGroup(
+  label: 'Palette JSON',
+  extensions: ['json'],
+);
+
+void _paletteSnack(BuildContext context, String message, {bool error = false}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message, style: const TextStyle(fontSize: 12)),
+      backgroundColor: error ? const Color(0xFF7F1D1D) : null,
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
+String _paletteFileName(String name) {
+  final safe = name.replaceAll(RegExp(r'[^\w\- ]'), '_').trim();
+  return safe.isEmpty ? 'palette' : safe;
+}
+
+/// Palette list + user-palette actions (save current, import; delete and
+/// export per custom row). Owns the list so CRUD refreshes immediately.
+class _PaletteSection extends StatefulWidget {
+  final String graphId;
+  const _PaletteSection({required this.graphId});
+
+  @override
+  State<_PaletteSection> createState() => _PaletteSectionState();
+}
+
+class _PaletteSectionState extends State<_PaletteSection> {
+  List<PaletteInfo> _infos = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _infos = _loadInfos();
+  }
+
+  List<PaletteInfo> _loadInfos() {
+    try {
+      return listPaletteInfos();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  void _reload() {
+    final infos = _loadInfos();
+    if (mounted) setState(() => _infos = infos);
+  }
+
+  void _apply(String name) {
+    final err = ProjectState.instance.applyPalette(widget.graphId, name);
+    if (err != null && mounted) {
+      _paletteSnack(context, 'Palette failed: $err', error: true);
+    }
+  }
+
+  Future<void> _confirmDelete(String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PrimeTheme.panelBackground,
+        title: const Text('Delete Palette'),
+        content: Text(
+          'Delete palette "$name"? Curves already colored with it keep '
+          'their colors.',
+          style: const TextStyle(fontSize: 12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      deleteUserPalette(name: name);
+      _reload();
+      if (mounted) _paletteSnack(context, 'Palette "$name" deleted');
+    } catch (e) {
+      if (mounted) _paletteSnack(context, 'Delete failed: $e', error: true);
+    }
+  }
+
+  Future<void> _export(String name) async {
+    try {
+      final loc = await getSaveLocation(
+        suggestedName: '${_paletteFileName(name)}.json',
+        acceptedTypeGroups: const [_paletteFileType],
+      );
+      final path = loc?.path;
+      if (path == null || path.isEmpty) return;
+      exportUserPalette(name: name, path: path);
+      if (mounted) _paletteSnack(context, 'Exported "$name" to $path');
+    } catch (e) {
+      if (mounted) _paletteSnack(context, 'Export failed: $e', error: true);
+    }
+  }
+
+  Future<void> _import() async {
+    try {
+      final file = await openFile(acceptedTypeGroups: const [_paletteFileType]);
+      final path = file?.path;
+      if (path == null || path.isEmpty) return;
+      final name = importUserPalette(path: path);
+      _reload();
+      if (mounted) _paletteSnack(context, 'Imported palette "$name"');
+    } catch (e) {
+      if (mounted) _paletteSnack(context, 'Import failed: $e', error: true);
+    }
+  }
+
+  Future<void> _saveCurrent() async {
+    List<String> colors;
+    try {
+      colors = graphCurveColors(graphId: widget.graphId);
+    } catch (e) {
+      _paletteSnack(context, 'Save failed: $e', error: true);
+      return;
+    }
+    if (!mounted) return;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _SavePaletteDialog(colors: colors),
+    );
+    if (name == null || !mounted) return;
+    try {
+      createUserPalette(name: name, colors: colors);
+      _reload();
+      if (mounted) _paletteSnack(context, 'Palette "$name" saved');
+    } catch (e) {
+      if (mounted) _paletteSnack(context, 'Save failed: $e', error: true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    List<String> hexes = const [];
-    try {
-      hexes = paletteColors(palette: paletteName);
-    } catch (_) {
-      // Leave dots empty; tap will surface the error.
-    }
-    final dots = hexes.take(6).map((h) => _hex(h)).toList();
+    final builtins = _infos.where((p) => p.builtin);
+    final customs = _infos.where((p) => !p.builtin);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final info in builtins)
+          _PaletteRow(info: info, onApply: () => _apply(info.name)),
+        for (final info in customs)
+          _PaletteRow(
+            info: info,
+            onApply: () => _apply(info.name),
+            onDelete: () => _confirmDelete(info.name),
+            onExport: () => _export(info.name),
+          ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _actionButton(
+                Icons.bookmark_add_outlined,
+                'Save current…',
+                _saveCurrent,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _actionButton(Icons.file_open_outlined, 'Import…', _import),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _actionButton(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        height: 24,
+        decoration: BoxDecoration(
+          color: PrimeTheme.searchBarBackground,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: PrimeTheme.borderSide),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 12, color: PrimeTheme.textSecondary),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: PrimeTheme.textPrimary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One palette row: swatch dots + name. Tap re-aligns this graph's curves
+/// (in tree order) to the palette sequence, overwriting per-curve colors.
+/// Dots size themselves so all colors fit one line at any pane width.
+class _PaletteRow extends StatelessWidget {
+  final PaletteInfo info;
+  final VoidCallback onApply;
+  final VoidCallback? onDelete;
+  final VoidCallback? onExport;
+
+  const _PaletteRow({
+    required this.info,
+    required this.onApply,
+    this.onDelete,
+    this.onExport,
+  });
+
+  static const _dotGap = 3.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final dots = info.colors.map(_paletteHexColor).toList();
+    final nameStyle = TextStyle(fontSize: 12, color: PrimeTheme.textPrimary);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -1096,24 +1319,7 @@ class _PaletteButton extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(4),
-          onTap: () {
-            final err = ProjectState.instance.applyPalette(
-              graphId,
-              paletteName,
-            );
-            if (err != null && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Palette failed: $err',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  backgroundColor: const Color(0xFF7F1D1D),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
+          onTap: onApply,
           child: Container(
             height: 26,
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1122,40 +1328,190 @@ class _PaletteButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: PrimeTheme.borderSide),
             ),
-            child: Row(
-              children: [
-                for (var i = 0; i < dots.length; i++)
-                  Container(
-                    width: 12,
-                    height: 12,
-                    margin: EdgeInsets.only(
-                      right: i == dots.length - 1 ? 0 : 3,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final n = dots.length;
+                final painter = TextPainter(
+                  text: TextSpan(text: info.name, style: nameStyle),
+                  maxLines: 1,
+                  textDirection: TextDirection.ltr,
+                )..layout();
+                final nameWidth = math.min(
+                  painter.width,
+                  constraints.maxWidth * 0.4,
+                );
+                final iconCount =
+                    (onExport != null ? 1 : 0) + (onDelete != null ? 1 : 0);
+                final reserved = 8.0 + iconCount * 22.0 + nameWidth;
+                final dotArea = constraints.maxWidth - reserved;
+                final diameter = n == 0
+                    ? 12.0
+                    : ((dotArea - _dotGap * (n - 1)) / n).clamp(7.0, 12.0);
+                return Row(
+                  children: [
+                    for (var i = 0; i < n; i++)
+                      Container(
+                        width: diameter,
+                        height: diameter,
+                        margin: EdgeInsets.only(
+                          right: i == n - 1 ? 0 : _dotGap,
+                        ),
+                        decoration: BoxDecoration(
+                          color: dots[i],
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.black.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        info.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: nameStyle,
+                      ),
                     ),
+                    if (onExport != null)
+                      _rowIcon(Icons.ios_share, 'Export palette', onExport!),
+                    if (onDelete != null)
+                      _rowIcon(
+                        Icons.delete_outline,
+                        'Delete palette',
+                        onDelete!,
+                        danger: true,
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _rowIcon(
+    IconData icon,
+    String tooltip,
+    VoidCallback onTap, {
+    bool danger = false,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(
+            icon,
+            size: 14,
+            color: danger
+                ? Colors.redAccent.withValues(alpha: 0.8)
+                : PrimeTheme.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Name prompt for "Save current as palette…": previews the graph's present
+/// curve colors and gates Save on the 2–12 colors the backend accepts.
+class _SavePaletteDialog extends StatefulWidget {
+  final List<String> colors;
+  const _SavePaletteDialog({required this.colors});
+
+  @override
+  State<_SavePaletteDialog> createState() => _SavePaletteDialogState();
+}
+
+class _SavePaletteDialogState extends State<_SavePaletteDialog> {
+  String _name = '';
+  bool _nameError = false;
+
+  bool get _validCount =>
+      widget.colors.length >= 2 && widget.colors.length <= 12;
+
+  void _submit() {
+    FocusScope.of(context).unfocus();
+    final name = _name.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = true);
+      return;
+    }
+    Navigator.pop(context, name);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: PrimeTheme.panelBackground,
+      title: const Text('Save as Palette'),
+      content: SizedBox(
+        width: 300,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                for (final h in widget.colors)
+                  Container(
+                    width: 14,
+                    height: 14,
                     decoration: BoxDecoration(
-                      color: dots[i],
+                      color: _paletteHexColor(h),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: Colors.black.withValues(alpha: 0.4),
                       ),
                     ),
                   ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    paletteName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: PrimeTheme.textPrimary,
-                    ),
-                  ),
-                ),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            PrimeTextField(
+              value: '',
+              hintText: 'Palette name',
+              onChanged: (v) => setState(() {
+                _name = v;
+                _nameError = false;
+              }),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _nameError
+                  ? 'Enter a palette name.'
+                  : _validCount
+                  ? '${widget.colors.length} curve colors, in tree order.'
+                  : 'Needs 2–12 curve colors (graph has '
+                        '${widget.colors.length}).',
+              style: TextStyle(
+                fontSize: 10,
+                color: (_validCount && !_nameError)
+                    ? PrimeTheme.textSecondary
+                    : Colors.redAccent,
+              ),
+            ),
+          ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: _validCount ? _submit : null,
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

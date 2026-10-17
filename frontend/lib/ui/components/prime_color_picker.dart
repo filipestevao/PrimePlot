@@ -1,8 +1,10 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
+import '../../src/rust/api/user_palettes.dart';
 import 'prime_text_field.dart';
 
 /// Standard academic and scientific palettes for PrimePlot curves.
@@ -87,6 +89,12 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
   }
 
   void _showPaletteDialog(BuildContext context, Color currentColor) {
+    List<String> recents;
+    try {
+      recents = listRecentColors();
+    } catch (_) {
+      recents = const [];
+    }
     showDialog(
       context: context,
       barrierColor: Colors.black45,
@@ -148,6 +156,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                         return _swatchTile(c, activeColor, () {
                           final h = _toHex(c);
                           widget.onChanged(h);
+                          _rememberColor(h);
                           Navigator.pop(ctx);
                         });
                       }).toList(),
@@ -170,6 +179,7 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                         return _swatchTile(c, activeColor, () {
                           final h = _toHex(c);
                           widget.onChanged(h);
+                          _rememberColor(h);
                           Navigator.pop(ctx);
                         });
                       }).toList(),
@@ -192,10 +202,85 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                         return _swatchTile(c, activeColor, () {
                           final h = _toHex(c);
                           widget.onChanged(h);
+                          _rememberColor(h);
                           Navigator.pop(ctx);
                         });
                       }).toList(),
                     ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'CUSTOM',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: PrimeTheme.textSecondary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () => _pickCustomColor(ctx, activeColor),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                gradient: const SweepGradient(
+                                  colors: [
+                                    Color(0xFFFF0000),
+                                    Color(0xFFFFFF00),
+                                    Color(0xFF00FF00),
+                                    Color(0xFF00FFFF),
+                                    Color(0xFF0000FF),
+                                    Color(0xFFFF00FF),
+                                    Color(0xFFFF0000),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: PrimeTheme.borderSide),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Pick from color wheel…',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: PrimeTheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (recents.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'RECENT',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: PrimeTheme.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: recents.map((h) {
+                          final c = _parse(h);
+                          return _swatchTile(c, activeColor, () {
+                            widget.onChanged(h);
+                            _rememberColor(h);
+                            Navigator.pop(ctx);
+                          });
+                        }).toList(),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -223,6 +308,82 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
         );
       },
     );
+  }
+
+  /// Recent picks are user-level (prefs dir), shared by every picker.
+  void _rememberColor(String hex) {
+    try {
+      pushRecentColor(color: hex);
+    } catch (_) {
+      // Recents are a convenience; failing to record must never block a pick.
+    }
+  }
+
+  /// Wheel dialog for a free-form color; applies and closes the palette
+  /// dialog on confirm, mirroring a swatch tap.
+  Future<void> _pickCustomColor(BuildContext paletteCtx, Color currentColor) async {
+    var picked = currentColor;
+    final applied = await showDialog<Color>(
+      context: paletteCtx,
+      barrierColor: Colors.black45,
+      builder: (wheelCtx) {
+        return StatefulBuilder(
+          builder: (context, setWheelState) {
+            return Dialog(
+              backgroundColor: PrimeTheme.panelBackground,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                side: BorderSide(color: PrimeTheme.borderSide),
+              ),
+              child: Container(
+                width: 360,
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Custom Color',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: PrimeTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ColorPicker(
+                      color: picked,
+                      onColorChanged: (c) => setWheelState(() => picked = c),
+                      pickersEnabled: const {ColorPickerType.wheel: true},
+                      enableOpacity: false,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(wheelCtx),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(wheelCtx, picked),
+                          child: const Text('Apply'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (applied == null) return;
+    final hex = _toHex(applied);
+    widget.onChanged(hex);
+    _rememberColor(hex);
+    if (paletteCtx.mounted) Navigator.pop(paletteCtx);
   }
 
   Widget _swatchTile(Color color, Color selectedColor, VoidCallback onTap) {
