@@ -588,15 +588,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
         setState(() {
           _dragging = false;
         });
-        if (details.files.isNotEmpty) {
-          final file = details.files.first;
-          try {
-            final content = await file.readAsString();
-            ProjectState.instance.handleDataImport(content, file.name);
-          } catch (e) {
-            debugPrint("Error reading dropped file: $e");
-          }
-        }
+        if (details.files.isEmpty) return;
+        // All dropped files become tables under the active graph, as one
+        // undo step with a single summary snackbar (see FileActions).
+        await FileActions.importDataFiles(context, details.files);
       },
       child: Stack(
         children: [
@@ -677,6 +672,24 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                     onTap: () {
                       Navigator.pop(context);
                       FileActions.doOpen(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.upload_file,
+                      size: 18,
+                      color: PrimeTheme.textSecondary,
+                    ),
+                    title: Text(
+                      'Import Data…',
+                      style: TextStyle(
+                        color: PrimeTheme.textPrimary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      FileActions.doImportData(context);
                     },
                   ),
                   ListTile(

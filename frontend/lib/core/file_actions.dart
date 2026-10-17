@@ -19,6 +19,10 @@ class FileActions {
     label: 'PrimePlot project',
     extensions: [_ext],
   );
+  static const _dataTypeGroup = XTypeGroup(
+    label: 'Data files',
+    extensions: ['csv', 'tsv', 'txt'],
+  );
 
   static String ensureExtension(String path) {
     if (path.toLowerCase().endsWith('.$_ext')) return path;
@@ -144,5 +148,50 @@ class FileActions {
     if (!context.mounted) return;
     ProjectState.instance.createNew();
     _snack(context, 'New project created');
+  }
+
+  /// Drawer entry point: multi-select data files and import them as tables
+  /// under the active graph (mouse-only equivalent of drag & drop).
+  static Future<void> doImportData(BuildContext context) async {
+    final files = await openFiles(acceptedTypeGroups: [_dataTypeGroup]);
+    if (!context.mounted) return;
+    await importDataFiles(context, files);
+  }
+
+  /// Reads and imports data files as separate tables under the active graph:
+  /// one undo step for the whole batch, one summary snackbar — failures are
+  /// listed, never silent.
+  static Future<void> importDataFiles(
+    BuildContext context,
+    List<XFile> files,
+  ) async {
+    if (files.isEmpty) return;
+    final contents = <({String raw, String name})>[];
+    final failed = <String>[];
+    for (final f in files) {
+      try {
+        contents.add((raw: await f.readAsString(), name: f.name));
+      } catch (_) {
+        failed.add(f.name);
+      }
+    }
+    var imported = 0;
+    if (contents.isNotEmpty) {
+      final result = ProjectState.instance.handleDataImports(contents);
+      imported = result.imported;
+      failed.addAll(result.failed);
+    }
+    final noun = imported == 1 ? 'table' : 'tables';
+    if (!context.mounted) return;
+    if (failed.isEmpty) {
+      _snack(context, 'Imported $imported $noun');
+    } else {
+      _snack(
+        context,
+        'Imported $imported $noun, ${failed.length} failed: '
+        '${failed.join(', ')}',
+        error: true,
+      );
+    }
   }
 }

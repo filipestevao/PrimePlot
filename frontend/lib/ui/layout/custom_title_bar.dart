@@ -6,6 +6,17 @@ import 'package:window_manager/window_manager.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
 
+/// Maximize/restore toggle shared by the title-bar double-click and the
+/// window-control button. Explicit handler — no dependence on the window
+/// manager's own double-click behavior.
+Future<void> _toggleMaximize() async {
+  if (await windowManager.isMaximized()) {
+    await windowManager.unmaximize();
+  } else {
+    await windowManager.maximize();
+  }
+}
+
 class CustomTitleBar extends StatelessWidget {
   const CustomTitleBar({super.key});
 
@@ -83,6 +94,7 @@ class CustomTitleBar extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onPanStart: (details) => windowManager.startDragging(),
+              onDoubleTap: _toggleMaximize,
               child: Container(),
             ),
           ),
@@ -115,6 +127,7 @@ class CustomTitleBar extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onPanStart: (details) => windowManager.startDragging(),
+              onDoubleTap: _toggleMaximize,
               child: Container(),
             ),
           ),
@@ -184,13 +197,7 @@ class WindowButtons extends StatelessWidget {  const WindowButtons({super.key});
     return Row(
       children: [
         _buildButton(Icons.remove, () => windowManager.minimize()),
-        _buildButton(Icons.crop_square, () async {
-          if (await windowManager.isMaximized()) {
-            windowManager.unmaximize();
-          } else {
-            windowManager.maximize();
-          }
-        }),
+        _buildButton(Icons.crop_square, _toggleMaximize),
         // Routes through MainLayout's onWindowClose, which prompts to save
         // when dirty before destroying the window.
         _buildButton(

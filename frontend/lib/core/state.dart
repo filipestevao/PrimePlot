@@ -814,10 +814,40 @@ class ProjectState {
 
   void handleDataImport(String raw, String displayName) {
     checkpointCoalesced();
+    _importOne(raw, displayName);
+  }
+
+  /// Imports several data files as separate tables under the active graph,
+  /// as a single undo step. Returns how many were imported and the display
+  /// names that failed.
+  ({int imported, List<String> failed}) handleDataImports(
+    List<({String raw, String name})> files,
+  ) {
+    checkpointCoalesced();
+    var imported = 0;
+    final failed = <String>[];
+    for (final f in files) {
+      try {
+        if (_importOne(f.raw, f.name)) {
+          imported++;
+        } else {
+          failed.add(f.name);
+        }
+      } catch (e) {
+        debugPrint("Import failed for ${f.name}: $e");
+        failed.add(f.name);
+      }
+    }
+    return (imported: imported, failed: failed);
+  }
+
+  /// Adds one table from raw text. Returns true on success. No checkpoint —
+  /// callers own the undo boundary so batches stay a single step.
+  bool _importOne(String raw, String displayName) {
     final parentId = getValidParentGraphId();
     if (parentId == null) {
       debugPrint("No valid graph found to import data into.");
-      return;
+      return false;
     }
 
     // Perform insertion
@@ -834,6 +864,7 @@ class ProjectState {
     // silently disabling canvas navigation until nodes were reselected.
     selectProjectNode(parentId);
     markDirty();
+    return true;
   }
 
   /// Handles paste operations by either updating an existing selected table
