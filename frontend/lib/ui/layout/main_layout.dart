@@ -46,6 +46,12 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   bool _isDataPanelCollapsed = false;
   bool _dragging = false;
 
+  /// Root keyboard-focus anchor. Global shortcuts (CallbackShortcuts below)
+  /// only fire while something in this subtree holds focus, so when an
+  /// interaction leaves the app with no focused node (drawer item pops,
+  /// native GTK file dialogs, route teardown), focus is re-anchored here.
+  final FocusNode _rootFocus = FocusNode(debugLabel: 'app-root');
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +63,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     ProjectState.instance.selectedProjectNodeId.addListener(
       _onSelectionChanged,
     );
+    FocusManager.instance.addListener(_onFocusChanged);
 
     // Left Vertical Split
     _leftController = MultiSplitViewController(
@@ -404,6 +411,42 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     });
   }
 
+  /// Re-anchor keyboard focus whenever it leaves the app's subtree — the
+  /// CallbackShortcuts at the root only see key events while a node below
+  /// them is focused.
+  void _onFocusChanged() {
+    if (_focusIsUsable(FocusManager.instance.primaryFocus)) return;
+    // Focus can be transiently null while routes/overlays tear down; check
+    // again once the frame settles before stealing focus.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _anchorFocusIfLost();
+    });
+  }
+
+  /// A focus that can actually deliver key events to the app shortcuts.
+  /// When a focused widget is disposed (drawer pop, help overlay removal)
+  /// Flutter falls back to the [FocusManager.rootScope], which is a valid
+  /// focused node but sits ABOVE the shortcut map, so it must be treated
+  /// as "lost" alongside null/detached nodes.
+  bool _focusIsUsable(FocusNode? node) =>
+      node != null &&
+      node.context != null &&
+      node.hasFocus &&
+      !identical(node, FocusManager.instance.rootScope);
+
+  void _anchorFocusIfLost() {
+    if (!_focusIsUsable(FocusManager.instance.primaryFocus)) {
+      _rootFocus.requestFocus();
+    }
+  }
+
+  /// Native GTK file dialogs (open/save/import) run outside the Flutter
+  /// window; on return the focus tree can be stale, killing shortcuts.
+  @override
+  void onWindowFocus() {
+    _anchorFocusIfLost();
+  }
+
   void _toggleDataPanel() {
     setState(() {
       _isDataPanelCollapsed = !_isDataPanelCollapsed;
@@ -458,6 +501,12 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   void _hideShortcutHelp() {
     _helpEntry?.remove();
     _helpEntry = null;
+    // The overlay owns an autofocus node; removing the entry leaves focus
+    // on the root scope (or nothing), which would mute global shortcuts.
+    // Re-anchor once the frame settles.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _anchorFocusIfLost();
+    });
   }
 
   /// Runtime backstop for the minimum window size: if a resize lands below
@@ -481,6 +530,8 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   void dispose() {
     _hideShortcutHelp();
     windowManager.removeListener(this);
+    FocusManager.instance.removeListener(_onFocusChanged);
+    _rootFocus.dispose();
     ProjectState.instance.selectedProjectNodeId.removeListener(
       _onSelectionChanged,
     );
@@ -575,6 +626,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
             }),
       },
       child: Focus(
+        focusNode: _rootFocus,
         autofocus: true,
         child: DropTarget(
       onDragEntered: (details) {
