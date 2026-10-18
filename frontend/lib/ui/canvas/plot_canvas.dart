@@ -73,6 +73,8 @@ class PlotCanvas extends StatelessWidget {
         ProjectState.instance.refreshCanvas,
         ProjectState.instance.projectTree,
         ProjectState.instance.exportTransparent,
+        ProjectState.instance.isolateActiveCurve,
+        ProjectState.instance.selectedProjectNodeId,
         ProjectState.instance.decimalSeparator,
         ProjectState.instance.useThousands,
       ]),
@@ -95,8 +97,10 @@ class PlotCanvas extends StatelessWidget {
               );
             }
 
-            // Selection scope: a selected table/function isolates its own
-            // curve(s); graph (or other) selection shows the whole plot.
+            // Selection scope: a selected dataset previews all sibling
+            // curves of its graph (the selected one highlighted); function
+            // selection isolates that function; graph selection shows the
+            // whole plot.
             final st = ProjectState.instance;
             final plotId = st.activePlotId;
             final root = st.projectTree.value;
@@ -106,6 +110,7 @@ class PlotCanvas extends StatelessWidget {
                 : null;
             final selectDataset =
                 selectedNode?.nodeType == NodeType.dataset;
+            final activeTableId = selectDataset ? selectedId : null;
             final selectFunction =
                 selectedNode?.nodeType == NodeType.function;
             final plotNode = (root != null && plotId != null)
@@ -314,6 +319,7 @@ class PlotCanvas extends StatelessWidget {
                                   tableIds: tableIds,
                                   formatKey: formatKey,
                                   transparentBackground: transparent,
+                                  activeTableId: activeTableId,
                                 ),
                                 child: Container(),
                               ),
@@ -334,6 +340,7 @@ class PlotCanvas extends StatelessWidget {
                           tableIds: tableIds,
                           formatKey: formatKey,
                           transparentBackground: transparent,
+                          activeTableId: activeTableId,
                         ),
                         child: Container(),
                       );
@@ -363,6 +370,54 @@ class PlotCanvas extends StatelessWidget {
                       child: Stack(
                         children: [
                           canvas,
+                          // Curve visibility toggle — only meaningful with a
+                          // dataset selected (it targets that curve).
+                          if (activeTableId != null)
+                            Positioned(
+                              top: 6,
+                              right: 38,
+                              child: ValueListenableBuilder<bool>(
+                                valueListenable:
+                                    ProjectState.instance.isolateActiveCurve,
+                                builder: (context, isolate, _) {
+                                  return Tooltip(
+                                    message: isolate
+                                        ? 'Show all curves (highlight selected)'
+                                        : 'Isolate selected curve',
+                                    child: InkWell(
+                                      onTap: () => ProjectState.instance
+                                          .toggleIsolateActiveCurve(),
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Container(
+                                        width: 26,
+                                        height: 26,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: PrimeTheme.panelBackground
+                                              .withValues(alpha: 0.9),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: isolate
+                                                ? PrimeTheme.primaryAccent
+                                                : PrimeTheme.borderSide,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          isolate
+                                              ? Icons.filter_1
+                                              : Icons.layers,
+                                          size: 14,
+                                          color: isolate
+                                              ? PrimeTheme.primaryAccent
+                                              : PrimeTheme.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           // Statistics toggle (σ button + S hotkey). Export
                           // lives in the Graph header ··· menu.
                           Positioned(
@@ -542,6 +597,11 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   /// True skips the page fill (transparent figure export).
   final bool transparentBackground;
 
+  /// Selected dataset's table id (when a dataset is selected): its curve is
+  /// highlighted (full color, +0.75px stroke) and siblings are dimmed to
+  /// 45% alpha for preview. Null = render everything normally.
+  final String? activeTableId;
+
   _MultiSeriesPlotPainter({
     required this.xSeries,
     required this.ySeries,
@@ -552,6 +612,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     this.tableIds = const [],
     this.formatKey = '._false',
     this.transparentBackground = false,
+    this.activeTableId,
   });
 
   @override
@@ -776,6 +837,11 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       if (xs.isEmpty || ys.isEmpty) continue;
 
       final props = s < tableProps.length ? tableProps[s] : null;
+      // Selection highlight: with a dataset selected, its curve draws
+      // prominently; the previewed siblings recede to 45% alpha.
+      final seriesId = s < tableIds.length ? tableIds[s] : null;
+      final isActive = activeTableId != null && seriesId == activeTableId;
+      final dimmed = activeTableId != null && !isActive;
       final lineColor = props != null
           ? _parseColor(props.lineColor, const Color(0xFF1F77B4))
           : const Color(0xFF1F77B4);
@@ -783,8 +849,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           ? _parseColor(props.markerColor, Colors.black)
           : Colors.black;
       final linePaint = Paint()
-        ..color = lineColor
-        ..strokeWidth = props?.lineThickness ?? 2.5
+        ..color = dimmed ? lineColor.withValues(alpha: 0.45) : lineColor
+        ..strokeWidth =
+            (props?.lineThickness ?? 2.5) + (isActive ? 0.75 : 0.0)
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..isAntiAlias = true;
@@ -811,11 +878,15 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
       if (props?.markerVisible ?? false) {
         final markerPaint = Paint()
-          ..color = markerColor
+          ..color = dimmed
+              ? markerColor.withValues(alpha: 0.45)
+              : markerColor
           ..style = PaintingStyle.fill
           ..isAntiAlias = true;
         final markerStroke = Paint()
-          ..color = markerColor
+          ..color = dimmed
+              ? markerColor.withValues(alpha: 0.45)
+              : markerColor
           ..strokeWidth = 2
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
@@ -1076,6 +1147,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     if (transparentBackground != oldDelegate.transparentBackground) {
       return true;
     }
+    if (activeTableId != oldDelegate.activeTableId) return true;
     if (tableProps.length != oldDelegate.tableProps.length) return true;
     if (tableNames.length != oldDelegate.tableNames.length) return true;
     for (var i = 0; i < tableProps.length; i++) {

@@ -45,6 +45,11 @@ class ProjectState {
   /// when non-empty. Kept separate to preserve legacy single-table flows.
   final ValueNotifier<List<DTODataTable>> activeTables = ValueNotifier([]);
 
+  /// Canvas curve visibility mode. OFF (default): selecting a dataset
+  /// previews every sibling curve of its graph, with the selected one
+  /// highlighted. ON: only the selected dataset's curve is drawn.
+  final ValueNotifier<bool> isolateActiveCurve = ValueNotifier(false);
+
   /// Display name shown in the Table panel header (reacts to file drops & resets).
   final ValueNotifier<String> tableDisplayName = ValueNotifier('Table');
 
@@ -717,17 +722,40 @@ class ProjectState {
         fetchTablesForGraph(nodeId);
         graphName.value = node.name;
       } else if (node.nodeType == NodeType.dataset) {
-        // Single dataset selected — fetch that table and set activeTable
+        // Single dataset selected — keep previewing the whole graph's
+        // curves (siblings stay dimmed behind the highlighted one) while
+        // the data grid shows the selected table. Isolate mode narrows the
+        // canvas to the selected curve only.
         try {
           final table = getTable(tableId: nodeId);
+          if (plotId != null) {
+            fetchTablesForGraph(plotId);
+          }
           activeTable.value = table;
-          // Clear multi-table view so canvas shows single table
-          activeTables.value = [];
+          tableDisplayName.value = table.name;
+          if (plotId != null && isolateActiveCurve.value) {
+            activeTables.value = [table];
+          }
         } catch (e) {
           // ignore and keep existing state
         }
       }
     }
+  }
+
+  /// Flips canvas curve visibility and re-applies it for the current
+  /// dataset selection (no-op for non-dataset selections).
+  void toggleIsolateActiveCurve() {
+    isolateActiveCurve.value = !isolateActiveCurve.value;
+    final sel = selectedProjectNodeId.value;
+    final root = projectTree.value;
+    if (sel != null && root != null) {
+      final node = findNodeById(root, sel);
+      if (node != null && node.nodeType == NodeType.dataset) {
+        selectProjectNode(sel);
+      }
+    }
+    refreshCanvas.value++;
   }
 
   ProjectNode? findNodeById(ProjectNode? node, String id) {
