@@ -16,6 +16,7 @@ const shortcutRows = [
   ('Ctrl + Shift + S', 'Save project as…'),
   ('Ctrl + E', 'Export figure'),
   ('Ctrl + Shift + E', 'Export data'),
+  ('Ctrl + F', 'Search nodes & commands'),
   ('Ctrl + Z', 'Undo'),
   ('Ctrl + Y', 'Redo'),
   ('S', 'Toggle series statistics'),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
+import '../components/prime_search_bar.dart';
 
 /// Maximize/restore toggle shared by the title-bar double-click and the
 /// window-control button. Explicit handler — no dependence on the window
@@ -40,10 +41,7 @@ class CustomTitleBar extends StatelessWidget {
                     Scaffold.of(context).openDrawer();
                   },
                 ),
-                const SizedBox(width: 4),
-                _HistoryButton(isRedo: false),
-                _HistoryButton(isRedo: true),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent), // Placeholder logo
                 const SizedBox(width: 8),
                 Text(
@@ -99,27 +97,16 @@ class CustomTitleBar extends StatelessWidget {
             ),
           ),
 
-          // Center: Search Bar
-          Container(
-            width: 300,
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            decoration: BoxDecoration(
-              color: PrimeTheme.searchBarBackground,
-              borderRadius: BorderRadius.circular(6.0),
-              border: Border.all(color: PrimeTheme.borderSide),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Type command or search... (Ctrl + F)',
-                    style: TextStyle(fontSize: 12, color: PrimeTheme.textSecondary.withValues(alpha: 0.7)),
-                  ),
-                ),
-                Icon(Icons.search, size: 16, color: PrimeTheme.textSecondary),
-              ],
-            ),
+          // Center: Undo/Redo + command search cluster
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _HistoryButton(isRedo: false),
+              const SizedBox(width: 4),
+              _HistoryButton(isRedo: true),
+              const SizedBox(width: 12),
+              const PrimeSearchBar(),
+            ],
           ),
 
           // Right Flexible Drag Area

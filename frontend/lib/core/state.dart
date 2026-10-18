@@ -574,6 +574,63 @@ class ProjectState {
     markDirty();
   }
 
+  /// Creates a new empty graph node, auto-creating a folder when none exists.
+  /// Mirrors the Project Explorer "Add Item → Add Graph" behavior and selects
+  /// the new graph. Used by the command palette.
+  void newGraph() {
+    checkpointCoalesced();
+    final root = projectTree.value;
+    if (root == null) return;
+
+    ProjectNode? targetFolder;
+    void findFolder(ProjectNode node) {
+      if (targetFolder != null) return;
+      if (node.nodeType == NodeType.folder && node.id != 'root_1') {
+        targetFolder = node;
+        return;
+      }
+      for (final child in node.children) {
+        findFolder(child);
+      }
+    }
+
+    findFolder(root);
+    String? graphId;
+    if (targetFolder != null) {
+      graphId = addProjectNodeAndReturnId(
+        targetFolder!.id,
+        'Graph',
+        NodeType.plot,
+      );
+    } else {
+      final folderId = addProjectNodeAndReturnId(
+        'root_1',
+        'Folder',
+        NodeType.folder,
+      );
+      graphId = addProjectNodeAndReturnId(
+        folderId,
+        'Graph',
+        NodeType.plot,
+      );
+    }
+    if (graphId.isNotEmpty) selectProjectNode(graphId);
+  }
+
+  /// Creates a new function node in the active graph (auto-creating a graph
+  /// when the project has none) and selects it. Used by the command palette.
+  void newFunction() {
+    checkpointCoalesced();
+    var graphId = getValidParentGraphId();
+    if (graphId == null) {
+      newGraph();
+      graphId = getValidParentGraphId();
+    }
+    if (graphId == null) return;
+    final id = addProjectNodeAndReturnId(graphId, 'Function', NodeType.function);
+    if (id.isNotEmpty) selectProjectNode(id);
+  }
+
   /// Clears all data rows, keeping the column schema, resetting to an empty table.
   void clearTableData() {
     checkpointCoalesced();

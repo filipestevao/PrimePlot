@@ -12,6 +12,7 @@ import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../components/panel_container.dart';
+import '../components/prime_search_bar.dart';
 import '../components/shortcut_map.dart';
 import '../dialogs/about_dialog.dart';
 import '../dialogs/export_dialog.dart';
@@ -523,6 +524,8 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
           control: true,
           shift: true,
         ): () => openExportDialog(context, 1),
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true): () =>
+            PrimeSearchBar.requestFocus(),
         const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () =>
             _guardedText(() {
               final err = ProjectState.instance.undo();
