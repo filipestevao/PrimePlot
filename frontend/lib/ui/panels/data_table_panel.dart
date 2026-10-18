@@ -27,6 +27,10 @@ class _DataTablePanelState extends State<DataTablePanel> {
   static const double _indexColWidth = 40.0;
   static const double _dataColWidth = 100.0;
   static const double _addColWidth = 36.0;
+  /// Fixed row height for O(1) virtualization (see `itemExtent` on the
+  /// `ListView.builder`).  Also used to compute vertical scroll offsets
+  /// when TAB-navigating between cells.
+  static const double _rowHeight = 28.0;
 
   int? _editingRow;
   int? _editingCol;
@@ -119,15 +123,16 @@ class _DataTablePanelState extends State<DataTablePanel> {
   }
 
   // ---------------------------------------------------------------------------
-  // TAB cell walk + scroll helpers
+  // Cell navigation: TAB / Shift+TAB / Enter
   // ---------------------------------------------------------------------------
 
-  /// Fixed row stride used to keep the focused cell on screen.
-  static const double _estimatedRowHeight = 33.0;
-
-  /// Commits any in-progress edit, then moves the cell cursor forward
-  /// (TAB) or backward (Shift+TAB) with wraparound, scrolling into view.
-  void _moveCellFocus({required bool forward}) {
+  /// Commits any in-progress edit, then moves the cell cursor:
+  ///   • **forward** (TAB): next column, wrapping to row+1 col 0.
+  ///   • **backward** (Shift+TAB): previous column, wrapping to row-1 last col.
+  ///   • **down** (Enter): next row in the same column.
+  /// After moving, scrolls the target cell into view and enters edit mode
+  /// with all text selected (type-to-replace).
+  void _moveCellFocus({required bool forward, bool down = false}) {
     final tableData = ProjectState.instance.activeTable.value;
     if (tableData == null || tableData.columns.isEmpty) return;
     final colCount = tableData.columns.length;
@@ -142,7 +147,12 @@ class _DataTablePanelState extends State<DataTablePanel> {
       r = _editingRow!;
       c = _editingCol!;
       _commitEdit(tableData, r, c, _editController.text);
-      if (forward) {
+
+      if (down) {
+        // Enter: advance one row, same column
+        r++;
+        if (r >= rowCount) r = 0;
+      } else if (forward) {
         c++;
         if (c >= colCount) {
           c = 0;
@@ -179,15 +189,41 @@ class _DataTablePanelState extends State<DataTablePanel> {
       _selectAllEditText();
     });
 
+    _scrollCellIntoView(r, c);
+  }
+
+  /// Ensures the cell at `(row, col)` is visible in both vertical and
+  /// horizontal scroll views by jumping to the calculated pixel offset.
+  void _scrollCellIntoView(int row, int col) {
     if (_verticalController.hasClients) {
-      final target = (r * _estimatedRowHeight - 100).clamp(
-          0.0, _verticalController.position.maxScrollExtent);
-      _verticalController.jumpTo(target);
+      final viewportHeight = _verticalController.position.viewportDimension;
+      final currentOffset = _verticalController.offset;
+      final cellTop = row * _rowHeight;
+      final cellBottom = cellTop + _rowHeight;
+      // Only jump when the target cell is outside the visible window.
+      if (cellTop < currentOffset) {
+        _verticalController.jumpTo(
+            cellTop.clamp(0.0, _verticalController.position.maxScrollExtent));
+      } else if (cellBottom > currentOffset + viewportHeight) {
+        _verticalController.jumpTo(
+            (cellBottom - viewportHeight)
+                .clamp(0.0, _verticalController.position.maxScrollExtent));
+      }
     }
     if (_horizontalController.hasClients) {
-      final targetX = (c * 100.0 - 200).clamp(
-          0.0, _horizontalController.position.maxScrollExtent);
-      _horizontalController.jumpTo(targetX);
+      final viewportWidth = _horizontalController.position.viewportDimension;
+      final currentOffsetX = _horizontalController.offset;
+      // Column pixel position (skip the index column which is not scrolled).
+      final cellLeft = col * _dataColWidth;
+      final cellRight = cellLeft + _dataColWidth;
+      if (cellLeft < currentOffsetX) {
+        _horizontalController.jumpTo(
+            cellLeft.clamp(0.0, _horizontalController.position.maxScrollExtent));
+      } else if (cellRight > currentOffsetX + viewportWidth - _indexColWidth) {
+        _horizontalController.jumpTo(
+            (cellRight - viewportWidth + _indexColWidth)
+                .clamp(0.0, _horizontalController.position.maxScrollExtent));
+      }
     }
   }
 
@@ -264,6 +300,15 @@ class _DataTablePanelState extends State<DataTablePanel> {
               );
               return KeyEventResult.handled;
             }
+            // Enter: commit and advance one row down, same column.
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.enter &&
+                _editingRow != null &&
+                _editingCol != null &&
+                ProjectState.instance.isTableEditable.value) {
+              _moveCellFocus(forward: true, down: true);
+              return KeyEventResult.handled;
+            }
             return KeyEventResult.ignored;
           },
           child: ValueListenableBuilder<DTODataTable?>(
@@ -317,6 +362,11 @@ class _DataTablePanelState extends State<DataTablePanel> {
                                   thumbVisibility: true,
                                   child: ListView.builder(
                                     controller: _verticalController,
+                                    // O(1) virtualization: fixed row height
+                                    // engages RenderSliverFixedExtentList,
+                                    // eliminating per-row layout measurement
+                                    // during fling scrolls through 10k+ rows.
+                                    itemExtent: _rowHeight,
                                     // Scroll smoothness: no keep-alives, but
                                     // repaint boundaries per row.
                                     addAutomaticKeepAlives: false,
@@ -905,26 +955,37 @@ class _DataTablePanelState extends State<DataTablePanel> {
           ),
         ),
         child: isEditing
-            ? TextFormField(
-                controller: _editController,
-                focusNode: _cellFocus,
-                autofocus: true,
-                style: TextStyle(
-                    fontSize: 12, color: PrimeTheme.primaryAccent),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                  border: InputBorder.none,
-                ),
-                keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true, signed: true),
-                onFieldSubmitted: (newValue) =>
-                    _commitEdit(tableData, rowIndex, colIndex, newValue),
-                onTapOutside: (_) {
-                  if (_editingRow != null && _editingCol != null) {
-                    _commitEdit(tableData, _editingRow!, _editingCol!, _editController.text);
-                  }
+            // Suppress Flutter's default focus-traversal intents so that
+            // TAB / Shift+TAB are handled exclusively by our custom
+            // _moveCellFocus handler on the parent Focus widget.
+            ? Actions(
+                actions: <Type, Action<Intent>>{
+                  NextFocusIntent: _DoNothingFocusAction(),
+                  PreviousFocusIntent: _DoNothingFocusAction(),
                 },
+                child: TextFormField(
+                  controller: _editController,
+                  focusNode: _cellFocus,
+                  autofocus: true,
+                  style: TextStyle(
+                      fontSize: 12, color: PrimeTheme.primaryAccent),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: true),
+                  // Enter is intercepted at the panel-level onKeyEvent for
+                  // consistent advance-down; onFieldSubmitted is a fallback.
+                  onFieldSubmitted: (_) =>
+                      _moveCellFocus(forward: true, down: true),
+                  onTapOutside: (_) {
+                    if (_editingRow != null && _editingCol != null) {
+                      _commitEdit(tableData, _editingRow!, _editingCol!, _editController.text);
+                    }
+                  },
+                ),
               )
             : Text(
                 displayText,
@@ -987,4 +1048,17 @@ class _DataTablePanelState extends State<DataTablePanel> {
       _editingCol = null;
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: swallow focus-traversal intents so TAB/Shift+TAB stay in our
+// custom cell-walk handler instead of escaping to the widget tree.
+// ---------------------------------------------------------------------------
+
+class _DoNothingFocusAction extends Action<Intent> {
+  @override
+  Object? invoke(Intent intent) => null;
+
+  @override
+  bool consumesKey(Intent intent) => true;
 }
