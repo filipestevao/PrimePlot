@@ -176,6 +176,13 @@ class _DataTablePanelState extends State<DataTablePanel> {
     final raw = targetValid ? tableData.columns[c].data[r] : double.nan;
     _editController.text = raw.isNaN ? '' : formatNumber(raw);
     _selectAllEditText();
+    // Force a real focus cycle. The next cell's editor reuses `_cellFocus`
+    // while it still holds primary focus; Flutter's FocusNode skips the
+    // keyboard-token handshake when focus never changes, so EditableText
+    // would mount without an input connection (typing silently dead until
+    // a click). Dropping focus here makes the re-request below a genuine
+    // focus change that opens the input connection.
+    _cellFocus.unfocus();
     setState(() {
       _editingRow = r;
       _editingCol = c;
@@ -185,7 +192,7 @@ class _DataTablePanelState extends State<DataTablePanel> {
     // post-frame so typing replaces the content immediately.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (!_cellFocus.hasFocus) _cellFocus.requestFocus();
+      _cellFocus.requestFocus();
       _selectAllEditText();
     });
 
@@ -977,9 +984,15 @@ class _DataTablePanelState extends State<DataTablePanel> {
                   keyboardType: const TextInputType.numberWithOptions(
                       decimal: true, signed: true),
                   // Enter is intercepted at the panel-level onKeyEvent for
-                  // consistent advance-down; onFieldSubmitted is a fallback.
-                  onFieldSubmitted: (_) =>
-                      _moveCellFocus(forward: true, down: true),
+                  // consistent advance-down; the IME action arrives through
+                  // a separate channel, so only act here if the edit
+                  // position still points at THIS field (avoids skipping
+                  // two cells per Enter press).
+                  onFieldSubmitted: (_) {
+                    if (_editingRow == rowIndex && _editingCol == colIndex) {
+                      _moveCellFocus(forward: true, down: true);
+                    }
+                  },
                   onTapOutside: (_) {
                     if (_editingRow != null && _editingCol != null) {
                       _commitEdit(tableData, _editingRow!, _editingCol!, _editController.text);
