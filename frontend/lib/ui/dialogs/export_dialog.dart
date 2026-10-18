@@ -67,10 +67,7 @@ void openExportDialog(BuildContext context, int initialTab) {
 
 /// Renders the canvas and places the PNG on the system clipboard.
 Future<void> copyFigureToClipboard(BuildContext context) async {
-  final bytes = await captureCanvasPng(
-    pixelRatio: 2.0,
-    background: CanvasExportBackground.theme,
-  );
+  final bytes = await captureCanvasPng(pixelRatio: 2.0);
   if (!context.mounted) return;
   if (bytes == null) {
     _snack(context, 'Copy failed: could not render canvas', error: true);
@@ -134,7 +131,7 @@ class _ExportDialogState extends State<ExportDialog>
 
   // Figure tab state.
   double _dpi = 150;
-  CanvasExportBackground _figBg = CanvasExportBackground.theme;
+  bool _figTransparent = false;
   late final TextEditingController _figName;
 
   // Data tab state.
@@ -294,14 +291,19 @@ class _ExportDialogState extends State<ExportDialog>
         ),
         const SizedBox(height: 10),
         _label('Background'),
-        PrimeSelect<CanvasExportBackground>(
-          value: _figBg,
-          options: const {
-            CanvasExportBackground.theme: 'Match theme',
-            CanvasExportBackground.white: 'White',
-            CanvasExportBackground.transparent: 'Transparent',
-          },
-          onChanged: (v) => setState(() => _figBg = v),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Transparent (no page fill)',
+                style: TextStyle(fontSize: 12, color: PrimeTheme.textPrimary),
+              ),
+            ),
+            PrimeSwitch(
+              value: _figTransparent,
+              onChanged: (v) => setState(() => _figTransparent = v),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         _label('File name'),
@@ -317,7 +319,7 @@ class _ExportDialogState extends State<ExportDialog>
     try {
       final bytes = await captureCanvasPng(
         pixelRatio: _dpi / 96.0,
-        background: _figBg,
+        transparentBackground: _figTransparent,
       );
       if (!mounted) return;
       if (bytes == null) {

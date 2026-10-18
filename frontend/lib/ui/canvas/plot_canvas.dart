@@ -51,13 +51,14 @@ Color _chartBackground(GraphProperties? gp) =>
     _parseColor(gp?.backgroundColor ?? '#FFFFFF', const Color(0xFFFFFFFF));
 
 /// Unified axis label color (titles + tick numbers). An explicit override
-/// wins; otherwise follows the active theme text color (dark slate on the
-/// Light theme, light text on dark themes) — labels render on the margin
-/// area around the white chart rect, which stays theme-colored.
+/// wins; otherwise auto-contrast against the chart page: black on light
+/// pages (the white default), white on dark pages.
 Color _chartLabelColor(GraphProperties? gp) {
   final override = gp?.labelColor;
-  if (override != null) return _parseColor(override, PrimeTheme.textPrimary);
-  return PrimeTheme.textPrimary;
+  if (override != null) return _parseColor(override, const Color(0xFF000000));
+  return _chartBackground(gp).computeLuminance() > 0.5
+      ? const Color(0xFF000000)
+      : const Color(0xFFFFFFFF);
 }
 
 class PlotCanvas extends StatelessWidget {
@@ -71,17 +72,12 @@ class PlotCanvas extends StatelessWidget {
       listenable: Listenable.merge([
         ProjectState.instance.refreshCanvas,
         ProjectState.instance.projectTree,
-        ProjectState.instance.exportBackground,
+        ProjectState.instance.exportTransparent,
         ProjectState.instance.decimalSeparator,
         ProjectState.instance.useThousands,
       ]),
       builder: (context, _) {
-        final Color? backgroundFill =
-            switch (ProjectState.instance.exportBackground.value) {
-          CanvasExportBackground.transparent => null,
-          CanvasExportBackground.white => const Color(0xFFFFFFFF),
-          CanvasExportBackground.theme => PrimeTheme.canvasBackground,
-        };
+        final transparent = ProjectState.instance.exportTransparent.value;
         // Locale fingerprint: forces painter repaint on separator/grouping
         // changes even when every data value is identical.
         final formatKey =
@@ -193,7 +189,7 @@ class PlotCanvas extends StatelessWidget {
                             markerType: 'Circle',
                             markerVisible: false,
                             lineColor: '#1F77B4',
-                            markerColor: '#FFFFFF',
+                            markerColor: '#000000',
                           ),
                         );
                       }
@@ -264,7 +260,7 @@ class PlotCanvas extends StatelessWidget {
                             markerType: 'None',
                             markerVisible: false,
                             lineColor: fprops.lineColor,
-                            markerColor: '#FFFFFF',
+                            markerColor: '#000000',
                           ),
                         );
                         tableNames.add(fn.name);
@@ -317,7 +313,7 @@ class PlotCanvas extends StatelessWidget {
                                   latexFields: latexFields,
                                   tableIds: tableIds,
                                   formatKey: formatKey,
-                                  backgroundFill: backgroundFill,
+                                  transparentBackground: transparent,
                                 ),
                                 child: Container(),
                               ),
@@ -337,7 +333,7 @@ class PlotCanvas extends StatelessWidget {
                           latexFields: latexFields,
                           tableIds: tableIds,
                           formatKey: formatKey,
-                          backgroundFill: backgroundFill,
+                          transparentBackground: transparent,
                         ),
                         child: Container(),
                       );
@@ -543,8 +539,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   /// formatting changes even if all data is identical.
   final String formatKey;
 
-  /// Null skips the background fill (transparent export).
-  final Color? backgroundFill;
+  /// True skips the page fill (transparent figure export).
+  final bool transparentBackground;
 
   _MultiSeriesPlotPainter({
     required this.xSeries,
@@ -555,7 +551,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     this.latexFields = const {},
     this.tableIds = const [],
     this.formatKey = '._false',
-    this.backgroundFill,
+    this.transparentBackground = false,
   });
 
   @override
@@ -586,13 +582,12 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     final plotHeight = size.height - marginTop - marginBottom;
     if (plotWidth <= 0 || plotHeight <= 0) return;
 
-    final bg = backgroundFill;
-    if (bg != null) {
-      canvas.drawRect(Offset.zero & size, Paint()..color = bg);
-      // Chart area standard: white by default (customizable per graph).
-      // Skipped with transparent exports, which stay fully unfilled.
+    // Chart page: the whole canvas area (plot rect + axis/title margins)
+    // shares one background — white by default. Transparent exports skip
+    // the fill entirely.
+    if (!transparentBackground) {
       canvas.drawRect(
-        Rect.fromLTWH(marginLeft, marginTop, plotWidth, plotHeight),
+        Offset.zero & size,
         Paint()..color = _chartBackground(graphProps),
       );
     }
@@ -785,8 +780,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           ? _parseColor(props.lineColor, const Color(0xFF1F77B4))
           : const Color(0xFF1F77B4);
       final markerColor = props != null
-          ? _parseColor(props.markerColor, Colors.white)
-          : Colors.white;
+          ? _parseColor(props.markerColor, Colors.black)
+          : Colors.black;
       final linePaint = Paint()
         ..color = lineColor
         ..strokeWidth = props?.lineThickness ?? 2.5
@@ -982,7 +977,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         _LegendEntry(
           name: entryName,
           lineColor: _parseColor(props.lineColor, const Color(0xFF1F77B4)),
-          markerColor: _parseColor(props.markerColor, Colors.white),
+          markerColor: _parseColor(props.markerColor, Colors.black),
           lineStyle: props.lineStyle,
           markerType: props.markerType,
           showLine: props.lineVisible,
@@ -1078,7 +1073,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   bool shouldRepaint(covariant _MultiSeriesPlotPainter oldDelegate) {
     if (graphProps != oldDelegate.graphProps) return true;
     if (formatKey != oldDelegate.formatKey) return true;
-    if (backgroundFill != oldDelegate.backgroundFill) return true;
+    if (transparentBackground != oldDelegate.transparentBackground) {
+      return true;
+    }
     if (tableProps.length != oldDelegate.tableProps.length) return true;
     if (tableNames.length != oldDelegate.tableNames.length) return true;
     for (var i = 0; i < tableProps.length; i++) {

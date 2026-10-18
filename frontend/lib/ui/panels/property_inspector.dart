@@ -737,8 +737,8 @@ class _GraphInspector extends StatelessWidget {
                   child: _ThemeColorRow(
                     value: props.labelColor,
                     label: 'Axis Labels Color',
-                    fallback: _autoLabelHex,
-                    resetTooltip: 'Follow theme (auto)',
+                    fallback: _autoLabelHexFor(props.backgroundColor),
+                    resetTooltip: 'Auto (black/white by page)',
                     presets: const [
                       '#0F172A',
                       '#000000',
@@ -1139,10 +1139,11 @@ Color _paletteHexColor(String hex) {
   return Color(v);
 }
 
-/// Hex of the theme's primary text color — what the "auto" axis label color
-/// resolves to when no override is set.
-String get _autoLabelHex {
-  final v = PrimeTheme.textPrimary.toARGB32() & 0xFFFFFF;
+/// Hex of the auto axis label color given the chart page background —
+/// mirrors the painter: black on light pages, white on dark ones.
+String _autoLabelHexFor(String? backgroundHex) {
+  final bg = _paletteHexColor(backgroundHex ?? '#FFFFFF');
+  final v = bg.computeLuminance() > 0.5 ? 0x000000 : 0xFFFFFF;
   return '#${v.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }
 

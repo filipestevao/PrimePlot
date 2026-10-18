@@ -31,9 +31,6 @@ class GraphHomeView {
   }
 }
 
-/// Figure background for PNG export / clipboard.
-enum CanvasExportBackground { theme, white, transparent }
-
 /// A lightweight, globally accessible state manager.
 class ProjectState {
   static final ProjectState instance = ProjectState._internal();
@@ -284,10 +281,9 @@ class ProjectState {
   /// painted canvas, excluding crosshair/marquee overlays).
   final GlobalKey canvasCaptureKey = GlobalKey();
 
-  /// Background used the next time the painter paints. Toggled transiently
-  /// during PNG export / clipboard copy, then restored.
-  final ValueNotifier<CanvasExportBackground> exportBackground =
-      ValueNotifier(CanvasExportBackground.theme);
+  /// Figure export background: ON skips the chart page fill entirely
+  /// (transparent PNG). Toggled transiently during capture, then restored.
+  final ValueNotifier<bool> exportTransparent = ValueNotifier(false);
 
   /// App version for the title bar / About dialog (loaded once at startup).
   String appVersion = '';

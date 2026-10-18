@@ -129,7 +129,7 @@ impl Default for TableProperties {
             marker_type: "Circle".to_string(),
             marker_visible: false,
             line_color: "#1F77B4".to_string(),
-            marker_color: "#FFFFFF".to_string(),
+            marker_color: "#000000".to_string(),
         }
     }
 }
