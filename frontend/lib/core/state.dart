@@ -459,6 +459,8 @@ class ProjectState {
         showBorder: gp.showBorder,
         gridColor: gp.gridColor,
         axisColor: gp.axisColor,
+        backgroundColor: gp.backgroundColor,
+        labelColor: gp.labelColor,
       ),
     );
   }

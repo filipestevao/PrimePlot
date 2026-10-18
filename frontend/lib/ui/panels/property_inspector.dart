@@ -44,6 +44,8 @@ extension GraphPropertiesExt on GraphProperties {
     bool? showBorder,
     String? Function()? gridColor,
     String? Function()? axisColor,
+    String? Function()? backgroundColor,
+    String? Function()? labelColor,
   }) {
     return GraphProperties(
       xMin: xMin != null ? xMin() : this.xMin,
@@ -67,6 +69,10 @@ extension GraphPropertiesExt on GraphProperties {
       showBorder: showBorder ?? this.showBorder,
       gridColor: gridColor != null ? gridColor() : this.gridColor,
       axisColor: axisColor != null ? axisColor() : this.axisColor,
+      backgroundColor: backgroundColor != null
+          ? backgroundColor()
+          : this.backgroundColor,
+      labelColor: labelColor != null ? labelColor() : this.labelColor,
     );
   }
 }
@@ -727,6 +733,27 @@ class _GraphInspector extends StatelessWidget {
                   ),
                 ),
                 PropertyRow(
+                  label: 'Axis Labels Color',
+                  child: _ThemeColorRow(
+                    value: props.labelColor,
+                    label: 'Axis Labels Color',
+                    fallback: _autoLabelHex,
+                    resetTooltip: 'Follow theme (auto)',
+                    presets: const [
+                      '#0F172A',
+                      '#000000',
+                      '#64748B',
+                      '#FFFFFF',
+                    ],
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(labelColor: () => val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
                   label: 'Title Size',
                   child: Row(
                     children: [
@@ -918,6 +945,27 @@ class _GraphInspector extends StatelessWidget {
                   ),
                 ),
                 PropertyRow(
+                  label: 'Chart Background',
+                  child: _ThemeColorRow(
+                    value: props.backgroundColor,
+                    label: 'Chart Background',
+                    fallback: '#FFFFFF',
+                    resetTooltip: 'Default white',
+                    presets: const [
+                      '#FFFFFF',
+                      '#F8FAFC',
+                      '#E2E8F0',
+                      '#000000',
+                    ],
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(backgroundColor: () => val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
                   label: 'Grid Color',
                   child: _ThemeColorRow(
                     value: props.gridColor,
@@ -1030,10 +1078,23 @@ class _ThemeColorRow extends StatelessWidget {
   final String? value;
   final String label;
   final ValueChanged<String?> onChanged;
+
+  /// Swatch color shown when [value] is null (the resolved default).
+  final String fallback;
+
+  /// Tooltip of the reset (↺) button.
+  final String resetTooltip;
+
+  /// Optional quick-pick swatches in the picker dialog.
+  final List<String>? presets;
+
   const _ThemeColorRow({
     required this.value,
     required this.label,
     required this.onChanged,
+    this.fallback = '#808080',
+    this.resetTooltip = 'Follow theme',
+    this.presets,
   });
 
   @override
@@ -1041,14 +1102,15 @@ class _ThemeColorRow extends StatelessWidget {
     return Row(
       children: [
         PrimeColorPicker(
-          hexColor: value ?? '#808080',
+          hexColor: value ?? fallback,
           label: label,
+          presets: presets,
           onChanged: (c) => onChanged(c),
         ),
         if (value != null) ...[
           const SizedBox(width: 6),
           Tooltip(
-            message: 'Follow theme',
+            message: resetTooltip,
             child: InkWell(
               onTap: () => onChanged(null),
               borderRadius: BorderRadius.circular(4),
@@ -1075,6 +1137,13 @@ Color _paletteHexColor(String hex) {
   final v = int.tryParse(h, radix: 16);
   if (v == null) return const Color(0xFF808080);
   return Color(v);
+}
+
+/// Hex of the theme's primary text color — what the "auto" axis label color
+/// resolves to when no override is set.
+String get _autoLabelHex {
+  final v = PrimeTheme.textPrimary.toARGB32() & 0xFFFFFF;
+  return '#${v.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }
 
 const _paletteFileType = XTypeGroup(

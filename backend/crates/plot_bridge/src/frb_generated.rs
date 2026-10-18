@@ -2705,6 +2705,8 @@ impl SseDecode for crate::api::properties::GraphProperties {
         let mut var_showBorder = <bool>::sse_decode(deserializer);
         let mut var_gridColor = <Option<String>>::sse_decode(deserializer);
         let mut var_axisColor = <Option<String>>::sse_decode(deserializer);
+        let mut var_backgroundColor = <Option<String>>::sse_decode(deserializer);
+        let mut var_labelColor = <Option<String>>::sse_decode(deserializer);
         return crate::api::properties::GraphProperties {
             x_min: var_xMin,
             x_max: var_xMax,
@@ -2727,6 +2729,8 @@ impl SseDecode for crate::api::properties::GraphProperties {
             show_border: var_showBorder,
             grid_color: var_gridColor,
             axis_color: var_axisColor,
+            background_color: var_backgroundColor,
+            label_color: var_labelColor,
         };
     }
 }
@@ -3359,6 +3363,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::GraphProperties {
             self.show_border.into_into_dart().into_dart(),
             self.grid_color.into_into_dart().into_dart(),
             self.axis_color.into_into_dart().into_dart(),
+            self.background_color.into_into_dart().into_dart(),
+            self.label_color.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3679,6 +3685,8 @@ impl SseEncode for crate::api::properties::GraphProperties {
         <bool>::sse_encode(self.show_border, serializer);
         <Option<String>>::sse_encode(self.grid_color, serializer);
         <Option<String>>::sse_encode(self.axis_color, serializer);
+        <Option<String>>::sse_encode(self.background_color, serializer);
+        <Option<String>>::sse_encode(self.label_color, serializer);
     }
 }
 

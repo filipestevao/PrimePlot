@@ -2678,8 +2678,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   GraphProperties dco_decode_graph_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 21)
-      throw Exception('unexpected arr length: expect 21 but see ${arr.length}');
+    if (arr.length != 23)
+      throw Exception('unexpected arr length: expect 23 but see ${arr.length}');
     return GraphProperties(
       xMin: dco_decode_opt_box_autoadd_f_64(arr[0]),
       xMax: dco_decode_opt_box_autoadd_f_64(arr[1]),
@@ -2702,6 +2702,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       showBorder: dco_decode_bool(arr[18]),
       gridColor: dco_decode_opt_String(arr[19]),
       axisColor: dco_decode_opt_String(arr[20]),
+      backgroundColor: dco_decode_opt_String(arr[21]),
+      labelColor: dco_decode_opt_String(arr[22]),
     );
   }
 
@@ -3086,6 +3088,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_showBorder = sse_decode_bool(deserializer);
     var var_gridColor = sse_decode_opt_String(deserializer);
     var var_axisColor = sse_decode_opt_String(deserializer);
+    var var_backgroundColor = sse_decode_opt_String(deserializer);
+    var var_labelColor = sse_decode_opt_String(deserializer);
     return GraphProperties(
       xMin: var_xMin,
       xMax: var_xMax,
@@ -3108,6 +3112,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       showBorder: var_showBorder,
       gridColor: var_gridColor,
       axisColor: var_axisColor,
+      backgroundColor: var_backgroundColor,
+      labelColor: var_labelColor,
     );
   }
 
@@ -3551,6 +3557,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.showBorder, serializer);
     sse_encode_opt_String(self.gridColor, serializer);
     sse_encode_opt_String(self.axisColor, serializer);
+    sse_encode_opt_String(self.backgroundColor, serializer);
+    sse_encode_opt_String(self.labelColor, serializer);
   }
 
   @protected

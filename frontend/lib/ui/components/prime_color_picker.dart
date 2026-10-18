@@ -51,11 +51,16 @@ class PrimeColorPicker extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final String label;
 
+  /// Extra quick-pick swatches shown as a PRESETS section at the top of the
+  /// dialog (e.g. standard chart backgrounds). Hex strings.
+  final List<String>? presets;
+
   const PrimeColorPicker({
     super.key,
     required this.hexColor,
     required this.onChanged,
     this.label = 'Color',
+    this.presets,
   });
 
   @override
@@ -145,6 +150,24 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    if (widget.presets != null && widget.presets!.isNotEmpty) ...[
+                      Text(
+                        'PRESETS',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: PrimeTheme.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _swatchRow(
+                        widget.presets!.map(_parse).toList(),
+                        activeColor,
+                        pick,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     Text(
                       'ACADEMIC PALETTE (Tab10)',
                       style: TextStyle(

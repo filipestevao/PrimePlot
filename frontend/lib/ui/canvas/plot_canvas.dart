@@ -46,6 +46,20 @@ Color _parseColor(String value, Color fallback) {
   }
 }
 
+/// Chart area (inner plot rect) background; default publication white.
+Color _chartBackground(GraphProperties? gp) =>
+    _parseColor(gp?.backgroundColor ?? '#FFFFFF', const Color(0xFFFFFFFF));
+
+/// Unified axis label color (titles + tick numbers). An explicit override
+/// wins; otherwise follows the active theme text color (dark slate on the
+/// Light theme, light text on dark themes) — labels render on the margin
+/// area around the white chart rect, which stays theme-colored.
+Color _chartLabelColor(GraphProperties? gp) {
+  final override = gp?.labelColor;
+  if (override != null) return _parseColor(override, PrimeTheme.textPrimary);
+  return PrimeTheme.textPrimary;
+}
+
 class PlotCanvas extends StatelessWidget {
   const PlotCanvas({super.key});
 
@@ -443,7 +457,7 @@ class PlotCanvas extends StatelessWidget {
     final labelStyle = TextStyle(
       fontSize: axisTitleSize(graphProps),
       fontWeight: FontWeight.bold,
-      color: PrimeTheme.textPrimary,
+      color: _chartLabelColor(graphProps),
     );
     final textH = TextPainter(
       text: TextSpan(text: 'Hg', style: labelStyle),
@@ -575,6 +589,12 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     final bg = backgroundFill;
     if (bg != null) {
       canvas.drawRect(Offset.zero & size, Paint()..color = bg);
+      // Chart area standard: white by default (customizable per graph).
+      // Skipped with transparent exports, which stay fully unfilled.
+      canvas.drawRect(
+        Rect.fromLTWH(marginLeft, marginTop, plotWidth, plotHeight),
+        Paint()..color = _chartBackground(graphProps),
+      );
     }
 
     final showGrid = graphProps?.showGrid ?? true;
@@ -611,8 +631,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
     void drawAxisAndGrid() {
       const ticks = 5;
+      final labelColor = _chartLabelColor(graphProps);
       final textStyle = TextStyle(
-        color: paintAxis.color,
+        color: labelColor,
         fontSize: tickSize,
       );
       final bottom = size.height - marginBottom;
@@ -705,7 +726,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           text: TextSpan(
             text: graphProps?.xLabel ?? 'X',
             style: TextStyle(
-              color: PrimeTheme.textPrimary,
+              color: labelColor,
               fontSize: titleSize,
               fontWeight: FontWeight.bold,
             ),
@@ -727,7 +748,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           text: TextSpan(
             text: graphProps?.yLabel ?? 'Y',
             style: TextStyle(
-              color: PrimeTheme.textPrimary,
+              color: labelColor,
               fontSize: titleSize,
               fontWeight: FontWeight.bold,
             ),

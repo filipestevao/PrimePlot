@@ -176,6 +176,13 @@ class GraphProperties {
   final String? gridColor;
   final String? axisColor;
 
+  /// Chart area background (the inner plot rect). `None` = default white.
+  final String? backgroundColor;
+
+  /// Unified color for both X and Y axis titles and tick numbers.
+  /// `None` = theme text color (labels render on the themed margin area).
+  final String? labelColor;
+
   const GraphProperties({
     this.xMin,
     this.xMax,
@@ -198,6 +205,8 @@ class GraphProperties {
     required this.showBorder,
     this.gridColor,
     this.axisColor,
+    this.backgroundColor,
+    this.labelColor,
   });
 
   static Future<GraphProperties> default_() =>
@@ -225,7 +234,9 @@ class GraphProperties {
       titlePaddingY.hashCode ^
       showBorder.hashCode ^
       gridColor.hashCode ^
-      axisColor.hashCode;
+      axisColor.hashCode ^
+      backgroundColor.hashCode ^
+      labelColor.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -252,7 +263,9 @@ class GraphProperties {
           titlePaddingY == other.titlePaddingY &&
           showBorder == other.showBorder &&
           gridColor == other.gridColor &&
-          axisColor == other.axisColor;
+          axisColor == other.axisColor &&
+          backgroundColor == other.backgroundColor &&
+          labelColor == other.labelColor;
 }
 
 class ShapeProperties {

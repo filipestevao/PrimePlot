@@ -56,6 +56,13 @@ pub struct GraphProperties {
     pub grid_color: Option<String>,
     #[serde(default)]
     pub axis_color: Option<String>,
+    /// Chart area background (the inner plot rect). `None` = default white.
+    #[serde(default)]
+    pub background_color: Option<String>,
+    /// Unified color for both X and Y axis titles and tick numbers.
+    /// `None` = theme text color (labels render on the themed margin area).
+    #[serde(default)]
+    pub label_color: Option<String>,
 }
 
 fn default_title_font_size() -> f64 {
@@ -94,6 +101,8 @@ impl Default for GraphProperties {
             show_border: false,
             grid_color: None,
             axis_color: None,
+            background_color: Some("#FFFFFF".to_string()),
+            label_color: None,
         }
     }
 }
@@ -382,6 +391,23 @@ mod tests {
         assert!(!legacy.show_border);
         assert_eq!(legacy.grid_color, None);
         assert_eq!(legacy.axis_color, None);
+    }
+
+    #[test]
+    fn test_graph_props_background_and_label_color_migration() {
+        // Pre-Step-N bundles carry neither field; serde defaults leave both
+        // None (painter resolves None to white chart / auto-contrast labels).
+        let legacy: GraphProperties = serde_json::from_str(
+            r#"{"x_min":null,"x_max":null,"y_min":null,"y_max":null,"x_visible":true,"y_visible":true,"x_scale":"Linear","y_scale":"Linear","x_label":"X","y_label":"Y","aspect_ratio":null,"show_grid":true,"show_legend":true,"legend_position":"Top Right"}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.background_color, None);
+        assert_eq!(legacy.label_color, None);
+
+        // Fresh graphs default to an explicit white chart background.
+        let fresh = GraphProperties::default();
+        assert_eq!(fresh.background_color, Some("#FFFFFF".to_string()));
+        assert_eq!(fresh.label_color, None);
     }
 
     #[test]
