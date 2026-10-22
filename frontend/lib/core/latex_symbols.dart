@@ -196,14 +196,13 @@ List<InlineSpan> buildLatexSpans(
   final spans = <InlineSpan>[];
   final mathStyle = TextStyle(
     fontSize: mathFontSize ?? (style?.fontSize ?? 12),
+    fontWeight: style?.fontWeight,
     color: style?.color,
   );
   final segments = _splitDollar(text);
   for (var i = 0; i < segments.length; i++) {
     if (i.isOdd) {
-      spans.add(
-        WidgetSpan(child: Math.tex(segments[i], textStyle: mathStyle)),
-      );
+      spans.add(WidgetSpan(child: _mathTex(segments[i], mathStyle)));
     } else {
       final segment = segments[i];
       if (forceLatex || hasLatex(segment)) {
@@ -247,13 +246,31 @@ List<InlineSpan> _parseMathSpans(
       continue;
     }
     flushPlain();
-    spans.add(
-      WidgetSpan(child: Math.tex(token.tex, textStyle: mathStyle)),
-    );
+    spans.add(WidgetSpan(child: _mathTex(token.tex, mathStyle)));
     i = token.end;
   }
   flushPlain();
   return spans;
+}
+
+/// Renders TeX with the bundled KaTeX SansSerif family so inline math
+/// matches the app's sans-serif labels. Glyphs missing from that family
+/// (Greek letters, large operators) keep their default KaTeX font.
+Widget _mathTex(String tex, TextStyle mathStyle) {
+  final fontWeight = mathStyle.fontWeight ?? FontWeight.normal;
+  final sansFont = FontOptions(
+    fontFamily: 'SansSerif',
+    fontWeight: fontWeight,
+  );
+  return Math.tex(
+    tex,
+    options: MathOptions(
+      fontSize: mathStyle.fontSize ?? 12,
+      color: mathStyle.color ?? const Color(0xFF000000),
+      mathFontOptions: sansFont,
+      textFontOptions: sansFont,
+    ),
+  );
 }
 
 _MathToken? _readMathToken(String text, int start) {
