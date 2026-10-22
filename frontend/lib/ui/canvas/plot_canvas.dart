@@ -195,6 +195,7 @@ class PlotCanvas extends StatelessWidget {
                             markerVisible: false,
                             lineColor: '#1F77B4',
                             markerColor: '#000000',
+                            legendLatex: false,
                           ),
                         );
                       }
@@ -266,6 +267,7 @@ class PlotCanvas extends StatelessWidget {
                             markerVisible: false,
                             lineColor: fprops.lineColor,
                             markerColor: '#000000',
+                            legendLatex: fprops.legendLatex,
                           ),
                         );
                         tableNames.add(fn.name);
@@ -279,15 +281,19 @@ class PlotCanvas extends StatelessWidget {
                       ...functionIds,
                     ];
                     final latexFields = <String>{};
-                    final nodeId = ProjectState.instance.selectedProjectNodeId.value;
-                    if (nodeId != null && graphProps != null) {
-                      final s = ProjectState.instance;
-                      if (s.getLatexMode(nodeId, 'xLabel')) latexFields.add('xLabel');
-                      if (s.getLatexMode(nodeId, 'yLabel')) latexFields.add('yLabel');
-                      for (final tid in tableIds) {
-                        if (s.getLatexMode(tid, 'legendDisplayName')) {
-                          latexFields.add('legendDisplayName_$tid');
-                        }
+                    final s = ProjectState.instance;
+                    final graphNodeId = plotId;
+                    if (graphNodeId != null && graphProps != null) {
+                      if (s.getLatexMode(graphNodeId, 'xLabel')) {
+                        latexFields.add('xLabel');
+                      }
+                      if (s.getLatexMode(graphNodeId, 'yLabel')) {
+                        latexFields.add('yLabel');
+                      }
+                    }
+                    for (final tid in tableIds) {
+                      if (s.getLatexMode(tid, 'legendDisplayName')) {
+                        latexFields.add('legendDisplayName_$tid');
                       }
                     }
                     final hasLatexLabels = latexFields.contains('xLabel') || latexFields.contains('yLabel');
@@ -538,6 +544,7 @@ class PlotCanvas extends StatelessWidget {
                   children: buildLatexSpans(
                     graphProps.xLabel,
                     style: labelStyle,
+                    forceLatex: true,
                   ),
                 ),
               ),
@@ -567,6 +574,7 @@ class PlotCanvas extends StatelessWidget {
                     children: buildLatexSpans(
                       graphProps.yLabel,
                       style: labelStyle,
+                      forceLatex: true,
                     ),
                   ),
                 ),

@@ -63,6 +63,12 @@ pub struct GraphProperties {
     /// `None` = theme text color (labels render on the themed margin area).
     #[serde(default)]
     pub label_color: Option<String>,
+    /// Rich-text (LaTeX) rendering for the X axis label.
+    #[serde(default)]
+    pub x_label_latex: bool,
+    /// Rich-text (LaTeX) rendering for the Y axis label.
+    #[serde(default)]
+    pub y_label_latex: bool,
 }
 
 fn default_title_font_size() -> f64 {
@@ -103,6 +109,8 @@ impl Default for GraphProperties {
             axis_color: None,
             background_color: Some("#FFFFFF".to_string()),
             label_color: None,
+            x_label_latex: false,
+            y_label_latex: false,
         }
     }
 }
@@ -117,6 +125,9 @@ pub struct TableProperties {
     pub marker_visible: bool,
     pub line_color: String,
     pub marker_color: String,
+    /// Rich-text (LaTeX) rendering for the legend display name.
+    #[serde(default)]
+    pub legend_latex: bool,
 }
 
 impl Default for TableProperties {
@@ -130,6 +141,7 @@ impl Default for TableProperties {
             marker_visible: false,
             line_color: "#1F77B4".to_string(),
             marker_color: "#000000".to_string(),
+            legend_latex: false,
         }
     }
 }
@@ -155,6 +167,9 @@ pub struct FunctionProperties {
     pub line_thickness: f64,
     #[serde(default = "default_line_style")]
     pub line_style: String,
+    /// Rich-text (LaTeX) rendering for the legend display name.
+    #[serde(default)]
+    pub legend_latex: bool,
 }
 
 fn default_legend_name() -> String {
@@ -196,6 +211,7 @@ impl Default for FunctionProperties {
             line_color: default_function_color(),
             line_thickness: default_line_thickness(),
             line_style: default_line_style(),
+            legend_latex: false,
         }
     }
 }
@@ -391,6 +407,8 @@ mod tests {
         assert!(!legacy.show_border);
         assert_eq!(legacy.grid_color, None);
         assert_eq!(legacy.axis_color, None);
+        assert!(!legacy.x_label_latex);
+        assert!(!legacy.y_label_latex);
     }
 
     #[test]
@@ -408,6 +426,28 @@ mod tests {
         let fresh = GraphProperties::default();
         assert_eq!(fresh.background_color, Some("#FFFFFF".to_string()));
         assert_eq!(fresh.label_color, None);
+    }
+
+    #[test]
+    fn test_latex_flags_migrate_to_false() {
+        // Pre-Step-R bundles carry no LaTeX flags; serde defaults keep the
+        // toggles inactive so labels render exactly as before.
+        let graph: GraphProperties = serde_json::from_str(
+            r#"{"x_min":null,"x_max":null,"y_min":null,"y_max":null,"x_visible":true,"y_visible":true,"x_scale":"Linear","y_scale":"Linear","x_label":"X","y_label":"Y","aspect_ratio":null,"show_grid":true,"show_legend":true,"legend_position":"Top Right"}"#,
+        )
+        .unwrap();
+        assert!(!graph.x_label_latex);
+        assert!(!graph.y_label_latex);
+
+        let table: TableProperties = serde_json::from_str(
+            r##"{"legend_display_name":"Series","line_style":"Full","line_thickness":2.5,"line_visible":true,"marker_type":"Circle","marker_visible":false,"line_color":"#1F77B4","marker_color":"#000000"}"##,
+        )
+        .unwrap();
+        assert!(!table.legend_latex);
+
+        let function: FunctionProperties =
+            serde_json::from_str(r#"{"equation":"x","legend_display_name":"f"}"#).unwrap();
+        assert!(!function.legend_latex);
     }
 
     #[test]

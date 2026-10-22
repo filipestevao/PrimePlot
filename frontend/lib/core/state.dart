@@ -11,6 +11,7 @@ import '../src/rust/api/palettes.dart' as pal;
 import '../src/rust/api/transforms.dart' as tr;
 import '../src/rust/api/history.dart' as hist;
 import '../src/rust/api/prefs.dart' as prefs;
+import 'properties_ext.dart';
 import 'theme.dart';
 
 /// Double-click home view: inspector-defined axis ranges per graph.
@@ -350,15 +351,50 @@ class ProjectState {
     );
   }
 
-  final Map<String, bool> latexMode = {};
-
+  /// Rich-text (LaTeX) toggle state lives in the node properties (SSOT), so
+  /// it persists in `.primeplot` bundles and participates in undo/redo.
   bool getLatexMode(String nodeId, String field) {
-    return latexMode['${nodeId}_$field'] ?? false;
+    if (field == 'xLabel' || field == 'yLabel') {
+      final props = getGraphProperties(nodeId: nodeId);
+      return field == 'xLabel' ? props.xLabelLatex : props.yLabelLatex;
+    }
+    if (field == 'legendDisplayName') {
+      final root = projectTree.value;
+      final node = root == null ? null : findNodeById(root, nodeId);
+      if (node?.nodeType == NodeType.function) {
+        return getFunctionProperties(nodeId: nodeId).legendLatex;
+      }
+      return getTableProperties(nodeId: nodeId).legendLatex;
+    }
+    return false;
   }
 
   void toggleLatexMode(String nodeId, String field) {
-    final key = '${nodeId}_$field';
-    latexMode[key] = !(latexMode[key] ?? false);
+    if (field == 'xLabel' || field == 'yLabel') {
+      final props = getGraphProperties(nodeId: nodeId);
+      updateGraphProperties(
+        nodeId,
+        field == 'xLabel'
+            ? props.copyWith(xLabelLatex: !props.xLabelLatex)
+            : props.copyWith(yLabelLatex: !props.yLabelLatex),
+      );
+    } else if (field == 'legendDisplayName') {
+      final root = projectTree.value;
+      final node = root == null ? null : findNodeById(root, nodeId);
+      if (node?.nodeType == NodeType.function) {
+        final props = getFunctionProperties(nodeId: nodeId);
+        updateFunctionProperties(
+          nodeId,
+          props.copyWith(legendLatex: !props.legendLatex),
+        );
+      } else {
+        final props = getTableProperties(nodeId: nodeId);
+        updateTableProperties(
+          nodeId,
+          props.copyWith(legendLatex: !props.legendLatex),
+        );
+      }
+    }
     refreshCanvas.value++;
   }
 
@@ -462,6 +498,8 @@ class ProjectState {
         axisColor: gp.axisColor,
         backgroundColor: gp.backgroundColor,
         labelColor: gp.labelColor,
+        xLabelLatex: gp.xLabelLatex,
+        yLabelLatex: gp.yLabelLatex,
       ),
     );
   }

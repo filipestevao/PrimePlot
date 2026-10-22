@@ -101,6 +101,9 @@ class FunctionProperties {
   final double lineThickness;
   final String lineStyle;
 
+  /// Rich-text (LaTeX) rendering for the legend display name.
+  final bool legendLatex;
+
   const FunctionProperties({
     required this.equation,
     required this.legendDisplayName,
@@ -110,6 +113,7 @@ class FunctionProperties {
     required this.lineColor,
     required this.lineThickness,
     required this.lineStyle,
+    required this.legendLatex,
   });
 
   static Future<FunctionProperties> default_() =>
@@ -124,7 +128,8 @@ class FunctionProperties {
       numSamples.hashCode ^
       lineColor.hashCode ^
       lineThickness.hashCode ^
-      lineStyle.hashCode;
+      lineStyle.hashCode ^
+      legendLatex.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -138,7 +143,8 @@ class FunctionProperties {
           numSamples == other.numSamples &&
           lineColor == other.lineColor &&
           lineThickness == other.lineThickness &&
-          lineStyle == other.lineStyle;
+          lineStyle == other.lineStyle &&
+          legendLatex == other.legendLatex;
 }
 
 class GraphProperties {
@@ -183,6 +189,12 @@ class GraphProperties {
   /// `None` = theme text color (labels render on the themed margin area).
   final String? labelColor;
 
+  /// Rich-text (LaTeX) rendering for the X axis label.
+  final bool xLabelLatex;
+
+  /// Rich-text (LaTeX) rendering for the Y axis label.
+  final bool yLabelLatex;
+
   const GraphProperties({
     this.xMin,
     this.xMax,
@@ -207,6 +219,8 @@ class GraphProperties {
     this.axisColor,
     this.backgroundColor,
     this.labelColor,
+    required this.xLabelLatex,
+    required this.yLabelLatex,
   });
 
   static Future<GraphProperties> default_() =>
@@ -236,7 +250,9 @@ class GraphProperties {
       gridColor.hashCode ^
       axisColor.hashCode ^
       backgroundColor.hashCode ^
-      labelColor.hashCode;
+      labelColor.hashCode ^
+      xLabelLatex.hashCode ^
+      yLabelLatex.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -265,7 +281,9 @@ class GraphProperties {
           gridColor == other.gridColor &&
           axisColor == other.axisColor &&
           backgroundColor == other.backgroundColor &&
-          labelColor == other.labelColor;
+          labelColor == other.labelColor &&
+          xLabelLatex == other.xLabelLatex &&
+          yLabelLatex == other.yLabelLatex;
 }
 
 class ShapeProperties {
@@ -297,6 +315,9 @@ class TableProperties {
   final String lineColor;
   final String markerColor;
 
+  /// Rich-text (LaTeX) rendering for the legend display name.
+  final bool legendLatex;
+
   const TableProperties({
     required this.legendDisplayName,
     required this.lineStyle,
@@ -306,6 +327,7 @@ class TableProperties {
     required this.markerVisible,
     required this.lineColor,
     required this.markerColor,
+    required this.legendLatex,
   });
 
   static Future<TableProperties> default_() =>
@@ -320,7 +342,8 @@ class TableProperties {
       markerType.hashCode ^
       markerVisible.hashCode ^
       lineColor.hashCode ^
-      markerColor.hashCode;
+      markerColor.hashCode ^
+      legendLatex.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -334,5 +357,6 @@ class TableProperties {
           markerType == other.markerType &&
           markerVisible == other.markerVisible &&
           lineColor == other.lineColor &&
-          markerColor == other.markerColor;
+          markerColor == other.markerColor &&
+          legendLatex == other.legendLatex;
 }

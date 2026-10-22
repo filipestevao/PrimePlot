@@ -2660,8 +2660,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   FunctionProperties dco_decode_function_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return FunctionProperties(
       equation: dco_decode_String(arr[0]),
       legendDisplayName: dco_decode_String(arr[1]),
@@ -2671,6 +2671,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       lineColor: dco_decode_String(arr[5]),
       lineThickness: dco_decode_f_64(arr[6]),
       lineStyle: dco_decode_String(arr[7]),
+      legendLatex: dco_decode_bool(arr[8]),
     );
   }
 
@@ -2678,8 +2679,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   GraphProperties dco_decode_graph_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 23)
-      throw Exception('unexpected arr length: expect 23 but see ${arr.length}');
+    if (arr.length != 25)
+      throw Exception('unexpected arr length: expect 25 but see ${arr.length}');
     return GraphProperties(
       xMin: dco_decode_opt_box_autoadd_f_64(arr[0]),
       xMax: dco_decode_opt_box_autoadd_f_64(arr[1]),
@@ -2704,6 +2705,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       axisColor: dco_decode_opt_String(arr[20]),
       backgroundColor: dco_decode_opt_String(arr[21]),
       labelColor: dco_decode_opt_String(arr[22]),
+      xLabelLatex: dco_decode_bool(arr[23]),
+      yLabelLatex: dco_decode_bool(arr[24]),
     );
   }
 
@@ -2863,8 +2866,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TableProperties dco_decode_table_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return TableProperties(
       legendDisplayName: dco_decode_String(arr[0]),
       lineStyle: dco_decode_String(arr[1]),
@@ -2874,6 +2877,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       markerVisible: dco_decode_bool(arr[5]),
       lineColor: dco_decode_String(arr[6]),
       markerColor: dco_decode_String(arr[7]),
+      legendLatex: dco_decode_bool(arr[8]),
     );
   }
 
@@ -3052,6 +3056,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_lineColor = sse_decode_String(deserializer);
     var var_lineThickness = sse_decode_f_64(deserializer);
     var var_lineStyle = sse_decode_String(deserializer);
+    var var_legendLatex = sse_decode_bool(deserializer);
     return FunctionProperties(
       equation: var_equation,
       legendDisplayName: var_legendDisplayName,
@@ -3061,6 +3066,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       lineColor: var_lineColor,
       lineThickness: var_lineThickness,
       lineStyle: var_lineStyle,
+      legendLatex: var_legendLatex,
     );
   }
 
@@ -3090,6 +3096,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_axisColor = sse_decode_opt_String(deserializer);
     var var_backgroundColor = sse_decode_opt_String(deserializer);
     var var_labelColor = sse_decode_opt_String(deserializer);
+    var var_xLabelLatex = sse_decode_bool(deserializer);
+    var var_yLabelLatex = sse_decode_bool(deserializer);
     return GraphProperties(
       xMin: var_xMin,
       xMax: var_xMax,
@@ -3114,6 +3122,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       axisColor: var_axisColor,
       backgroundColor: var_backgroundColor,
       labelColor: var_labelColor,
+      xLabelLatex: var_xLabelLatex,
+      yLabelLatex: var_yLabelLatex,
     );
   }
 
@@ -3339,6 +3349,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_markerVisible = sse_decode_bool(deserializer);
     var var_lineColor = sse_decode_String(deserializer);
     var var_markerColor = sse_decode_String(deserializer);
+    var var_legendLatex = sse_decode_bool(deserializer);
     return TableProperties(
       legendDisplayName: var_legendDisplayName,
       lineStyle: var_lineStyle,
@@ -3348,6 +3359,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       markerVisible: var_markerVisible,
       lineColor: var_lineColor,
       markerColor: var_markerColor,
+      legendLatex: var_legendLatex,
     );
   }
 
@@ -3528,6 +3540,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.lineColor, serializer);
     sse_encode_f_64(self.lineThickness, serializer);
     sse_encode_String(self.lineStyle, serializer);
+    sse_encode_bool(self.legendLatex, serializer);
   }
 
   @protected
@@ -3559,6 +3572,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.axisColor, serializer);
     sse_encode_opt_String(self.backgroundColor, serializer);
     sse_encode_opt_String(self.labelColor, serializer);
+    sse_encode_bool(self.xLabelLatex, serializer);
+    sse_encode_bool(self.yLabelLatex, serializer);
   }
 
   @protected
@@ -3760,6 +3775,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.markerVisible, serializer);
     sse_encode_String(self.lineColor, serializer);
     sse_encode_String(self.markerColor, serializer);
+    sse_encode_bool(self.legendLatex, serializer);
   }
 
   @protected

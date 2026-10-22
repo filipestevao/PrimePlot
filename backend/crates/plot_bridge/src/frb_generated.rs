@@ -2668,6 +2668,7 @@ impl SseDecode for crate::api::properties::FunctionProperties {
         let mut var_lineColor = <String>::sse_decode(deserializer);
         let mut var_lineThickness = <f64>::sse_decode(deserializer);
         let mut var_lineStyle = <String>::sse_decode(deserializer);
+        let mut var_legendLatex = <bool>::sse_decode(deserializer);
         return crate::api::properties::FunctionProperties {
             equation: var_equation,
             legend_display_name: var_legendDisplayName,
@@ -2677,6 +2678,7 @@ impl SseDecode for crate::api::properties::FunctionProperties {
             line_color: var_lineColor,
             line_thickness: var_lineThickness,
             line_style: var_lineStyle,
+            legend_latex: var_legendLatex,
         };
     }
 }
@@ -2707,6 +2709,8 @@ impl SseDecode for crate::api::properties::GraphProperties {
         let mut var_axisColor = <Option<String>>::sse_decode(deserializer);
         let mut var_backgroundColor = <Option<String>>::sse_decode(deserializer);
         let mut var_labelColor = <Option<String>>::sse_decode(deserializer);
+        let mut var_xLabelLatex = <bool>::sse_decode(deserializer);
+        let mut var_yLabelLatex = <bool>::sse_decode(deserializer);
         return crate::api::properties::GraphProperties {
             x_min: var_xMin,
             x_max: var_xMax,
@@ -2731,6 +2735,8 @@ impl SseDecode for crate::api::properties::GraphProperties {
             axis_color: var_axisColor,
             background_color: var_backgroundColor,
             label_color: var_labelColor,
+            x_label_latex: var_xLabelLatex,
+            y_label_latex: var_yLabelLatex,
         };
     }
 }
@@ -2985,6 +2991,7 @@ impl SseDecode for crate::api::properties::TableProperties {
         let mut var_markerVisible = <bool>::sse_decode(deserializer);
         let mut var_lineColor = <String>::sse_decode(deserializer);
         let mut var_markerColor = <String>::sse_decode(deserializer);
+        let mut var_legendLatex = <bool>::sse_decode(deserializer);
         return crate::api::properties::TableProperties {
             legend_display_name: var_legendDisplayName,
             line_style: var_lineStyle,
@@ -2994,6 +3001,7 @@ impl SseDecode for crate::api::properties::TableProperties {
             marker_visible: var_markerVisible,
             line_color: var_lineColor,
             marker_color: var_markerColor,
+            legend_latex: var_legendLatex,
         };
     }
 }
@@ -3323,6 +3331,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::FunctionPropertie
             self.line_color.into_into_dart().into_dart(),
             self.line_thickness.into_into_dart().into_dart(),
             self.line_style.into_into_dart().into_dart(),
+            self.legend_latex.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3365,6 +3374,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::GraphProperties {
             self.axis_color.into_into_dart().into_dart(),
             self.background_color.into_into_dart().into_dart(),
             self.label_color.into_into_dart().into_dart(),
+            self.x_label_latex.into_into_dart().into_dart(),
+            self.y_label_latex.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3538,6 +3549,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::TableProperties {
             self.marker_visible.into_into_dart().into_dart(),
             self.line_color.into_into_dart().into_dart(),
             self.marker_color.into_into_dart().into_dart(),
+            self.legend_latex.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3658,6 +3670,7 @@ impl SseEncode for crate::api::properties::FunctionProperties {
         <String>::sse_encode(self.line_color, serializer);
         <f64>::sse_encode(self.line_thickness, serializer);
         <String>::sse_encode(self.line_style, serializer);
+        <bool>::sse_encode(self.legend_latex, serializer);
     }
 }
 
@@ -3687,6 +3700,8 @@ impl SseEncode for crate::api::properties::GraphProperties {
         <Option<String>>::sse_encode(self.axis_color, serializer);
         <Option<String>>::sse_encode(self.background_color, serializer);
         <Option<String>>::sse_encode(self.label_color, serializer);
+        <bool>::sse_encode(self.x_label_latex, serializer);
+        <bool>::sse_encode(self.y_label_latex, serializer);
     }
 }
 
@@ -3892,6 +3907,7 @@ impl SseEncode for crate::api::properties::TableProperties {
         <bool>::sse_encode(self.marker_visible, serializer);
         <String>::sse_encode(self.line_color, serializer);
         <String>::sse_encode(self.marker_color, serializer);
+        <bool>::sse_encode(self.legend_latex, serializer);
     }
 }
 

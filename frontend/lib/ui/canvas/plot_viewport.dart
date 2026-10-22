@@ -14,10 +14,10 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/properties_ext.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
 import '../../src/rust/api/properties.dart';
-import '../panels/property_inspector.dart' show GraphPropertiesExt;
 import 'plot_geometry.dart';
 
 class PlotViewport extends StatefulWidget {
