@@ -1207,6 +1207,10 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         .trim()
         .toLowerCase();
     final outside = position.contains('outside');
+    // Inside legends keep a breathing gap from the plot spines: 12px
+    // horizontally (matching the left margin), 8px from the top spine.
+    const horizontalInset = 12.0;
+    const topInset = 8.0;
     final double left;
     final double top;
     if (outside) {
@@ -1215,11 +1219,11 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       top = margins.top;
     } else {
       left = position.contains('left')
-          ? margins.left + 12.0
-          : size.width - margins.right - legendWidth;
+          ? margins.left + horizontalInset
+          : size.width - margins.right - legendWidth - horizontalInset;
       top = position.contains('bottom')
-          ? size.height - margins.bottom - 12.0 - legendHeight
-          : margins.top + 8.0;
+          ? size.height - margins.bottom - horizontalInset - legendHeight
+          : margins.top + topInset;
     }
     final rect = Rect.fromLTWH(left, top, legendWidth, legendHeight);
 
