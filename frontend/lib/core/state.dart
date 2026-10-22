@@ -500,6 +500,15 @@ class ProjectState {
         labelColor: gp.labelColor,
         xLabelLatex: gp.xLabelLatex,
         yLabelLatex: gp.yLabelLatex,
+        xDivisions: gp.xDivisions,
+        yDivisions: gp.yDivisions,
+        numberNotation: gp.numberNotation,
+        scientificThreshold: gp.scientificThreshold,
+        legendFontSize: gp.legendFontSize,
+        legendOpacity: gp.legendOpacity,
+        legendShowBorder: gp.legendShowBorder,
+        legendBorderColor: gp.legendBorderColor,
+        legendBackgroundColor: gp.legendBackgroundColor,
       ),
     );
   }

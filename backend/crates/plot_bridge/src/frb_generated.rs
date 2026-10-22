@@ -2711,6 +2711,15 @@ impl SseDecode for crate::api::properties::GraphProperties {
         let mut var_labelColor = <Option<String>>::sse_decode(deserializer);
         let mut var_xLabelLatex = <bool>::sse_decode(deserializer);
         let mut var_yLabelLatex = <bool>::sse_decode(deserializer);
+        let mut var_xDivisions = <Option<u32>>::sse_decode(deserializer);
+        let mut var_yDivisions = <Option<u32>>::sse_decode(deserializer);
+        let mut var_numberNotation = <String>::sse_decode(deserializer);
+        let mut var_scientificThreshold = <u32>::sse_decode(deserializer);
+        let mut var_legendFontSize = <f64>::sse_decode(deserializer);
+        let mut var_legendOpacity = <f64>::sse_decode(deserializer);
+        let mut var_legendShowBorder = <bool>::sse_decode(deserializer);
+        let mut var_legendBorderColor = <Option<String>>::sse_decode(deserializer);
+        let mut var_legendBackgroundColor = <Option<String>>::sse_decode(deserializer);
         return crate::api::properties::GraphProperties {
             x_min: var_xMin,
             x_max: var_xMax,
@@ -2737,6 +2746,15 @@ impl SseDecode for crate::api::properties::GraphProperties {
             label_color: var_labelColor,
             x_label_latex: var_xLabelLatex,
             y_label_latex: var_yLabelLatex,
+            x_divisions: var_xDivisions,
+            y_divisions: var_yDivisions,
+            number_notation: var_numberNotation,
+            scientific_threshold: var_scientificThreshold,
+            legend_font_size: var_legendFontSize,
+            legend_opacity: var_legendOpacity,
+            legend_show_border: var_legendShowBorder,
+            legend_border_color: var_legendBorderColor,
+            legend_background_color: var_legendBackgroundColor,
         };
     }
 }
@@ -2909,6 +2927,17 @@ impl SseDecode for Option<f64> {
     }
 }
 
+impl SseDecode for Option<u32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<u32>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for crate::api::palettes::PaletteInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3003,6 +3032,13 @@ impl SseDecode for crate::api::properties::TableProperties {
             marker_color: var_markerColor,
             legend_latex: var_legendLatex,
         };
+    }
+}
+
+impl SseDecode for u32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_u32::<NativeEndian>().unwrap()
     }
 }
 
@@ -3376,6 +3412,15 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::GraphProperties {
             self.label_color.into_into_dart().into_dart(),
             self.x_label_latex.into_into_dart().into_dart(),
             self.y_label_latex.into_into_dart().into_dart(),
+            self.x_divisions.into_into_dart().into_dart(),
+            self.y_divisions.into_into_dart().into_dart(),
+            self.number_notation.into_into_dart().into_dart(),
+            self.scientific_threshold.into_into_dart().into_dart(),
+            self.legend_font_size.into_into_dart().into_dart(),
+            self.legend_opacity.into_into_dart().into_dart(),
+            self.legend_show_border.into_into_dart().into_dart(),
+            self.legend_border_color.into_into_dart().into_dart(),
+            self.legend_background_color.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3702,6 +3747,15 @@ impl SseEncode for crate::api::properties::GraphProperties {
         <Option<String>>::sse_encode(self.label_color, serializer);
         <bool>::sse_encode(self.x_label_latex, serializer);
         <bool>::sse_encode(self.y_label_latex, serializer);
+        <Option<u32>>::sse_encode(self.x_divisions, serializer);
+        <Option<u32>>::sse_encode(self.y_divisions, serializer);
+        <String>::sse_encode(self.number_notation, serializer);
+        <u32>::sse_encode(self.scientific_threshold, serializer);
+        <f64>::sse_encode(self.legend_font_size, serializer);
+        <f64>::sse_encode(self.legend_opacity, serializer);
+        <bool>::sse_encode(self.legend_show_border, serializer);
+        <Option<String>>::sse_encode(self.legend_border_color, serializer);
+        <Option<String>>::sse_encode(self.legend_background_color, serializer);
     }
 }
 
@@ -3849,6 +3903,16 @@ impl SseEncode for Option<f64> {
     }
 }
 
+impl SseEncode for Option<u32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <u32>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for crate::api::palettes::PaletteInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3908,6 +3972,13 @@ impl SseEncode for crate::api::properties::TableProperties {
         <String>::sse_encode(self.line_color, serializer);
         <String>::sse_encode(self.marker_color, serializer);
         <bool>::sse_encode(self.legend_latex, serializer);
+    }
+}
+
+impl SseEncode for u32 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_u32::<NativeEndian>(self).unwrap();
     }
 }
 

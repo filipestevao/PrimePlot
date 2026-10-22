@@ -199,13 +199,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
           isSelected: currentTheme == 'light',
           onTap: () => ProjectState.instance.setTheme('light'),
         ),
-        const SizedBox(height: 20),
-        _buildSectionHeader(
-          icon: Icons.auto_awesome_mosaic_outlined,
-          title: 'CANVAS PREVIEW',
-          subtitle:
-              'Canvas background, axes, and grid lines automatically sync with your selected theme.',
-        ),
       ],
     );
   }

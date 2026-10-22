@@ -27,6 +27,10 @@ class PlotViewport extends StatefulWidget {
   final String? plotId;
   final Widget child;
 
+  /// Right-margin space reserved for an outside legend; must match the
+  /// painter's reservation so gestures map exactly to what is painted.
+  final double legendReservedRight;
+
   const PlotViewport({
     super.key,
     required this.xSeries,
@@ -34,6 +38,7 @@ class PlotViewport extends StatefulWidget {
     required this.graphProps,
     required this.plotId,
     required this.child,
+    this.legendReservedRight = 0.0,
   });
 
   @override
@@ -55,6 +60,7 @@ class _PlotViewportState extends State<PlotViewport> {
       xSeries: widget.xSeries,
       ySeries: widget.ySeries,
       graphProps: widget.graphProps,
+      legendReservedRight: widget.legendReservedRight,
     );
   }
 

@@ -30,6 +30,15 @@ extension GraphPropertiesExt on GraphProperties {
     String? Function()? labelColor,
     bool? xLabelLatex,
     bool? yLabelLatex,
+    int? Function()? xDivisions,
+    int? Function()? yDivisions,
+    String? numberNotation,
+    int? scientificThreshold,
+    double? legendFontSize,
+    double? legendOpacity,
+    bool? legendShowBorder,
+    String? Function()? legendBorderColor,
+    String? Function()? legendBackgroundColor,
   }) {
     return GraphProperties(
       xMin: xMin != null ? xMin() : this.xMin,
@@ -59,6 +68,19 @@ extension GraphPropertiesExt on GraphProperties {
       labelColor: labelColor != null ? labelColor() : this.labelColor,
       xLabelLatex: xLabelLatex ?? this.xLabelLatex,
       yLabelLatex: yLabelLatex ?? this.yLabelLatex,
+      xDivisions: xDivisions != null ? xDivisions() : this.xDivisions,
+      yDivisions: yDivisions != null ? yDivisions() : this.yDivisions,
+      numberNotation: numberNotation ?? this.numberNotation,
+      scientificThreshold: scientificThreshold ?? this.scientificThreshold,
+      legendFontSize: legendFontSize ?? this.legendFontSize,
+      legendOpacity: legendOpacity ?? this.legendOpacity,
+      legendShowBorder: legendShowBorder ?? this.legendShowBorder,
+      legendBorderColor: legendBorderColor != null
+          ? legendBorderColor()
+          : this.legendBorderColor,
+      legendBackgroundColor: legendBackgroundColor != null
+          ? legendBackgroundColor()
+          : this.legendBackgroundColor,
     );
   }
 }

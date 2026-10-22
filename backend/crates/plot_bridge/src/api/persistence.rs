@@ -624,4 +624,103 @@ mod tests {
 
         std::fs::remove_file(&path).ok();
     }
+    #[test]
+    fn phase5_properties_round_trip_through_zip() {
+        let _lock = crate::api::properties::TEST_MUTEX.lock().unwrap();
+        use data_engine::NodeType as EngineNodeType;
+
+        // Arrange: one graph with a table and a function so every Phase 5
+        // property family (graph LaTeX/legend/axis + node LaTeX) is saved.
+        let mut root =
+            EngineProjectNode::new("root_p5", "Workspace", EngineNodeType::Folder);
+        let mut graph = EngineProjectNode::new("graph_p5", "Graph", EngineNodeType::Plot);
+        graph.add_child(EngineProjectNode::new(
+            "table_p5",
+            "Sample",
+            EngineNodeType::Dataset,
+        ));
+        graph.add_child(EngineProjectNode::new(
+            "function_p5",
+            "Curve",
+            EngineNodeType::Function,
+        ));
+        root.add_child(graph);
+        crate::api::project::restore_tree_engine(root);
+        crate::api::project::restore_tables_engine(HashMap::new());
+        crate::api::properties::clear_all_property_stores();
+
+        let graph_props = crate::api::properties::GraphProperties {
+            x_label_latex: true,
+            y_label_latex: true,
+            x_divisions: Some(8),
+            y_divisions: Some(4),
+            number_notation: "Scientific".to_string(),
+            scientific_threshold: 7,
+            legend_font_size: 16.5,
+            legend_opacity: 0.35,
+            legend_show_border: false,
+            legend_border_color: Some("#112233".to_string()),
+            legend_background_color: Some("#00000000".to_string()),
+            ..Default::default()
+        };
+        crate::api::properties::restore_graph_props(HashMap::from([(
+            "graph_p5".to_string(),
+            graph_props,
+        )]));
+        crate::api::properties::restore_table_props(HashMap::from([(
+            "table_p5".to_string(),
+            crate::api::properties::TableProperties {
+                legend_latex: true,
+                ..Default::default()
+            },
+        )]));
+        crate::api::properties::restore_function_props(HashMap::from([(
+            "function_p5".to_string(),
+            crate::api::properties::FunctionProperties {
+                equation: "x^2".to_string(),
+                legend_latex: true,
+                ..Default::default()
+            },
+        )]));
+
+        let path = format!(
+            "{}/primeplot_phase5_test_{}.primeplot",
+            std::env::temp_dir().display(),
+            std::process::id()
+        );
+        save_project_to_zip(&path).expect("save must succeed");
+
+        // Mutate state so load must restore rather than retain.
+        crate::api::properties::clear_all_property_stores();
+
+        load_project_from_zip(&path).expect("load must succeed");
+        let graphs = crate::api::properties::snapshot_graph_props();
+        let restored = &graphs["graph_p5"];
+        assert!(restored.x_label_latex);
+        assert!(restored.y_label_latex);
+        assert_eq!(restored.x_divisions, Some(8));
+        assert_eq!(restored.y_divisions, Some(4));
+        assert_eq!(restored.number_notation, "Scientific");
+        assert_eq!(restored.scientific_threshold, 7);
+        assert_eq!(restored.legend_font_size, 16.5);
+        assert!((restored.legend_opacity - 0.35).abs() < f64::EPSILON);
+        assert!(!restored.legend_show_border);
+        assert_eq!(
+            restored.legend_border_color.as_deref(),
+            Some("#112233")
+        );
+        assert_eq!(
+            restored.legend_background_color.as_deref(),
+            Some("#00000000")
+        );
+
+        let tables = crate::api::properties::snapshot_table_props();
+        assert!(tables["table_p5"].legend_latex);
+        let functions = crate::api::properties::snapshot_function_props();
+        assert!(functions["function_p5"].legend_latex);
+        assert_eq!(functions["function_p5"].equation, "x^2");
+
+        std::fs::remove_file(&path).ok();
+    }
+
 }

@@ -69,6 +69,55 @@ pub struct GraphProperties {
     /// Rich-text (LaTeX) rendering for the Y axis label.
     #[serde(default)]
     pub y_label_latex: bool,
+    /// Number of grid intervals on the X axis. `None` = historical 5.
+    #[serde(default)]
+    pub x_divisions: Option<u32>,
+    /// Number of grid intervals on the Y axis. `None` = historical 5.
+    #[serde(default)]
+    pub y_divisions: Option<u32>,
+    /// Tick-number notation: `"Auto"`, `"Decimal"`, or `"Scientific"`.
+    #[serde(default = "default_number_notation")]
+    pub number_notation: String,
+    /// `Auto` switches to scientific notation at this power of ten
+    /// (5 = 100,000). Clamped at render time.
+    #[serde(default = "default_scientific_threshold")]
+    pub scientific_threshold: u32,
+    /// Legend text size in logical pixels.
+    #[serde(default = "default_legend_font_size")]
+    pub legend_font_size: f64,
+    /// Legend background opacity (0.0 = transparent fill, 1.0 = solid).
+    #[serde(default = "default_legend_opacity")]
+    pub legend_opacity: f64,
+    /// Draw the legend border stroke.
+    #[serde(default = "default_legend_show_border")]
+    pub legend_show_border: bool,
+    /// Legend border color override. `None` = theme border token.
+    #[serde(default)]
+    pub legend_border_color: Option<String>,
+    /// Legend background override. `None` = theme panel color; an
+    /// alpha-zero value (e.g. `#00000000`) skips the fill entirely.
+    #[serde(default)]
+    pub legend_background_color: Option<String>,
+}
+
+fn default_number_notation() -> String {
+    "Auto".to_string()
+}
+
+fn default_scientific_threshold() -> u32 {
+    5
+}
+
+fn default_legend_font_size() -> f64 {
+    11.0
+}
+
+fn default_legend_opacity() -> f64 {
+    0.9
+}
+
+fn default_legend_show_border() -> bool {
+    true
 }
 
 fn default_title_font_size() -> f64 {
@@ -111,6 +160,15 @@ impl Default for GraphProperties {
             label_color: None,
             x_label_latex: false,
             y_label_latex: false,
+            x_divisions: None,
+            y_divisions: None,
+            number_notation: default_number_notation(),
+            scientific_threshold: default_scientific_threshold(),
+            legend_font_size: default_legend_font_size(),
+            legend_opacity: default_legend_opacity(),
+            legend_show_border: default_legend_show_border(),
+            legend_border_color: None,
+            legend_background_color: None,
         }
     }
 }
@@ -409,6 +467,57 @@ mod tests {
         assert_eq!(legacy.axis_color, None);
         assert!(!legacy.x_label_latex);
         assert!(!legacy.y_label_latex);
+        assert_eq!(legacy.x_divisions, None);
+        assert_eq!(legacy.y_divisions, None);
+        assert_eq!(legacy.number_notation, "Auto");
+        assert_eq!(legacy.scientific_threshold, 5);
+        assert_eq!(legacy.legend_font_size, 11.0);
+        assert_eq!(legacy.legend_opacity, 0.9);
+        assert!(legacy.legend_show_border);
+        assert_eq!(legacy.legend_border_color, None);
+        assert_eq!(legacy.legend_background_color, None);
+    }
+
+    #[test]
+    fn test_legend_styling_migrate_with_defaults() {
+        // Pre-Step-S bundles carry no legend styling fields; serde defaults
+        // reproduce the historical fixed look (11pt, 90% panel, themed
+        // border, themed panel background).
+        let legacy: GraphProperties = serde_json::from_str(
+            r#"{"x_min":null,"x_max":null,"y_min":null,"y_max":null,"x_visible":true,"y_visible":true,"x_scale":"Linear","y_scale":"Linear","x_label":"X","y_label":"Y","aspect_ratio":null,"show_grid":true,"show_legend":true,"legend_position":"Top Right"}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.legend_font_size, 11.0);
+        assert_eq!(legacy.legend_opacity, 0.9);
+        assert!(legacy.legend_show_border);
+        assert_eq!(legacy.legend_border_color, None);
+        assert_eq!(legacy.legend_background_color, None);
+
+        // Fresh graphs reproduce the same defaults.
+        let fresh = GraphProperties::default();
+        assert_eq!(fresh.legend_font_size, 11.0);
+        assert_eq!(fresh.legend_opacity, 0.9);
+        assert!(fresh.legend_show_border);
+    }
+
+    #[test]
+    fn test_axis_divisions_and_notation_migrate_with_defaults() {
+        // Pre-Step-T bundles carry none of these fields; the historical
+        // 5-interval, Auto-threshold-at-1e5 rendering is reproduced.
+        let legacy: GraphProperties = serde_json::from_str(
+            r#"{"x_min":null,"x_max":null,"y_min":null,"y_max":null,"x_visible":true,"y_visible":true,"x_scale":"Linear","y_scale":"Linear","x_label":"X","y_label":"Y","aspect_ratio":null,"show_grid":true,"show_legend":true,"legend_position":"Top Right"}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.x_divisions, None);
+        assert_eq!(legacy.y_divisions, None);
+        assert_eq!(legacy.number_notation, "Auto");
+        assert_eq!(legacy.scientific_threshold, 5);
+
+        let fresh = GraphProperties::default();
+        assert_eq!(fresh.x_divisions, None);
+        assert_eq!(fresh.y_divisions, None);
+        assert_eq!(fresh.number_notation, "Auto");
+        assert_eq!(fresh.scientific_threshold, 5);
     }
 
     #[test]

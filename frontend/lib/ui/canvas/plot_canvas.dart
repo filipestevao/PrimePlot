@@ -61,6 +61,95 @@ Color _chartLabelColor(GraphProperties? gp) {
       : const Color(0xFFFFFFFF);
 }
 
+/// Legend text size in logical pixels (inspector range).
+double _legendFontSize(GraphProperties? gp) =>
+    (gp?.legendFontSize ?? 11.0).clamp(8.0, 24.0);
+
+/// Legend box geometry for the current font size; shared by the painter
+/// (drawing) and the canvas (outside-legend margin reservation) so the two
+/// can never disagree.
+class _LegendLayout {
+  final double padding;
+  final double rowHeight;
+  final double swatchWidth;
+  final double boxWidth;
+  final double boxHeight;
+
+  const _LegendLayout({
+    required this.padding,
+    required this.rowHeight,
+    required this.swatchWidth,
+    required this.boxWidth,
+    required this.boxHeight,
+  });
+}
+
+_LegendLayout _legendLayout(List<String> names, double fontSize) {
+  final padding = fontSize * 0.75;
+  final rowHeight = fontSize * 1.8;
+  final swatchWidth = fontSize * 2.5;
+  var maxTextWidth = 0.0;
+  final style = TextStyle(fontSize: fontSize);
+  for (final name in names) {
+    final painter = TextPainter(
+      text: TextSpan(text: name, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    maxTextWidth = math.max(maxTextWidth, painter.width);
+  }
+  return _LegendLayout(
+    padding: padding,
+    rowHeight: rowHeight,
+    swatchWidth: swatchWidth,
+    boxWidth: padding * 3 + swatchWidth + maxTextWidth,
+    boxHeight: padding * 2 + rowHeight * names.length,
+  );
+}
+
+bool _legendSeriesVisible(
+  int index,
+  List<List<double>> xSeries,
+  TableProperties props,
+) {
+  if (index >= xSeries.length || xSeries[index].isEmpty) return false;
+  return props.lineVisible || props.markerVisible;
+}
+
+String _legendSeriesName(
+  int index,
+  TableProperties props,
+  List<String> tableNames,
+  List<String> tableIds,
+  Set<String> latexFields,
+) {
+  final rawName = props.legendDisplayName.trim();
+  final tableName = index < tableNames.length
+      ? tableNames[index]
+      : 'Series ${index + 1}';
+  var name = rawName.isEmpty || rawName == 'Series' ? tableName : rawName;
+  if (index < tableIds.length &&
+      latexFields.contains('legendDisplayName_${tableIds[index]}')) {
+    name = substituteSymbols(name);
+  }
+  return name;
+}
+
+/// Right margin reserved by an `Outside Right` legend; 0 otherwise (and for
+/// the in-plot positions). Must match the painter's reservation.
+double _legendReservedRight(
+  GraphProperties? gp,
+  List<String> names,
+  double fontSize,
+) {
+  if (!(gp?.showLegend ?? true)) return 0;
+  if ((gp?.legendPosition ?? '').trim().toLowerCase() != 'outside right') {
+    return 0;
+  }
+  if (names.isEmpty) return 0;
+  final layout = _legendLayout(names, fontSize);
+  return layout.boxWidth + layout.padding * 2;
+}
+
 class PlotCanvas extends StatelessWidget {
   const PlotCanvas({super.key});
 
@@ -297,6 +386,22 @@ class PlotCanvas extends StatelessWidget {
                       }
                     }
                     final hasLatexLabels = latexFields.contains('xLabel') || latexFields.contains('yLabel');
+                    final legendNames = <String>[
+                      for (var i = 0; i < tableProps.length; i++)
+                        if (_legendSeriesVisible(i, seriesX, tableProps[i]))
+                          _legendSeriesName(
+                            i,
+                            tableProps[i],
+                            tableNames,
+                            tableIds,
+                            latexFields,
+                          ),
+                    ];
+                    final legendReserved = _legendReservedRight(
+                      graphProps,
+                      legendNames,
+                      _legendFontSize(graphProps),
+                    );
 
                     Widget baseCanvas;
                     if (hasLatexLabels && graphProps != null) {
@@ -309,6 +414,7 @@ class PlotCanvas extends StatelessWidget {
                                 xSeries: seriesX,
                                 ySeries: seriesY,
                                 graphProps: gp,
+                                legendReservedRight: legendReserved,
                               )?.margins ??
                               PlotMargins.fallback;
                           return Stack(
@@ -326,6 +432,7 @@ class PlotCanvas extends StatelessWidget {
                                   formatKey: formatKey,
                                   transparentBackground: transparent,
                                   activeTableId: activeTableId,
+                                  legendReservedRight: legendReserved,
                                 ),
                                 child: Container(),
                               ),
@@ -347,6 +454,7 @@ class PlotCanvas extends StatelessWidget {
                           formatKey: formatKey,
                           transparentBackground: transparent,
                           activeTableId: activeTableId,
+                          legendReservedRight: legendReserved,
                         ),
                         child: Container(),
                       );
@@ -357,6 +465,7 @@ class PlotCanvas extends StatelessWidget {
                       ySeries: seriesY,
                       graphProps: graphProps,
                       plotId: ProjectState.instance.activePlotId,
+                      legendReservedRight: legendReserved,
                       child: RepaintBoundary(
                         key: ProjectState.instance.canvasCaptureKey,
                         child: baseCanvas,
@@ -610,6 +719,10 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   /// 45% alpha for preview. Null = render everything normally.
   final String? activeTableId;
 
+  /// Right-margin space reserved for an `Outside Right` legend; computed by
+  /// the canvas from the same layout helper the legend drawing uses.
+  final double legendReservedRight;
+
   _MultiSeriesPlotPainter({
     required this.xSeries,
     required this.ySeries,
@@ -621,6 +734,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     this.formatKey = '._false',
     this.transparentBackground = false,
     this.activeTableId,
+    this.legendReservedRight = 0.0,
   });
 
   @override
@@ -632,6 +746,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       xSeries: xSeries,
       ySeries: ySeries,
       graphProps: graphProps,
+      legendReservedRight: legendReservedRight,
     );
     if (resolved == null) return;
 
@@ -694,7 +809,6 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     }
 
     void drawAxisAndGrid() {
-      const ticks = 5;
       final labelColor = _chartLabelColor(graphProps);
       final textStyle = TextStyle(
         color: labelColor,
@@ -702,21 +816,17 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       );
       final bottom = size.height - marginBottom;
       final right = size.width - marginRight;
+      final xIntervals = axisIntervalCount(graphProps?.xDivisions);
+      final yIntervals = axisIntervalCount(graphProps?.yDivisions);
 
-      for (var i = 0; i <= ticks; i++) {
-        final t = i / ticks;
+      for (var i = 0; i <= xIntervals; i++) {
+        final t = i / xIntervals;
         final screenX = marginLeft + plotWidth * t;
-        final screenY = marginTop + plotHeight - plotHeight * t;
 
         if (showGrid) {
           canvas.drawLine(
             Offset(screenX, bottom),
             Offset(screenX, marginTop),
-            paintGrid,
-          );
-          canvas.drawLine(
-            Offset(marginLeft, screenY),
-            Offset(right, screenY),
             paintGrid,
           );
         }
@@ -729,13 +839,29 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           );
           final rawX = inverseTransformValue(minX + (maxX - minX) * t, xScale);
           final label = TextPainter(
-            text: TextSpan(text: formatTickLabel(rawX), style: textStyle),
+            text: TextSpan(
+              text: formatTickLabel(rawX, graphProps: graphProps),
+              style: textStyle,
+            ),
             textDirection: TextDirection.ltr,
           );
           label.layout();
           label.paint(
             canvas,
             Offset(screenX - label.width / 2, bottom + kAxisLabelGap),
+          );
+        }
+      }
+
+      for (var i = 0; i <= yIntervals; i++) {
+        final t = i / yIntervals;
+        final screenY = marginTop + plotHeight - plotHeight * t;
+
+        if (showGrid) {
+          canvas.drawLine(
+            Offset(marginLeft, screenY),
+            Offset(right, screenY),
+            paintGrid,
           );
         }
 
@@ -747,7 +873,10 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           );
           final rawY = inverseTransformValue(minY + (maxY - minY) * t, yScale);
           final label = TextPainter(
-            text: TextSpan(text: formatTickLabel(rawY), style: textStyle),
+            text: TextSpan(
+              text: formatTickLabel(rawY, graphProps: graphProps),
+              style: textStyle,
+            ),
             textDirection: TextDirection.ltr,
           );
           label.layout();
@@ -1041,20 +1170,17 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
     final entries = <_LegendEntry>[];
     for (var i = 0; i < tableProps.length; i++) {
-      if (i >= xSeries.length || xSeries[i].isEmpty) continue;
+      if (!_legendSeriesVisible(i, xSeries, tableProps[i])) continue;
       final props = tableProps[i];
-      if (!props.lineVisible && !props.markerVisible) continue;
-      final rawName = props.legendDisplayName.trim();
-      final tableName = i < tableNames.length
-          ? tableNames[i]
-          : 'Series ${i + 1}';
-      var entryName = rawName.isEmpty || rawName == 'Series' ? tableName : rawName;
-      if (i < tableIds.length && latexFields.contains('legendDisplayName_${tableIds[i]}')) {
-        entryName = substituteSymbols(entryName);
-      }
       entries.add(
         _LegendEntry(
-          name: entryName,
+          name: _legendSeriesName(
+            i,
+            props,
+            tableNames,
+            tableIds,
+            latexFields,
+          ),
           lineColor: _parseColor(props.lineColor, const Color(0xFF1F77B4)),
           markerColor: _parseColor(props.markerColor, Colors.black),
           lineStyle: props.lineStyle,
@@ -1066,47 +1192,84 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     }
     if (entries.isEmpty) return;
 
-    final textStyle = TextStyle(color: PrimeTheme.textPrimary, fontSize: 11);
-    const padding = 8.0;
-    const rowHeight = 20.0;
-    const swatchWidth = 28.0;
-    var maxTextWidth = 0.0;
-    for (final entry in entries) {
-      final painter = TextPainter(
-        text: TextSpan(text: entry.name, style: textStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      maxTextWidth = math.max(maxTextWidth, painter.width);
-    }
+    final fontSize = _legendFontSize(graphProps);
+    final layout = _legendLayout(
+      [for (final e in entries) e.name],
+      fontSize,
+    );
+    final padding = layout.padding;
+    final rowHeight = layout.rowHeight;
+    final swatchWidth = layout.swatchWidth;
+    final legendWidth = layout.boxWidth;
+    final legendHeight = layout.boxHeight;
 
-    final legendWidth = padding * 3 + swatchWidth + maxTextWidth;
-    final legendHeight = padding * 2 + rowHeight * entries.length;
-    final position = (graphProps?.legendPosition ?? 'Top Right').toLowerCase();
-    final left = position.contains('left')
-        ? margins.left + 12.0
-        : size.width - margins.right - legendWidth;
-    final top = position.contains('bottom')
-        ? size.height - margins.bottom - 12.0 - legendHeight
-        : margins.top + 8.0;
+    final position = (graphProps?.legendPosition ?? 'Top Right')
+        .trim()
+        .toLowerCase();
+    final outside = position.contains('outside');
+    final double left;
+    final double top;
+    if (outside) {
+      // Painted in the right margin strip reserved by `legendReservedRight`.
+      left = size.width - padding - legendWidth;
+      top = margins.top;
+    } else {
+      left = position.contains('left')
+          ? margins.left + 12.0
+          : size.width - margins.right - legendWidth;
+      top = position.contains('bottom')
+          ? size.height - margins.bottom - 12.0 - legendHeight
+          : margins.top + 8.0;
+    }
     final rect = Rect.fromLTWH(left, top, legendWidth, legendHeight);
 
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, const Radius.circular(6)),
-      Paint()..color = PrimeTheme.panelBackground.withValues(alpha: 0.9),
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, const Radius.circular(6)),
-      Paint()
-        ..color = PrimeTheme.borderSide
-        ..style = PaintingStyle.stroke,
-    );
+    // Background fill: theme panel by default. Opacity 0 (or an alpha-zero
+    // override such as #00000000) skips the fill so curves show through.
+    final opacity = (graphProps?.legendOpacity ?? 0.9).clamp(0.0, 1.0);
+    final bgOverride = graphProps?.legendBackgroundColor;
+    final bgColor = bgOverride != null
+        ? _parseColor(bgOverride, PrimeTheme.panelBackground)
+        : PrimeTheme.panelBackground;
+    final fillAlpha = opacity * bgColor.a;
+    if (fillAlpha > 0) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+        Paint()..color = bgColor.withValues(alpha: fillAlpha),
+      );
+    }
+
+    if (graphProps?.legendShowBorder ?? true) {
+      final borderOverride = graphProps?.legendBorderColor;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
+        Paint()
+          ..color = borderOverride != null
+              ? _parseColor(borderOverride, PrimeTheme.borderSide)
+              : PrimeTheme.borderSide
+          ..style = PaintingStyle.stroke,
+      );
+    }
+
+    // Text contrasts with whatever is actually behind it: the panel/override
+    // color when the fill is visible, the chart page when it is not.
+    final Color textColor;
+    if (fillAlpha > 0) {
+      textColor = bgOverride != null
+          ? (bgColor.computeLuminance() > 0.5
+                ? const Color(0xFF000000)
+                : const Color(0xFFFFFFFF))
+          : PrimeTheme.textPrimary;
+    } else {
+      textColor = _chartLabelColor(graphProps);
+    }
+    final textStyle = TextStyle(color: textColor, fontSize: fontSize);
 
     for (var i = 0; i < entries.length; i++) {
       final entry = entries[i];
       final y = top + padding + rowHeight * i + rowHeight / 2;
       final linePaint = Paint()
         ..color = entry.lineColor
-        ..strokeWidth = 2
+        ..strokeWidth = math.max(1.5, fontSize * 0.18)
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..isAntiAlias = true;

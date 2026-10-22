@@ -665,9 +665,9 @@ class _GraphInspector extends StatelessWidget {
                             thumbColor: Colors.white,
                           ),
                           child: Slider(
-                            value: props.titleFontSize.clamp(8.0, 20.0),
+                            value: props.titleFontSize.clamp(8.0, 40.0),
                             min: 8.0,
-                            max: 20.0,
+                            max: 40.0,
                             onChanged: (val) {
                               ProjectState.instance.updateGraphProperties(
                                 nodeId,
@@ -684,7 +684,7 @@ class _GraphInspector extends StatelessWidget {
                           value: props.titleFontSize,
                           step: 0.5,
                           min: 8.0,
-                          max: 20.0,
+                          max: 40.0,
                           precision: 1,
                           onChanged: (val) {
                             if (val != null) {
@@ -749,6 +749,43 @@ class _GraphInspector extends StatelessWidget {
                   ),
                 ),
                 PropertyRow(
+                  label: 'Number Format',
+                  child: PrimeSelect<String>(
+                    value: props.numberNotation,
+                    options: const {
+                      'Auto': 'Auto (Smart)',
+                      'Decimal': 'Decimal (Fixed)',
+                      'Scientific': 'Scientific (1eX)',
+                    },
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(numberNotation: val),
+                      );
+                    },
+                  ),
+                ),
+                if (props.numberNotation.toLowerCase() == 'auto')
+                  PropertyRow(
+                    label: 'Exp. Threshold',
+                    child: PrimeSelect<int>(
+                      value: props.scientificThreshold,
+                      options: const {
+                        4: '10⁴ (10,000)',
+                        5: '10⁵ (100,000)',
+                        6: '10⁶ (1M)',
+                        7: '10⁷ (10M)',
+                        8: '10⁸ (100M)',
+                      },
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(scientificThreshold: val),
+                        );
+                      },
+                    ),
+                  ),
+                PropertyRow(
                   label: 'X Title Gap',
                   child: PrimeNumberField(
                     value: props.titlePadding,
@@ -805,6 +842,46 @@ class _GraphInspector extends StatelessWidget {
                         );
                       },
                     ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'X Divisions',
+                  child: PrimeNumberField(
+                    value: props.xDivisions?.toDouble(),
+                    allowAuto: true,
+                    autoLabel: 'Auto (5)',
+                    step: 1.0,
+                    min: 1.0,
+                    max: 30.0,
+                    precision: 0,
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(
+                          xDivisions: () => val?.round(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Y Divisions',
+                  child: PrimeNumberField(
+                    value: props.yDivisions?.toDouble(),
+                    allowAuto: true,
+                    autoLabel: 'Auto (5)',
+                    step: 1.0,
+                    min: 1.0,
+                    max: 30.0,
+                    precision: 0,
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(
+                          yDivisions: () => val?.round(),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 PropertyRow(
@@ -920,11 +997,148 @@ class _GraphInspector extends StatelessWidget {
                       'Top Right': 'Top Right',
                       'Bottom Left': 'Bottom Left',
                       'Bottom Right': 'Bottom Right',
+                      'Outside Right': 'Outside Right',
                     },
                     onChanged: (val) {
                       ProjectState.instance.updateGraphProperties(
                         nodeId,
                         props.copyWith(legendPosition: val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Text Size',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                            activeTrackColor: PrimeTheme.primaryAccent,
+                            inactiveTrackColor: PrimeTheme.borderSide,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: props.legendFontSize.clamp(8.0, 24.0),
+                            min: 8.0,
+                            max: 24.0,
+                            onChanged: (val) {
+                              ProjectState.instance.updateGraphProperties(
+                                nodeId,
+                                props.copyWith(legendFontSize: val),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 58,
+                        child: PrimeNumberField(
+                          value: props.legendFontSize,
+                          step: 0.5,
+                          min: 8.0,
+                          max: 24.0,
+                          precision: 1,
+                          onChanged: (val) {
+                            if (val != null) {
+                              ProjectState.instance.updateGraphProperties(
+                                nodeId,
+                                props.copyWith(legendFontSize: val),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Opacity',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                            overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                            activeTrackColor: PrimeTheme.primaryAccent,
+                            inactiveTrackColor: PrimeTheme.borderSide,
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: props.legendOpacity.clamp(0.0, 1.0),
+                            min: 0.0,
+                            max: 1.0,
+                            onChanged: (val) {
+                              ProjectState.instance.updateGraphProperties(
+                                nodeId,
+                                props.copyWith(legendOpacity: val),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SizedBox(
+                        width: 38,
+                        child: Text(
+                          '${(props.legendOpacity * 100).round()}%',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: PrimeTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Show Border',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.legendShowBorder,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(legendShowBorder: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Border Color',
+                  child: _ThemeColorRow(
+                    value: props.legendBorderColor,
+                    label: 'Legend Border',
+                    fallback: _colorHex(PrimeTheme.borderSide),
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(legendBorderColor: () => val),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Background',
+                  child: _ThemeColorRow(
+                    value: props.legendBackgroundColor,
+                    label: 'Legend Background',
+                    fallback: _colorHex(PrimeTheme.panelBackground),
+                    resetTooltip: 'Match theme panel',
+                    presets: const ['#FFFFFF', '#000000', '#00000000'],
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(legendBackgroundColor: () => val),
                       );
                     },
                   ),
@@ -1034,6 +1248,17 @@ Color _paletteHexColor(String hex) {
   final v = int.tryParse(h, radix: 16);
   if (v == null) return const Color(0xFF808080);
   return Color(v);
+}
+
+/// Hex of a theme token (for color-picker swatch fallbacks).
+String _colorHex(Color c) {
+  final r = (c.r * 255).round();
+  final g = (c.g * 255).round();
+  final b = (c.b * 255).round();
+  return '#${r.toRadixString(16).padLeft(2, '0')}'
+          '${g.toRadixString(16).padLeft(2, '0')}'
+          '${b.toRadixString(16).padLeft(2, '0')}'
+      .toUpperCase();
 }
 
 /// Hex of the auto axis label color given the chart page background —

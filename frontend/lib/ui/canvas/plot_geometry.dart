@@ -32,26 +32,79 @@ const double kAxisTitlePad = 6.0;
 /// Single source for axis-title sizing, shared by the painter, the LaTeX
 /// overlay, and the margin computation.
 double axisTitleSize(GraphProperties? graphProps) =>
-    (graphProps?.titleFontSize ?? 12.0).clamp(6.0, 32.0);
+    (graphProps?.titleFontSize ?? 12.0).clamp(6.0, 48.0);
 
 /// Single source for tick-number sizing.
 double axisTickSize(GraphProperties? graphProps) =>
     (graphProps?.tickFontSize ?? 10.0).clamp(6.0, 28.0);
 
-/// Axis tick label under the active locale (same rules as the painter).
-String formatTickLabel(double value) {
+/// Number of grid intervals on an axis; `None` keeps the historical 5.
+int axisIntervalCount(int? divisions) => (divisions ?? 5).clamp(1, 50);
+
+String _formatDecimalTick(double value) {
   final abs = value.abs();
-  String dotted;
-  if (abs != 0 && (abs >= 10000 || abs < 0.001)) {
-    dotted = value.toStringAsExponential(1);
-  } else if (abs >= 100) {
-    dotted = value.toStringAsFixed(0);
+  final int decimals;
+  if (abs >= 100) {
+    decimals = 0;
   } else if (abs >= 10) {
-    dotted = value.toStringAsFixed(1);
+    decimals = 1;
+  } else if (abs >= 1) {
+    decimals = 2;
+  } else if (abs >= 0.1) {
+    decimals = 3;
+  } else if (abs >= 0.01) {
+    decimals = 4;
+  } else if (abs >= 0.001) {
+    decimals = 5;
+  } else if (abs == 0) {
+    decimals = 0;
   } else {
-    dotted = value.toStringAsFixed(2);
+    // Decimal mode is explicit: keep enough places to show the value
+    // instead of collapsing tiny ticks to 0.000.
+    decimals = (-(math.log(abs) / math.ln10).floor() + 3).clamp(0, 20);
   }
-  return groupDotted(dotted);
+  var s = value.toStringAsFixed(decimals);
+  if (s.contains('.')) {
+    s = s.replaceAll(RegExp(r'0+$'), '');
+    s = s.replaceAll(RegExp(r'\.$'), '');
+  }
+  return groupDotted(s);
+}
+
+/// Compact scientific notation: `1e5`, `2.5e6`, `1.2e-4` (no `+`, no
+/// redundant mantissa zeros).
+String _formatScientificTick(double value) {
+  if (!value.isFinite || value == 0) return _formatDecimalTick(value);
+  final dotted = value.toStringAsExponential(2);
+  final eIndex = dotted.indexOf('e');
+  var mantissa = dotted.substring(0, eIndex);
+  var exponent = dotted.substring(eIndex + 1);
+  if (mantissa.contains('.')) {
+    mantissa = mantissa.replaceAll(RegExp(r'0+$'), '');
+    mantissa = mantissa.replaceAll(RegExp(r'\.$'), '');
+  }
+  final negative = exponent.startsWith('-');
+  exponent = exponent.replaceAll(RegExp(r'^[+-]'), '');
+  exponent = exponent.replaceAll(RegExp(r'^0+(?=\d)'), '');
+  return groupDotted('${mantissa}e${negative ? '-' : ''}$exponent');
+}
+
+/// Axis tick label under the active locale and the graph's notation mode
+/// (`Auto`, `Decimal`, `Scientific`). Auto keeps readable decimals through
+/// `10^threshold - 1` (100,000 by default) and switches to scientific only
+/// at the configured power of ten or below 0.001.
+String formatTickLabel(double value, {GraphProperties? graphProps}) {
+  final mode = (graphProps?.numberNotation ?? 'Auto').trim().toLowerCase();
+  if (mode.startsWith('decimal')) return _formatDecimalTick(value);
+  if (mode.startsWith('scientific')) return _formatScientificTick(value);
+
+  final abs = value.abs();
+  final threshold = (graphProps?.scientificThreshold ?? 5).clamp(1, 12);
+  final upper = math.pow(10.0, threshold.toDouble()).toDouble();
+  if (abs != 0 && (abs >= upper || abs < 0.001)) {
+    return _formatScientificTick(value);
+  }
+  return _formatDecimalTick(value);
 }
 
 enum PlotAxisScale { linear, log, sqrt }
@@ -149,11 +202,14 @@ Size _measureTickText(String text, TextStyle style) {
 }
 
 /// Resolves the canvas margins for the current fonts and title gaps.
+/// [legendReservedRight] widens the right margin when the legend renders
+/// outside the plot rect (`Outside Right` position).
 PlotMargins computePlotMargins(
   GraphProperties? graphProps, {
   required double minY,
   required double maxY,
   required PlotAxisScale yScale,
+  double legendReservedRight = 0.0,
 }) {
   final titleLineHeight = _measureTickText(
     'Hg',
@@ -179,13 +235,16 @@ PlotMargins computePlotMargins(
   if (graphProps?.yVisible ?? true) {
     final tickStyle = TextStyle(fontSize: axisTickSize(graphProps));
     var tickWidth = 0.0;
-    const ticks = 5;
+    final ticks = axisIntervalCount(graphProps?.yDivisions);
     for (var i = 0; i <= ticks; i++) {
       final rawY = inverseTransformValue(
         minY + (maxY - minY) * i / ticks,
         yScale,
       );
-      final width = _measureTickText(formatTickLabel(rawY), tickStyle).width;
+      final width = _measureTickText(
+        formatTickLabel(rawY, graphProps: graphProps),
+        tickStyle,
+      ).width;
       if (width > tickWidth) tickWidth = width;
     }
     final bandY = kAxisLabelGap + tickWidth;
@@ -197,7 +256,7 @@ PlotMargins computePlotMargins(
   return PlotMargins(
     left: left,
     top: kPlotMarginTop,
-    right: kPlotMarginRight,
+    right: math.max(kPlotMarginRight, legendReservedRight),
     bottom: bottom,
     xTitleTop: xTitleTop,
     yTitleFromAxis: yTitleFromAxis,
@@ -257,10 +316,13 @@ class RawLimits {
 
 /// Mirrors the painter: envelope of finite transformed points, overridden by
 /// explicit Rust limits. Returns null when there is nothing finite to show.
+/// [legendReservedRight] must match the painter so gestures map exactly to
+/// what is painted when the legend sits outside the plot rect.
 PlotView? resolvePlotView({
   required List<List<double>> xSeries,
   required List<List<double>> ySeries,
   required GraphProperties? graphProps,
+  double legendReservedRight = 0.0,
 }) {
   final xScale = plotAxisScale(graphProps?.xScale);
   final yScale = plotAxisScale(graphProps?.yScale);
@@ -317,6 +379,7 @@ PlotView? resolvePlotView({
       minY: minY,
       maxY: maxY,
       yScale: yScale,
+      legendReservedRight: legendReservedRight,
     ),
   );
 }
