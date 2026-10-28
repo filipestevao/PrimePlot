@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:frontend/src/rust/frb_generated.dart';
+import 'core/desktop_integration.dart';
 import 'core/state.dart';
 import 'core/theme.dart';
 import 'ui/layout/main_layout.dart';
@@ -34,6 +35,12 @@ Future<void> main() async {
 
   // Initialize Window Manager for Frameless Desktop Window
   await windowManager.ensureInitialized();
+
+  // Portable Linux bundle: register the bundled launcher entry/icon so the
+  // taskbar icon works on Wayland even when the folder is copied elsewhere.
+  if (Platform.isLinux) {
+    await ensureLinuxDesktopIntegration();
+  }
 
   // Use the bundled branding icon for the window/taskbar. Windows needs the
   // multi-resolution ICO; Linux's GTK backend loads the PNG.

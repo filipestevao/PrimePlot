@@ -3,11 +3,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../../core/theme.dart';
 
 /// Renders the PrimePlot brand icon SVG sized to [size].
-/// Automatically chooses the dark or light variant according to [PrimeTheme.tokens.brightness],
-/// or allows an explicit tint via [color].
+/// Automatically chooses the dark or light variant from the active [Theme],
+/// and allows an explicit tint via [color].
 class PrimeIcon extends StatelessWidget {
   final double size;
   final Color? color;
@@ -20,7 +19,7 @@ class PrimeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = PrimeTheme.tokens.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final assetPath = isDark
         ? 'assets/branding/icon-on-dark.svg'
         : 'assets/branding/icon-on-light.svg';
@@ -49,7 +48,7 @@ class PrimeLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = PrimeTheme.tokens.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final assetPath = isDark
         ? 'assets/branding/logo-on-dark.svg'
         : 'assets/branding/logo-on-light.svg';
