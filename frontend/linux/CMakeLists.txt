@@ -129,3 +129,15 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
+
+# Desktop integration. Installed bundles carry a launcher entry and the
+# hicolor app icon so Wayland compositors can resolve the taskbar icon by
+# application id. System packages using `cmake --install --prefix /usr` get
+# the same files in their standard locations.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/com.primeplot.frontend.desktop"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/applications"
+  COMPONENT Runtime)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../assets/branding/app-icon.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/512x512/apps"
+  RENAME "com.primeplot.frontend.png"
+  COMPONENT Runtime)

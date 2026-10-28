@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/theme.dart';
+import '../components/prime_icon.dart';
 
 class PrimeAboutDialog extends StatelessWidget {
   const PrimeAboutDialog({super.key});
@@ -133,11 +134,8 @@ class PrimeAboutDialog extends StatelessWidget {
                           .withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
-                      Icons.pie_chart,
-                      size: 26,
-                      color: PrimeTheme.primaryAccent,
-                    ),
+                    alignment: Alignment.center,
+                    child: const PrimeIcon(size: 26),
                   ),
                   const SizedBox(width: 14),
                   Expanded(

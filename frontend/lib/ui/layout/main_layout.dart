@@ -12,6 +12,7 @@ import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
 import '../components/panel_container.dart';
+import '../components/prime_icon.dart';
 import '../components/prime_search_bar.dart';
 import '../components/shortcut_map.dart';
 import '../dialogs/about_dialog.dart';
@@ -668,11 +669,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.pie_chart,
-                            size: 20,
-                            color: PrimeTheme.primaryAccent,
-                          ),
+                          const PrimeIcon(size: 20),
                           const SizedBox(width: 8),
                           Text(
                             'PrimePlot',

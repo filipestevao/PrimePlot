@@ -1,6 +1,8 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:window_manager/window_manager.dart';
@@ -32,6 +34,16 @@ Future<void> main() async {
 
   // Initialize Window Manager for Frameless Desktop Window
   await windowManager.ensureInitialized();
+
+  // Use the bundled branding icon for the window/taskbar. Windows needs the
+  // multi-resolution ICO; Linux's GTK backend loads the PNG.
+  if (Platform.isWindows || Platform.isLinux) {
+    await windowManager.setIcon(
+      Platform.isWindows
+          ? 'assets/branding/app-icon.ico'
+          : 'assets/branding/app-icon.png',
+    );
+  }
 
   // Never shrink into overflow territory (compositor hint; MainLayout's
   // onWindowResize clamps at runtime as a backstop).

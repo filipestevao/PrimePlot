@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=PrimePlot
+Comment=Scientific plotting and data visualization
+Exec=PrimePlot
+Icon=com.primeplot.frontend
+Terminal=false
+Categories=Science;
+Keywords=plot;chart;graph;data;visualization;
+StartupWMClass=com.primeplot.frontend

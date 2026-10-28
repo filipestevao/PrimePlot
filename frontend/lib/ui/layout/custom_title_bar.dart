@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import '../../core/state.dart';
 import '../../core/theme.dart';
+import '../components/prime_icon.dart';
 import '../components/prime_search_bar.dart';
 
 /// Maximize/restore toggle shared by the title-bar double-click and the
@@ -42,7 +43,7 @@ class CustomTitleBar extends StatelessWidget {
                   },
                 ),
                 const SizedBox(width: 8),
-                Icon(Icons.pie_chart, size: 20, color: PrimeTheme.primaryAccent), // Placeholder logo
+                const PrimeIcon(size: 20),
                 const SizedBox(width: 8),
                 Text(
                   ProjectState.instance.appVersion.isEmpty

@@ -28,6 +28,12 @@ PrimePlot is still in early development, so there are no pre-built binaries yet.
    flutter build linux
    ```
 
+   To register the launcher entry and app icon with your desktop — required for the taskbar icon to resolve by application id on Wayland — run from `frontend`:
+   ```bash
+   ./linux/install_desktop_entry.sh
+   ```
+   This writes a per-user desktop entry and hicolor icon under `$XDG_DATA_HOME` (default `~/.local/share`), pointing at the current debug or release bundle. Re-run it after switching build modes or moving the bundle.
+
    **Windows**
    ```bash
    flutter build windows
