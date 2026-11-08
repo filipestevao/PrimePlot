@@ -154,7 +154,7 @@ impl Default for GraphProperties {
             y_scale: "Linear".to_string(),
             x_label: "X".to_string(),
             y_label: "Y".to_string(),
-            aspect_ratio: None,
+            aspect_ratio: Some(1.3333),
             show_grid: true,
             show_legend: true,
             legend_position: "Top Right".to_string(),
@@ -587,5 +587,18 @@ mod tests {
         assert_eq!(legacy.x_max, Some(10.0));
         assert_eq!(legacy.num_samples, 1000);
         assert_eq!(legacy.line_color, "#FF7F0E");
+    }
+
+    #[test]
+    fn test_default_aspect_ratio_is_4_3() {
+        let fresh = GraphProperties::default();
+        assert_eq!(fresh.aspect_ratio, Some(1.3333));
+
+        // Legacy bundle with explicit null aspect ratio stays None (Free)
+        let legacy: GraphProperties = serde_json::from_str(
+            r#"{"x_min":null,"x_max":null,"y_min":null,"y_max":null,"x_visible":true,"y_visible":true,"x_scale":"Linear","y_scale":"Linear","x_label":"X","y_label":"Y","aspect_ratio":null,"show_grid":true,"show_legend":true,"legend_position":"Top Right"}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.aspect_ratio, None);
     }
 }

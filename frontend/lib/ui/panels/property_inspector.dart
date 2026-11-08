@@ -91,7 +91,7 @@ class _PropertyInspectorState extends State<PropertyInspector> {
             case NodeType.function:
               return _FunctionInspector(nodeId: selectedId);
             case NodeType.shape:
-              return _ShapeInspector(nodeId: selectedId);
+              return const SizedBox.shrink();
           }
         },
       ),
@@ -398,52 +398,6 @@ class _FunctionInspector extends StatelessWidget {
           onChanged: onChanged,
           useLatex: useLatex,
           onLatexToggle: () => state.toggleLatexMode(nodeId, field),
-        );
-      },
-    );
-  }
-}
-
-// -----------------------------------------------------------------------------
-// Shape Inspector
-// -----------------------------------------------------------------------------
-class _ShapeInspector extends StatelessWidget {
-  final String nodeId;
-  const _ShapeInspector({required this.nodeId});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<ShapeProperties?>(
-      valueListenable: ProjectState.instance.activeShapeProps,
-      builder: (context, props, child) {
-        if (props == null) return const SizedBox.shrink();
-        return ListView(
-          padding: const EdgeInsets.all(10.0),
-          children: [
-            PropertySection(
-              title: 'Shape Settings',
-              icon: Icons.category,
-              children: [
-                PropertyRow(
-                  label: 'Shape Type',
-                  child: PrimeSelect<String>(
-                    value: props.shapeType,
-                    options: const {
-                      'Rectangle': 'Rectangle',
-                      'Ellipse': 'Ellipse',
-                      'Line': 'Line',
-                    },
-                    onChanged: (val) {
-                      ProjectState.instance.updateShapeProperties(
-                        nodeId,
-                        ShapeProperties(shapeType: val),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
         );
       },
     );

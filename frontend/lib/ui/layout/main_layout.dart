@@ -140,7 +140,6 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                       break;
                     case _ExplorerAction.addTable:
                     case _ExplorerAction.addFunction:
-                    case _ExplorerAction.addShape:
                       final root = ProjectState.instance.projectTree.value;
                       if (root != null) {
                         // Find first graph (inside any folder or at root)
@@ -160,14 +159,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
 
                         final nodeType = action == _ExplorerAction.addTable
                             ? NodeType.dataset
-                            : action == _ExplorerAction.addFunction
-                            ? NodeType.function
-                            : NodeType.shape;
+                            : NodeType.function;
                         final defaultName = action == _ExplorerAction.addTable
                             ? 'Table'
-                            : action == _ExplorerAction.addFunction
-                            ? 'Function'
-                            : 'Shape';
+                            : 'Function';
 
                         if (targetGraph != null) {
                           ProjectState.instance.addProjectNodeWrapper(
@@ -219,13 +214,6 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                         value: _ExplorerAction.addFunction,
                         child: Text(
                           'Add Function',
-                          style: TextStyle(color: PrimeTheme.textPrimary),
-                        ),
-                      ),
-                      PopupMenuItem<_ExplorerAction>(
-                        value: _ExplorerAction.addShape,
-                        child: Text(
-                          'Add Shape',
                           style: TextStyle(color: PrimeTheme.textPrimary),
                         ),
                       ),
@@ -1028,7 +1016,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
 }
 
 /// Actions for the Project Explorer "Add Item" popup menu.
-enum _ExplorerAction { addGraph, addTable, addFunction, addShape, addFolder }
+enum _ExplorerAction { addGraph, addTable, addFunction, addFolder }
 
 /// Non-modal keyboard shortcut reference (toggles with ? / Ctrl+/,
 /// dismisses on any key or click-away).

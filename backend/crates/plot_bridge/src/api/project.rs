@@ -147,6 +147,14 @@ pub fn add_project_node(parent_id: String, name: String, node_type: NodeType) ->
             crate::api::palettes::next_combined_color(ds.as_deref(), fs.as_deref());
         crate::api::palettes::init_function_props(&new_id, &name, color);
     }
+
+    // Newborn plots default to 4:3 (Classic) aspect ratio.
+    if let NodeType::Plot = node_type {
+        crate::api::properties::set_graph_properties(
+            new_id.clone(),
+            crate::api::properties::GraphProperties::default(),
+        );
+    }
     
     state.clone().into()
 }
