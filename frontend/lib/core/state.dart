@@ -189,6 +189,10 @@ class ProjectState {
 
   final ValueNotifier<int> refreshCanvas = ValueNotifier(0);
 
+  /// Incremented after property mutations so the shell can re-anchor
+  /// keyboard focus if an inspector rebuild disposed the focused control.
+  final ValueNotifier<int> propertyMutation = ValueNotifier(0);
+
   /// Undo/redo availability (drives title-bar buttons).
   final ValueNotifier<bool> canUndo = ValueNotifier(false);
   final ValueNotifier<bool> canRedo = ValueNotifier(false);
@@ -242,6 +246,7 @@ class ProjectState {
       }
       _lastCheckpointAt = null;
       markDirty();
+      _notifyPropertyMutation();
       _refreshHistoryStatus();
       return null;
     } catch (e) {
@@ -269,6 +274,7 @@ class ProjectState {
       }
       _lastCheckpointAt = null;
       markDirty();
+      _notifyPropertyMutation();
       _refreshHistoryStatus();
       return null;
     } catch (e) {
@@ -276,7 +282,7 @@ class ProjectState {
     }
   }
 
-  /// Canvas statistics overlay visibility (σ button / S hotkey).
+  /// Canvas statistics overlay visibility (σ button / Ctrl+H shortcut).
   final ValueNotifier<bool> showStatsHud = ValueNotifier(false);
 
   /// Live cursor position in data coordinates (null when off-canvas).
@@ -322,6 +328,10 @@ class ProjectState {
   /// Marks the project as clean (no unsaved changes).
   void markClean() {
     if (isDirty.value) isDirty.value = false;
+  }
+
+  void _notifyPropertyMutation() {
+    propertyMutation.value++;
   }
 
   /// File name shown in the title bar (`Untitled` when never saved).
@@ -405,6 +415,7 @@ class ProjectState {
       activeFolderProps.value = newProps;
     }
     markDirty();
+    _notifyPropertyMutation();
   }
 
   void updateGraphProperties(
@@ -429,6 +440,7 @@ class ProjectState {
       );
     }
     markDirty();
+    _notifyPropertyMutation();
   }
 
   void updateTableProperties(String nodeId, TableProperties newProps) {
@@ -438,6 +450,7 @@ class ProjectState {
       activeTableProps.value = newProps;
     }
     markDirty();
+    _notifyPropertyMutation();
   }
 
   void updateFunctionProperties(String nodeId, FunctionProperties newProps) {
@@ -449,6 +462,7 @@ class ProjectState {
     // Canvas samples function props live but doesn't listen to them.
     refreshCanvas.value++;
     markDirty();
+    _notifyPropertyMutation();
   }
 
   void updateShapeProperties(String nodeId, ShapeProperties newProps) {
@@ -458,13 +472,14 @@ class ProjectState {
       activeShapeProps.value = newProps;
     }
     markDirty();
+    _notifyPropertyMutation();
   }
 
   /// Public ID of the plot governing the canvas (selected plot or parent
   /// of the selected dataset/function/shape). Null when no plot is active.
   String? get activePlotId => _getActivePlotId();
 
-  /// Restores the inspector-defined home view (R hotkey / double-click
+  /// Restores the inspector-defined home view (Home key / double-click
   /// equivalent). No-op when already home or no plot is active.
   void resetActiveView() {
     final id = activePlotId;

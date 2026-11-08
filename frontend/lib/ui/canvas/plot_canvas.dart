@@ -533,7 +533,7 @@ class PlotCanvas extends StatelessWidget {
                                 },
                               ),
                             ),
-                          // Statistics toggle (σ button + S hotkey). Export
+                          // Statistics toggle (σ button + Ctrl+H). Export
                           // lives in the Graph header ··· menu.
                           Positioned(
                             top: 6,

@@ -53,6 +53,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   /// native GTK file dialogs, route teardown), focus is re-anchored here.
   final FocusNode _rootFocus = FocusNode(debugLabel: 'app-root');
 
+  /// Coalesces post-frame focus-restore checks triggered by property
+  /// mutations (sliders can emit many updates per frame).
+  bool _focusRestoreScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +68,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     ProjectState.instance.selectedProjectNodeId.addListener(
       _onSelectionChanged,
     );
+    ProjectState.instance.propertyMutation.addListener(_onPropertyMutation);
     FocusManager.instance.addListener(_onFocusChanged);
 
     // Left Vertical Split
@@ -293,7 +298,14 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
         builder: (context, area) => const PanelContainer(
           title: 'Property Inspector',
           icon: Icons.tune,
-          child: PropertyInspector(),
+          // Keep focus inside the shortcut subtree when a focused control is
+          // rebuilt away. canRequestFocus must remain true: a FocusScopeNode
+          // with false makes every descendant unfocusable.
+          child: FocusScope(
+            canRequestFocus: true,
+            skipTraversal: true,
+            child: PropertyInspector(),
+          ),
         ),
       ),
     ];
@@ -379,7 +391,11 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                   ],
                 ),
               ],
-              child: const PlotCanvas(),
+              child: const FocusScope(
+                canRequestFocus: true,
+                skipTraversal: true,
+                child: PlotCanvas(),
+              ),
             );
           },
         ),
@@ -441,6 +457,18 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     }
   }
 
+  /// Inspector rebuilds can dispose the widget that currently owns focus.
+  /// Check once after the frame settles and re-anchor only if focus was
+  /// actually lost, so typing in a live field is never interrupted.
+  void _onPropertyMutation() {
+    if (_focusRestoreScheduled) return;
+    _focusRestoreScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusRestoreScheduled = false;
+      if (mounted) _anchorFocusIfLost();
+    });
+  }
+
   /// Native GTK file dialogs (open/save/import) run outside the Flutter
   /// window; on return the focus tree can be stale, killing shortcuts.
   @override
@@ -455,11 +483,18 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     });
   }
 
-  /// Single-key shortcuts must not fire while typing in a text field.
+  /// Single-key/navigation shortcuts must not fire while typing in a text
+  /// field. Check both the focused widget and its ancestors: on some
+  /// platforms the primary focus is an internal Focus wrapper rather than
+  /// the EditableText itself.
   static void _guardedText(VoidCallback action) {
-    final focus = FocusManager.instance.primaryFocus;
-    final widget = focus?.context?.widget;
-    if (widget is EditableText) return;
+    final context = FocusManager.instance.primaryFocus?.context;
+    if (context != null) {
+      if (context.widget is EditableText) return;
+      if (context.findAncestorWidgetOfExactType<EditableText>() != null) {
+        return;
+      }
+    }
     action();
   }
 
@@ -536,6 +571,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     ProjectState.instance.selectedProjectNodeId.removeListener(
       _onSelectionChanged,
     );
+    ProjectState.instance.propertyMutation.removeListener(_onPropertyMutation);
     ProjectState.instance.selectedColumn.removeListener(
       _onColumnFocusChanged,
     );
@@ -605,12 +641,12 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
                 );
               }
             }),
-        const SingleActivator(LogicalKeyboardKey.keyS): () =>
+        const SingleActivator(LogicalKeyboardKey.keyH, control: true): () =>
             _guardedText(() {
               ProjectState.instance.showStatsHud.value =
                   !ProjectState.instance.showStatsHud.value;
             }),
-        const SingleActivator(LogicalKeyboardKey.keyR): () =>
+        const SingleActivator(LogicalKeyboardKey.home): () =>
             _guardedText(
                 () => ProjectState.instance.resetActiveView()),
         const SingleActivator(LogicalKeyboardKey.slash, shift: true): () =>

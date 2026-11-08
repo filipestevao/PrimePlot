@@ -19,8 +19,8 @@ const shortcutRows = [
   ('Ctrl + F', 'Search nodes & commands'),
   ('Ctrl + Z', 'Undo'),
   ('Ctrl + Y', 'Redo'),
-  ('S', 'Toggle series statistics'),
-  ('R', 'Reset view to home ranges'),
+  ('Ctrl + H', 'Toggle series statistics'),
+  ('Home', 'Reset view to home ranges'),
   ('Esc', 'Clear selection'),
   ('Ctrl + /  or  ?', 'This shortcut map'),
 ];

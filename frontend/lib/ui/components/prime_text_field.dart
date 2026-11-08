@@ -43,6 +43,7 @@ class PrimeTextField extends StatefulWidget {
 class _PrimeTextFieldState extends State<PrimeTextField> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
+  late FocusNode _keyboardFocus;
   bool _isHovered = false;
   late String _initialValue;
 
@@ -53,6 +54,13 @@ class _PrimeTextFieldState extends State<PrimeTextField> {
     _controller = TextEditingController(text: widget.value);
     _focusNode = FocusNode();
     _focusNode.addListener(_onFocusChange);
+    // Stable ancestor node for Escape handling. Recreating this every build
+    // reparents the focused TextField and can drop shortcuts/focus.
+    _keyboardFocus = FocusNode(
+      debugLabel: 'prime-text-field-keys',
+      canRequestFocus: false,
+      skipTraversal: true,
+    );
   }
 
   void _onFocusChange() {
@@ -77,6 +85,7 @@ class _PrimeTextFieldState extends State<PrimeTextField> {
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
+    _keyboardFocus.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -105,7 +114,7 @@ class _PrimeTextFieldState extends State<PrimeTextField> {
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: KeyboardListener(
-        focusNode: FocusNode(),
+        focusNode: _keyboardFocus,
         onKeyEvent: _handleKey,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
