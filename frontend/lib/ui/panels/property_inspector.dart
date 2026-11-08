@@ -885,6 +885,62 @@ class _GraphInspector extends StatelessWidget {
                   ),
                 ),
                 PropertyRow(
+                  label: 'X Sub-divisions',
+                  child: PrimeNumberField(
+                    value: props.xSubdivisions?.toDouble(),
+                    allowAuto: true,
+                    autoLabel: 'None',
+                    step: 1.0,
+                    min: 2.0,
+                    max: 10.0,
+                    precision: 0,
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(
+                          xSubdivisions: () => val?.round(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Y Sub-divisions',
+                  child: PrimeNumberField(
+                    value: props.ySubdivisions?.toDouble(),
+                    allowAuto: true,
+                    autoLabel: 'None',
+                    step: 1.0,
+                    min: 2.0,
+                    max: 10.0,
+                    precision: 0,
+                    onChanged: (val) {
+                      ProjectState.instance.updateGraphProperties(
+                        nodeId,
+                        props.copyWith(
+                          ySubdivisions: () => val?.round(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                if (props.xSubdivisions != null || props.ySubdivisions != null)
+                  PropertyRow(
+                    label: 'Show Minor Grid',
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: PrimeSwitch(
+                        value: props.showMinorGrid,
+                        onChanged: (val) {
+                          ProjectState.instance.updateGraphProperties(
+                            nodeId,
+                            props.copyWith(showMinorGrid: val),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                PropertyRow(
                   label: 'Aspect Ratio',
                   child: PrimeSelect<double?>(
                     value: props.aspectRatio,

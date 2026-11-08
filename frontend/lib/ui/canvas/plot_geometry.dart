@@ -41,6 +41,105 @@ double axisTickSize(GraphProperties? graphProps) =>
 /// Number of grid intervals on an axis; `None` keeps the historical 5.
 int axisIntervalCount(int? divisions) => (divisions ?? 5).clamp(1, 50);
 
+const List<double> _niceStepCandidates = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0];
+
+double _niceStep(double min, double max, int targetIntervals) {
+  final span = max - min;
+  final target = targetIntervals.clamp(1, 50);
+  final rough = span / target;
+  final exponent = (math.log(rough) / math.ln10).floor();
+  final magnitude = math.pow(10.0, exponent.toDouble()).toDouble();
+  if (!magnitude.isFinite || magnitude <= 0) return rough;
+
+  // Prefer the candidate whose generated tick count is closest to the
+  // requested number of intervals plus both endpoints. Ties use the finer
+  // step, which favors 15/25/150/2500-style ticks over 20/50/200/5000.
+  final desiredTicks = target + 1;
+  var bestStep = magnitude;
+  var bestScore = double.infinity;
+  for (final candidate in _niceStepCandidates) {
+    final step = candidate * magnitude;
+    final first = (min / step).ceil() * step;
+    final last = (max / step).floor() * step;
+    final count = last + step * 1e-9 < first
+        ? 0
+        : ((last - first) / step).round() + 1;
+    final score = (count - desiredTicks).abs().toDouble();
+    if (score < bestScore - 1e-9 ||
+        (score == bestScore && step < bestStep)) {
+      bestStep = step;
+      bestScore = score;
+    }
+  }
+  return bestStep;
+}
+
+/// Nice major tick values within the raw data range [min, max].
+///
+/// Ticks are chosen on the transformed axis (linear/log/sqrt) so log plots
+/// get evenly spaced transformed intervals rather than clustered raw values.
+/// The returned values are raw data coordinates, ready for [formatTickLabel]
+/// and [dataToScreen].
+List<double> computeNiceTicks(
+  double min,
+  double max, {
+  int targetIntervals = 5,
+  String scale = 'Linear',
+}) {
+  if (!min.isFinite || !max.isFinite || max <= min) {
+    return min.isFinite ? <double>[min] : const <double>[];
+  }
+
+  final axisScale = plotAxisScale(scale);
+  final tMin = transformValue(min, axisScale);
+  final tMax = transformValue(max, axisScale);
+  if (tMin == null ||
+      tMax == null ||
+      !tMin.isFinite ||
+      !tMax.isFinite ||
+      tMax <= tMin) {
+    return <double>[min, max];
+  }
+
+  final step = _niceStep(tMin, tMax, targetIntervals);
+  if (!step.isFinite || step <= 0) return <double>[min, max];
+
+  final first = (tMin / step).ceil() * step;
+  final epsilon = step * 1e-9;
+  final ticks = <double>[];
+  var previous = double.negativeInfinity;
+  for (var i = 0; i < 200; i++) {
+    final t = first + step * i;
+    if (t > tMax + epsilon) break;
+    // At very large magnitudes a small step can round to no progress.
+    if (t <= previous) break;
+    previous = t;
+    final raw = inverseTransformValue(t, axisScale);
+    if (raw.isFinite) ticks.add(raw);
+  }
+  return ticks.isEmpty ? <double>[min, max] : ticks;
+}
+
+/// Minor tick positions between adjacent [majorTicks].
+///
+/// Returns `subdivisions - 1` evenly spaced interior positions per interval,
+/// in the same coordinate space as [majorTicks] (screen pixels when used by
+/// the painter).
+List<double> computeMinorTicks(List<double> majorTicks, int subdivisions) {
+  if (subdivisions <= 1 || majorTicks.length < 2) return const <double>[];
+  final count = subdivisions.clamp(2, 50);
+  final minor = <double>[];
+  for (var i = 0; i < majorTicks.length - 1; i++) {
+    final start = majorTicks[i];
+    final end = majorTicks[i + 1];
+    if (!start.isFinite || !end.isFinite || end == start) continue;
+    for (var j = 1; j < count; j++) {
+      minor.add(start + (end - start) * j / count);
+    }
+  }
+  return minor;
+}
+
 String _formatDecimalTick(double value) {
   final abs = value.abs();
   final int decimals;
@@ -235,17 +334,32 @@ PlotMargins computePlotMargins(
   if (graphProps?.yVisible ?? true) {
     final tickStyle = TextStyle(fontSize: axisTickSize(graphProps));
     var tickWidth = 0.0;
-    final ticks = axisIntervalCount(graphProps?.yDivisions);
-    for (var i = 0; i <= ticks; i++) {
-      final rawY = inverseTransformValue(
-        minY + (maxY - minY) * i / ticks,
-        yScale,
-      );
+    void measureTick(double rawY) {
       final width = _measureTickText(
         formatTickLabel(rawY, graphProps: graphProps),
         tickStyle,
       ).width;
       if (width > tickWidth) tickWidth = width;
+    }
+
+    if (graphProps?.yDivisions == null) {
+      final rawMinY = inverseTransformValue(minY, yScale);
+      final rawMaxY = inverseTransformValue(maxY, yScale);
+      final ticks = computeNiceTicks(
+        rawMinY,
+        rawMaxY,
+        scale: graphProps?.yScale ?? 'Linear',
+      );
+      for (final rawY in ticks) {
+        measureTick(rawY);
+      }
+    } else {
+      final ticks = axisIntervalCount(graphProps?.yDivisions);
+      for (var i = 0; i <= ticks; i++) {
+        measureTick(
+          inverseTransformValue(minY + (maxY - minY) * i / ticks, yScale),
+        );
+      }
     }
     final bandY = kAxisLabelGap + tickWidth;
     final gapY = (graphProps?.titlePaddingY ?? 20.0).clamp(0.0, 80.0);

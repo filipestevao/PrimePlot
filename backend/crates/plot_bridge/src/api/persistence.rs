@@ -654,6 +654,9 @@ mod tests {
             y_label_latex: true,
             x_divisions: Some(8),
             y_divisions: Some(4),
+            x_subdivisions: Some(5),
+            y_subdivisions: Some(3),
+            show_minor_grid: true,
             number_notation: "Scientific".to_string(),
             scientific_threshold: 7,
             legend_font_size: 16.5,
@@ -700,6 +703,9 @@ mod tests {
         assert!(restored.y_label_latex);
         assert_eq!(restored.x_divisions, Some(8));
         assert_eq!(restored.y_divisions, Some(4));
+        assert_eq!(restored.x_subdivisions, Some(5));
+        assert_eq!(restored.y_subdivisions, Some(3));
+        assert!(restored.show_minor_grid);
         assert_eq!(restored.number_notation, "Scientific");
         assert_eq!(restored.scientific_threshold, 7);
         assert_eq!(restored.legend_font_size, 16.5);

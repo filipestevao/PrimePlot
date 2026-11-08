@@ -2685,8 +2685,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   GraphProperties dco_decode_graph_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 34)
-      throw Exception('unexpected arr length: expect 34 but see ${arr.length}');
+    if (arr.length != 37)
+      throw Exception('unexpected arr length: expect 37 but see ${arr.length}');
     return GraphProperties(
       xMin: dco_decode_opt_box_autoadd_f_64(arr[0]),
       xMax: dco_decode_opt_box_autoadd_f_64(arr[1]),
@@ -2715,13 +2715,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       yLabelLatex: dco_decode_bool(arr[24]),
       xDivisions: dco_decode_opt_box_autoadd_u_32(arr[25]),
       yDivisions: dco_decode_opt_box_autoadd_u_32(arr[26]),
-      numberNotation: dco_decode_String(arr[27]),
-      scientificThreshold: dco_decode_u_32(arr[28]),
-      legendFontSize: dco_decode_f_64(arr[29]),
-      legendOpacity: dco_decode_f_64(arr[30]),
-      legendShowBorder: dco_decode_bool(arr[31]),
-      legendBorderColor: dco_decode_opt_String(arr[32]),
-      legendBackgroundColor: dco_decode_opt_String(arr[33]),
+      xSubdivisions: dco_decode_opt_box_autoadd_u_32(arr[27]),
+      ySubdivisions: dco_decode_opt_box_autoadd_u_32(arr[28]),
+      showMinorGrid: dco_decode_bool(arr[29]),
+      numberNotation: dco_decode_String(arr[30]),
+      scientificThreshold: dco_decode_u_32(arr[31]),
+      legendFontSize: dco_decode_f_64(arr[32]),
+      legendOpacity: dco_decode_f_64(arr[33]),
+      legendShowBorder: dco_decode_bool(arr[34]),
+      legendBorderColor: dco_decode_opt_String(arr[35]),
+      legendBackgroundColor: dco_decode_opt_String(arr[36]),
     );
   }
 
@@ -3133,6 +3136,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_yLabelLatex = sse_decode_bool(deserializer);
     var var_xDivisions = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_yDivisions = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_xSubdivisions = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_ySubdivisions = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_showMinorGrid = sse_decode_bool(deserializer);
     var var_numberNotation = sse_decode_String(deserializer);
     var var_scientificThreshold = sse_decode_u_32(deserializer);
     var var_legendFontSize = sse_decode_f_64(deserializer);
@@ -3168,6 +3174,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       yLabelLatex: var_yLabelLatex,
       xDivisions: var_xDivisions,
       yDivisions: var_yDivisions,
+      xSubdivisions: var_xSubdivisions,
+      ySubdivisions: var_ySubdivisions,
+      showMinorGrid: var_showMinorGrid,
       numberNotation: var_numberNotation,
       scientificThreshold: var_scientificThreshold,
       legendFontSize: var_legendFontSize,
@@ -3650,6 +3659,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.yLabelLatex, serializer);
     sse_encode_opt_box_autoadd_u_32(self.xDivisions, serializer);
     sse_encode_opt_box_autoadd_u_32(self.yDivisions, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.xSubdivisions, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.ySubdivisions, serializer);
+    sse_encode_bool(self.showMinorGrid, serializer);
     sse_encode_String(self.numberNotation, serializer);
     sse_encode_u_32(self.scientificThreshold, serializer);
     sse_encode_f_64(self.legendFontSize, serializer);

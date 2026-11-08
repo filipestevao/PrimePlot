@@ -796,6 +796,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
               : gridBase)
           .withValues(alpha: 0.3)
       ..strokeWidth = 1.0;
+    final paintMinorGrid = Paint()
+      ..color = paintGrid.color.withValues(alpha: paintGrid.color.a * 0.5)
+      ..strokeWidth = 1.0;
 
     Offset? mapToScreen(double x, double y) {
       final tx = transformValue(x, xScale);
@@ -816,13 +819,67 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       );
       final bottom = size.height - marginBottom;
       final right = size.width - marginRight;
-      final xIntervals = axisIntervalCount(graphProps?.xDivisions);
-      final yIntervals = axisIntervalCount(graphProps?.yDivisions);
+      final showMinorGrid = graphProps?.showMinorGrid ?? false;
+      final xTicks = <({double screen, double raw})>[];
+      final yTicks = <({double screen, double raw})>[];
 
-      for (var i = 0; i <= xIntervals; i++) {
-        final t = i / xIntervals;
-        final screenX = marginLeft + plotWidth * t;
+      if (graphProps?.xDivisions == null) {
+        final rawMinX = inverseTransformValue(minX, xScale);
+        final rawMaxX = inverseTransformValue(maxX, xScale);
+        for (final rawX in computeNiceTicks(
+          rawMinX,
+          rawMaxX,
+          scale: graphProps?.xScale ?? 'Linear',
+        )) {
+          final t = transformValue(rawX, xScale);
+          if (t == null) continue;
+          xTicks.add((
+            screen: marginLeft + ((t - minX) / (maxX - minX)) * plotWidth,
+            raw: rawX,
+          ));
+        }
+      } else {
+        final intervals = axisIntervalCount(graphProps?.xDivisions);
+        for (var i = 0; i <= intervals; i++) {
+          final t = i / intervals;
+          xTicks.add((
+            screen: marginLeft + plotWidth * t,
+            raw: inverseTransformValue(minX + (maxX - minX) * t, xScale),
+          ));
+        }
+      }
 
+      if (graphProps?.yDivisions == null) {
+        final rawMinY = inverseTransformValue(minY, yScale);
+        final rawMaxY = inverseTransformValue(maxY, yScale);
+        for (final rawY in computeNiceTicks(
+          rawMinY,
+          rawMaxY,
+          scale: graphProps?.yScale ?? 'Linear',
+        )) {
+          final t = transformValue(rawY, yScale);
+          if (t == null) continue;
+          yTicks.add((
+            screen:
+                marginTop +
+                plotHeight -
+                ((t - minY) / (maxY - minY)) * plotHeight,
+            raw: rawY,
+          ));
+        }
+      } else {
+        final intervals = axisIntervalCount(graphProps?.yDivisions);
+        for (var i = 0; i <= intervals; i++) {
+          final t = i / intervals;
+          yTicks.add((
+            screen: marginTop + plotHeight - plotHeight * t,
+            raw: inverseTransformValue(minY + (maxY - minY) * t, yScale),
+          ));
+        }
+      }
+
+      for (final tick in xTicks) {
+        final screenX = tick.screen;
         if (showGrid) {
           canvas.drawLine(
             Offset(screenX, bottom),
@@ -837,10 +894,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
             Offset(screenX, bottom + 5),
             paintAxis,
           );
-          final rawX = inverseTransformValue(minX + (maxX - minX) * t, xScale);
           final label = TextPainter(
             text: TextSpan(
-              text: formatTickLabel(rawX, graphProps: graphProps),
+              text: formatTickLabel(tick.raw, graphProps: graphProps),
               style: textStyle,
             ),
             textDirection: TextDirection.ltr,
@@ -853,10 +909,32 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         }
       }
 
-      for (var i = 0; i <= yIntervals; i++) {
-        final t = i / yIntervals;
-        final screenY = marginTop + plotHeight - plotHeight * t;
+      final xSubdivisions = graphProps?.xSubdivisions;
+      if (xSubdivisions != null && xSubdivisions > 1) {
+        final minor = computeMinorTicks(
+          xTicks.map((tick) => tick.screen).toList(),
+          xSubdivisions,
+        );
+        for (final screenX in minor) {
+          if (showGrid && showMinorGrid) {
+            canvas.drawLine(
+              Offset(screenX, bottom),
+              Offset(screenX, marginTop),
+              paintMinorGrid,
+            );
+          }
+          if (showXAxis) {
+            canvas.drawLine(
+              Offset(screenX, bottom),
+              Offset(screenX, bottom + 2.5),
+              paintAxis,
+            );
+          }
+        }
+      }
 
+      for (final tick in yTicks) {
+        final screenY = tick.screen;
         if (showGrid) {
           canvas.drawLine(
             Offset(marginLeft, screenY),
@@ -871,10 +949,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
             Offset(marginLeft, screenY),
             paintAxis,
           );
-          final rawY = inverseTransformValue(minY + (maxY - minY) * t, yScale);
           final label = TextPainter(
             text: TextSpan(
-              text: formatTickLabel(rawY, graphProps: graphProps),
+              text: formatTickLabel(tick.raw, graphProps: graphProps),
               style: textStyle,
             ),
             textDirection: TextDirection.ltr,
@@ -887,6 +964,30 @@ class _MultiSeriesPlotPainter extends CustomPainter {
               screenY - label.height / 2,
             ),
           );
+        }
+      }
+
+      final ySubdivisions = graphProps?.ySubdivisions;
+      if (ySubdivisions != null && ySubdivisions > 1) {
+        final minor = computeMinorTicks(
+          yTicks.map((tick) => tick.screen).toList(),
+          ySubdivisions,
+        );
+        for (final screenY in minor) {
+          if (showGrid && showMinorGrid) {
+            canvas.drawLine(
+              Offset(marginLeft, screenY),
+              Offset(right, screenY),
+              paintMinorGrid,
+            );
+          }
+          if (showYAxis) {
+            canvas.drawLine(
+              Offset(marginLeft - 2.5, screenY),
+              Offset(marginLeft, screenY),
+              paintAxis,
+            );
+          }
         }
       }
 

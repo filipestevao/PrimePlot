@@ -32,6 +32,9 @@ extension GraphPropertiesExt on GraphProperties {
     bool? yLabelLatex,
     int? Function()? xDivisions,
     int? Function()? yDivisions,
+    int? Function()? xSubdivisions,
+    int? Function()? ySubdivisions,
+    bool? showMinorGrid,
     String? numberNotation,
     int? scientificThreshold,
     double? legendFontSize,
@@ -70,6 +73,13 @@ extension GraphPropertiesExt on GraphProperties {
       yLabelLatex: yLabelLatex ?? this.yLabelLatex,
       xDivisions: xDivisions != null ? xDivisions() : this.xDivisions,
       yDivisions: yDivisions != null ? yDivisions() : this.yDivisions,
+      xSubdivisions: xSubdivisions != null
+          ? xSubdivisions()
+          : this.xSubdivisions,
+      ySubdivisions: ySubdivisions != null
+          ? ySubdivisions()
+          : this.ySubdivisions,
+      showMinorGrid: showMinorGrid ?? this.showMinorGrid,
       numberNotation: numberNotation ?? this.numberNotation,
       scientificThreshold: scientificThreshold ?? this.scientificThreshold,
       legendFontSize: legendFontSize ?? this.legendFontSize,

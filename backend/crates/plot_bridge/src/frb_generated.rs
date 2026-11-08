@@ -2713,6 +2713,9 @@ impl SseDecode for crate::api::properties::GraphProperties {
         let mut var_yLabelLatex = <bool>::sse_decode(deserializer);
         let mut var_xDivisions = <Option<u32>>::sse_decode(deserializer);
         let mut var_yDivisions = <Option<u32>>::sse_decode(deserializer);
+        let mut var_xSubdivisions = <Option<u32>>::sse_decode(deserializer);
+        let mut var_ySubdivisions = <Option<u32>>::sse_decode(deserializer);
+        let mut var_showMinorGrid = <bool>::sse_decode(deserializer);
         let mut var_numberNotation = <String>::sse_decode(deserializer);
         let mut var_scientificThreshold = <u32>::sse_decode(deserializer);
         let mut var_legendFontSize = <f64>::sse_decode(deserializer);
@@ -2748,6 +2751,9 @@ impl SseDecode for crate::api::properties::GraphProperties {
             y_label_latex: var_yLabelLatex,
             x_divisions: var_xDivisions,
             y_divisions: var_yDivisions,
+            x_subdivisions: var_xSubdivisions,
+            y_subdivisions: var_ySubdivisions,
+            show_minor_grid: var_showMinorGrid,
             number_notation: var_numberNotation,
             scientific_threshold: var_scientificThreshold,
             legend_font_size: var_legendFontSize,
@@ -3414,6 +3420,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::GraphProperties {
             self.y_label_latex.into_into_dart().into_dart(),
             self.x_divisions.into_into_dart().into_dart(),
             self.y_divisions.into_into_dart().into_dart(),
+            self.x_subdivisions.into_into_dart().into_dart(),
+            self.y_subdivisions.into_into_dart().into_dart(),
+            self.show_minor_grid.into_into_dart().into_dart(),
             self.number_notation.into_into_dart().into_dart(),
             self.scientific_threshold.into_into_dart().into_dart(),
             self.legend_font_size.into_into_dart().into_dart(),
@@ -3749,6 +3758,9 @@ impl SseEncode for crate::api::properties::GraphProperties {
         <bool>::sse_encode(self.y_label_latex, serializer);
         <Option<u32>>::sse_encode(self.x_divisions, serializer);
         <Option<u32>>::sse_encode(self.y_divisions, serializer);
+        <Option<u32>>::sse_encode(self.x_subdivisions, serializer);
+        <Option<u32>>::sse_encode(self.y_subdivisions, serializer);
+        <bool>::sse_encode(self.show_minor_grid, serializer);
         <String>::sse_encode(self.number_notation, serializer);
         <u32>::sse_encode(self.scientific_threshold, serializer);
         <f64>::sse_encode(self.legend_font_size, serializer);

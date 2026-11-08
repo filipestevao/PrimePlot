@@ -201,6 +201,15 @@ class GraphProperties {
   /// Number of grid intervals on the Y axis. `None` = historical 5.
   final int? yDivisions;
 
+  /// Minor sub-intervals between X-axis major ticks. `None` = no minor ticks.
+  final int? xSubdivisions;
+
+  /// Minor sub-intervals between Y-axis major ticks. `None` = no minor ticks.
+  final int? ySubdivisions;
+
+  /// Draw grid lines at minor tick positions (requires a subdivision count).
+  final bool showMinorGrid;
+
   /// Tick-number notation: `"Auto"`, `"Decimal"`, or `"Scientific"`.
   final String numberNotation;
 
@@ -252,6 +261,9 @@ class GraphProperties {
     required this.yLabelLatex,
     this.xDivisions,
     this.yDivisions,
+    this.xSubdivisions,
+    this.ySubdivisions,
+    required this.showMinorGrid,
     required this.numberNotation,
     required this.scientificThreshold,
     required this.legendFontSize,
@@ -293,6 +305,9 @@ class GraphProperties {
       yLabelLatex.hashCode ^
       xDivisions.hashCode ^
       yDivisions.hashCode ^
+      xSubdivisions.hashCode ^
+      ySubdivisions.hashCode ^
+      showMinorGrid.hashCode ^
       numberNotation.hashCode ^
       scientificThreshold.hashCode ^
       legendFontSize.hashCode ^
@@ -333,6 +348,9 @@ class GraphProperties {
           yLabelLatex == other.yLabelLatex &&
           xDivisions == other.xDivisions &&
           yDivisions == other.yDivisions &&
+          xSubdivisions == other.xSubdivisions &&
+          ySubdivisions == other.ySubdivisions &&
+          showMinorGrid == other.showMinorGrid &&
           numberNotation == other.numberNotation &&
           scientificThreshold == other.scientificThreshold &&
           legendFontSize == other.legendFontSize &&

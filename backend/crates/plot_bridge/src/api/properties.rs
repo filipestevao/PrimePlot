@@ -75,6 +75,15 @@ pub struct GraphProperties {
     /// Number of grid intervals on the Y axis. `None` = historical 5.
     #[serde(default)]
     pub y_divisions: Option<u32>,
+    /// Minor sub-intervals between X-axis major ticks. `None` = no minor ticks.
+    #[serde(default)]
+    pub x_subdivisions: Option<u32>,
+    /// Minor sub-intervals between Y-axis major ticks. `None` = no minor ticks.
+    #[serde(default)]
+    pub y_subdivisions: Option<u32>,
+    /// Draw grid lines at minor tick positions (requires a subdivision count).
+    #[serde(default)]
+    pub show_minor_grid: bool,
     /// Tick-number notation: `"Auto"`, `"Decimal"`, or `"Scientific"`.
     #[serde(default = "default_number_notation")]
     pub number_notation: String,
@@ -162,6 +171,9 @@ impl Default for GraphProperties {
             y_label_latex: false,
             x_divisions: None,
             y_divisions: None,
+            x_subdivisions: None,
+            y_subdivisions: None,
+            show_minor_grid: false,
             number_notation: default_number_notation(),
             scientific_threshold: default_scientific_threshold(),
             legend_font_size: default_legend_font_size(),
@@ -510,12 +522,18 @@ mod tests {
         .unwrap();
         assert_eq!(legacy.x_divisions, None);
         assert_eq!(legacy.y_divisions, None);
+        assert_eq!(legacy.x_subdivisions, None);
+        assert_eq!(legacy.y_subdivisions, None);
+        assert!(!legacy.show_minor_grid);
         assert_eq!(legacy.number_notation, "Auto");
         assert_eq!(legacy.scientific_threshold, 5);
 
         let fresh = GraphProperties::default();
         assert_eq!(fresh.x_divisions, None);
         assert_eq!(fresh.y_divisions, None);
+        assert_eq!(fresh.x_subdivisions, None);
+        assert_eq!(fresh.y_subdivisions, None);
+        assert!(!fresh.show_minor_grid);
         assert_eq!(fresh.number_notation, "Auto");
         assert_eq!(fresh.scientific_threshold, 5);
     }
