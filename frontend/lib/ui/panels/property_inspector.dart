@@ -849,7 +849,7 @@ class _GraphInspector extends StatelessWidget {
                   child: PrimeNumberField(
                     value: props.xDivisions?.toDouble(),
                     allowAuto: true,
-                    autoLabel: 'Auto (5)',
+                    autoLabel: 'Auto',
                     step: 1.0,
                     min: 1.0,
                     max: 30.0,
@@ -869,7 +869,7 @@ class _GraphInspector extends StatelessWidget {
                   child: PrimeNumberField(
                     value: props.yDivisions?.toDouble(),
                     allowAuto: true,
-                    autoLabel: 'Auto (5)',
+                    autoLabel: 'Auto',
                     step: 1.0,
                     min: 1.0,
                     max: 30.0,

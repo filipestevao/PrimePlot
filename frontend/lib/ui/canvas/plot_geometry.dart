@@ -342,24 +342,16 @@ PlotMargins computePlotMargins(
       if (width > tickWidth) tickWidth = width;
     }
 
-    if (graphProps?.yDivisions == null) {
-      final rawMinY = inverseTransformValue(minY, yScale);
-      final rawMaxY = inverseTransformValue(maxY, yScale);
-      final ticks = computeNiceTicks(
-        rawMinY,
-        rawMaxY,
-        scale: graphProps?.yScale ?? 'Linear',
-      );
-      for (final rawY in ticks) {
-        measureTick(rawY);
-      }
-    } else {
-      final ticks = axisIntervalCount(graphProps?.yDivisions);
-      for (var i = 0; i <= ticks; i++) {
-        measureTick(
-          inverseTransformValue(minY + (maxY - minY) * i / ticks, yScale),
-        );
-      }
+    final rawMinY = inverseTransformValue(minY, yScale);
+    final rawMaxY = inverseTransformValue(maxY, yScale);
+    final ticks = computeNiceTicks(
+      rawMinY,
+      rawMaxY,
+      targetIntervals: axisIntervalCount(graphProps?.yDivisions),
+      scale: graphProps?.yScale ?? 'Linear',
+    );
+    for (final rawY in ticks) {
+      measureTick(rawY);
     }
     final bandY = kAxisLabelGap + tickWidth;
     final gapY = (graphProps?.titlePaddingY ?? 20.0).clamp(0.0, 80.0);

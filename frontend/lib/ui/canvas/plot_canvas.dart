@@ -823,59 +823,39 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       final xTicks = <({double screen, double raw})>[];
       final yTicks = <({double screen, double raw})>[];
 
-      if (graphProps?.xDivisions == null) {
-        final rawMinX = inverseTransformValue(minX, xScale);
-        final rawMaxX = inverseTransformValue(maxX, xScale);
-        for (final rawX in computeNiceTicks(
-          rawMinX,
-          rawMaxX,
-          scale: graphProps?.xScale ?? 'Linear',
-        )) {
-          final t = transformValue(rawX, xScale);
-          if (t == null) continue;
-          xTicks.add((
-            screen: marginLeft + ((t - minX) / (maxX - minX)) * plotWidth,
-            raw: rawX,
-          ));
-        }
-      } else {
-        final intervals = axisIntervalCount(graphProps?.xDivisions);
-        for (var i = 0; i <= intervals; i++) {
-          final t = i / intervals;
-          xTicks.add((
-            screen: marginLeft + plotWidth * t,
-            raw: inverseTransformValue(minX + (maxX - minX) * t, xScale),
-          ));
-        }
+      final rawMinX = inverseTransformValue(minX, xScale);
+      final rawMaxX = inverseTransformValue(maxX, xScale);
+      for (final rawX in computeNiceTicks(
+        rawMinX,
+        rawMaxX,
+        targetIntervals: axisIntervalCount(graphProps?.xDivisions),
+        scale: graphProps?.xScale ?? 'Linear',
+      )) {
+        final t = transformValue(rawX, xScale);
+        if (t == null) continue;
+        xTicks.add((
+          screen: marginLeft + ((t - minX) / (maxX - minX)) * plotWidth,
+          raw: rawX,
+        ));
       }
 
-      if (graphProps?.yDivisions == null) {
-        final rawMinY = inverseTransformValue(minY, yScale);
-        final rawMaxY = inverseTransformValue(maxY, yScale);
-        for (final rawY in computeNiceTicks(
-          rawMinY,
-          rawMaxY,
-          scale: graphProps?.yScale ?? 'Linear',
-        )) {
-          final t = transformValue(rawY, yScale);
-          if (t == null) continue;
-          yTicks.add((
-            screen:
-                marginTop +
-                plotHeight -
-                ((t - minY) / (maxY - minY)) * plotHeight,
-            raw: rawY,
-          ));
-        }
-      } else {
-        final intervals = axisIntervalCount(graphProps?.yDivisions);
-        for (var i = 0; i <= intervals; i++) {
-          final t = i / intervals;
-          yTicks.add((
-            screen: marginTop + plotHeight - plotHeight * t,
-            raw: inverseTransformValue(minY + (maxY - minY) * t, yScale),
-          ));
-        }
+      final rawMinY = inverseTransformValue(minY, yScale);
+      final rawMaxY = inverseTransformValue(maxY, yScale);
+      for (final rawY in computeNiceTicks(
+        rawMinY,
+        rawMaxY,
+        targetIntervals: axisIntervalCount(graphProps?.yDivisions),
+        scale: graphProps?.yScale ?? 'Linear',
+      )) {
+        final t = transformValue(rawY, yScale);
+        if (t == null) continue;
+        yTicks.add((
+          screen:
+              marginTop +
+              plotHeight -
+              ((t - minY) / (maxY - minY)) * plotHeight,
+          raw: rawY,
+        ));
       }
 
       for (final tick in xTicks) {
