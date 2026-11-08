@@ -432,7 +432,8 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   /// CallbackShortcuts at the root only see key events while a node below
   /// them is focused.
   void _onFocusChanged() {
-    if (_focusIsUsable(FocusManager.instance.primaryFocus)) return;
+    final primary = FocusManager.instance.primaryFocus;
+    if (_focusIsUsable(primary)) return;
     // Focus can be transiently null while routes/overlays tear down; check
     // again once the frame settles before stealing focus.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -442,25 +443,32 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
 
   /// A focus that can actually deliver key events to the app shortcuts.
   /// When a focused widget is disposed (drawer pop, help overlay removal)
-  /// Flutter falls back to the [FocusManager.rootScope], which is a valid
-  /// focused node but sits ABOVE the shortcut map, so it must be treated
-  /// as "lost" alongside null/detached nodes.
-  bool _focusIsUsable(FocusNode? node) =>
-      node != null &&
-      node.context != null &&
-      node.hasFocus &&
-      !identical(node, FocusManager.instance.rootScope);
+  /// Flutter can fall back to the [FocusManager.rootScope] or to the route's
+  /// [FocusScopeNode]. Both are valid focused nodes but sit ABOVE the
+  /// shortcut map, so they must be treated as "lost" alongside null/detached
+  /// nodes. Any ancestor of [_rootFocus] is outside the shortcut subtree.
+  bool _focusIsUsable(FocusNode? node) {
+    if (node == null ||
+        node.context == null ||
+        !node.hasFocus ||
+        identical(node, FocusManager.instance.rootScope)) {
+      return false;
+    }
+    return !_rootFocus.ancestors.any((ancestor) => identical(ancestor, node));
+  }
 
   void _anchorFocusIfLost() {
-    if (!_focusIsUsable(FocusManager.instance.primaryFocus)) {
+    final primary = FocusManager.instance.primaryFocus;
+    if (!_focusIsUsable(primary)) {
       _rootFocus.requestFocus();
     }
   }
 
-  /// Inspector rebuilds can dispose the widget that currently owns focus.
-  /// Check once after the frame settles and re-anchor only if focus was
-  /// actually lost, so typing in a live field is never interrupted.
-  void _onPropertyMutation() {
+  /// Inspector rebuilds and pointer interactions can leave focus on a route
+  /// scope above the shortcut map. Check once after the frame settles and
+  /// re-anchor only if focus was actually lost, so typing in a live field is
+  /// never interrupted.
+  void _scheduleFocusRestore() {
     if (_focusRestoreScheduled) return;
     _focusRestoreScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -468,6 +476,8 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
       if (mounted) _anchorFocusIfLost();
     });
   }
+
+  void _onPropertyMutation() => _scheduleFocusRestore();
 
   /// Native GTK file dialogs (open/save/import) run outside the Flutter
   /// window; on return the focus tree can be stale, killing shortcuts.
@@ -665,7 +675,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
       child: Focus(
         focusNode: _rootFocus,
         autofocus: true,
-        child: DropTarget(
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => _scheduleFocusRestore(),
+          child: DropTarget(
       onDragEntered: (details) {
         setState(() {
           _dragging = true;
@@ -1007,6 +1020,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
             ),
         ],
       ),
+        ),
         ),
       ),
     );
