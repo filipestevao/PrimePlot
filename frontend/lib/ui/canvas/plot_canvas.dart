@@ -896,6 +896,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         final minor = computeMinorTicks(
           xTicks.map((tick) => tick.screen).toList(),
           xSubdivisions,
+          start: marginLeft,
+          end: right,
         );
         for (final screenX in minor) {
           if (showGrid && showMinorGrid) {
@@ -954,6 +956,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         final minor = computeMinorTicks(
           yTicks.map((tick) => tick.screen).toList(),
           ySubdivisions,
+          start: marginTop,
+          end: bottom,
         );
         for (final screenY in minor) {
           if (showGrid && showMinorGrid) {

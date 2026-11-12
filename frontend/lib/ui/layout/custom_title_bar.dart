@@ -30,71 +30,83 @@ class CustomTitleBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left: Menu & Brand
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0),
-            child: Row(
+          // Equal-flex side columns keep the center cluster fixed at the
+          // window center regardless of the displayed filename width.
+          Expanded(
+            child: Stack(
               children: [
-                IconButton(
-                  icon: Icon(Icons.menu, size: 20, color: PrimeTheme.textSecondary),
-                  splashRadius: 20,
-                  onPressed: () {
-                    Scaffold.of(context).openDrawer();
-                  },
-                ),
-                const SizedBox(width: 8),
-                const PrimeIcon(size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  ProjectState.instance.appVersion.isEmpty
-                      ? 'PrimePlot'
-                      : 'PrimePlot ${ProjectState.instance.appVersion}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: PrimeTheme.textPrimary,
-                    letterSpacing: 0.5,
+                const Positioned.fill(child: _TitleBarDragArea()),
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.menu,
+                            size: 20,
+                            color: PrimeTheme.textSecondary,
+                          ),
+                          splashRadius: 20,
+                          onPressed: () {
+                            Scaffold.of(context).openDrawer();
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        const PrimeIcon(size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          ProjectState.instance.appVersion.isEmpty
+                              ? 'PrimePlot'
+                              : 'PrimePlot ${ProjectState.instance.appVersion}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: PrimeTheme.textPrimary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Current file + dirty star, e.g. "— my_exp.primeplot *".
+                        Flexible(
+                          child: ListenableBuilder(
+                            listenable: Listenable.merge([
+                              ProjectState.instance.currentFilePath,
+                              ProjectState.instance.isDirty,
+                            ]),
+                            builder: (context, _) {
+                              final name =
+                                  ProjectState.instance.displayFileName;
+                              final dirty =
+                                  ProjectState.instance.isDirty.value;
+                              final version = ProjectState.instance.appVersion;
+                              final brand = version.isEmpty
+                                  ? 'PrimePlot'
+                                  : 'PrimePlot $version';
+                              final title = '— $name${dirty ? ' *' : ''}';
+                              // Mirror into the OS/taskbar title (fire-and-forget).
+                              windowManager.setTitle('$brand $title');
+                              return Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: PrimeTheme.textSecondary.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                  letterSpacing: 0.2,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Current file + dirty star, e.g. "— my_exp.primeplot *".
-                ListenableBuilder(
-                  listenable: Listenable.merge([
-                    ProjectState.instance.currentFilePath,
-                    ProjectState.instance.isDirty,
-                  ]),
-                  builder: (context, _) {
-                    final name = ProjectState.instance.displayFileName;
-                    final dirty = ProjectState.instance.isDirty.value;
-                    final version = ProjectState.instance.appVersion;
-                    final brand = version.isEmpty
-                        ? 'PrimePlot'
-                        : 'PrimePlot $version';
-                    final title = '— $name${dirty ? ' *' : ''}';
-                    // Mirror into the OS/taskbar title (fire-and-forget).
-                    windowManager.setTitle('$brand $title');
-                    return Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: PrimeTheme.textSecondary.withValues(alpha: 0.8),
-                        letterSpacing: 0.2,
-                      ),
-                    );
-                  },
-                ),
               ],
-            ),
-          ),
-          
-          // Left Flexible Drag Area
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onPanStart: (details) => windowManager.startDragging(),
-              onDoubleTap: _toggleMaximize,
-              child: Container(),
             ),
           ),
 
@@ -110,20 +122,34 @@ class CustomTitleBar extends StatelessWidget {
             ],
           ),
 
-          // Right Flexible Drag Area
+          // Right: drag space + window controls
           Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onPanStart: (details) => windowManager.startDragging(),
-              onDoubleTap: _toggleMaximize,
-              child: Container(),
+            child: Stack(
+              children: [
+                const Positioned.fill(child: _TitleBarDragArea()),
+                const Align(
+                  alignment: Alignment.centerRight,
+                  child: WindowButtons(),
+                ),
+              ],
             ),
           ),
-
-          // Right: Window Controls
-          const WindowButtons(),
         ],
       ),
+    );
+  }
+}
+
+class _TitleBarDragArea extends StatelessWidget {
+  const _TitleBarDragArea();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onPanStart: (details) => windowManager.startDragging(),
+      onDoubleTap: _toggleMaximize,
+      child: const SizedBox.expand(),
     );
   }
 }
@@ -183,6 +209,7 @@ class WindowButtons extends StatelessWidget {  const WindowButtons({super.key});
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         _buildButton(Icons.remove, () => windowManager.minimize()),
         _buildButton(Icons.crop_square, _toggleMaximize),

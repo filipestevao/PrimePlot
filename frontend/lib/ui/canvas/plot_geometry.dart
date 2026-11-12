@@ -124,20 +124,89 @@ List<double> computeNiceTicks(
 ///
 /// Returns `subdivisions - 1` evenly spaced interior positions per interval,
 /// in the same coordinate space as [majorTicks] (screen pixels when used by
-/// the painter).
-List<double> computeMinorTicks(List<double> majorTicks, int subdivisions) {
+/// the painter). When [start] and [end] are supplied, partial intervals at
+/// the visible edges are filled too, using the adjacent major spacing. This
+/// keeps minor ticks present when the data range starts/ends between nice
+/// major ticks. Positions are sorted when edge bounds are supplied.
+List<double> computeMinorTicks(
+  List<double> majorTicks,
+  int subdivisions, {
+  double? start,
+  double? end,
+}) {
   if (subdivisions <= 1 || majorTicks.length < 2) return const <double>[];
   final count = subdivisions.clamp(2, 50);
   final minor = <double>[];
   for (var i = 0; i < majorTicks.length - 1; i++) {
-    final start = majorTicks[i];
-    final end = majorTicks[i + 1];
-    if (!start.isFinite || !end.isFinite || end == start) continue;
+    final intervalStart = majorTicks[i];
+    final intervalEnd = majorTicks[i + 1];
+    if (!intervalStart.isFinite ||
+        !intervalEnd.isFinite ||
+        intervalEnd == intervalStart) {
+      continue;
+    }
     for (var j = 1; j < count; j++) {
-      minor.add(start + (end - start) * j / count);
+      minor.add(intervalStart + (intervalEnd - intervalStart) * j / count);
     }
   }
-  return minor;
+
+  if (start == null || end == null) return minor;
+
+  final ordered = majorTicks.where((tick) => tick.isFinite).toList()..sort();
+  if (ordered.length < 2) return minor;
+  final lower = math.min(start, end);
+  final upper = math.max(start, end);
+  final leadingInterval = ordered[1] - ordered[0];
+  final trailingInterval = ordered.last - ordered[ordered.length - 2];
+  if (!leadingInterval.isFinite ||
+      leadingInterval <= 0 ||
+      !trailingInterval.isFinite ||
+      trailingInterval <= 0) {
+    return minor;
+  }
+
+  // Fill the partial interval before the first major tick.
+  var previous = ordered.first - leadingInterval;
+  final leadingStep = leadingInterval / count;
+  for (
+    var guard = 0;
+    previous + leadingInterval > lower && guard < 1000;
+    guard++
+  ) {
+    for (var j = 1; j < count; j++) {
+      final position = previous + leadingStep * j;
+      if (position >= lower && position < ordered.first) {
+        minor.add(position);
+      }
+    }
+    previous -= leadingInterval;
+  }
+
+  // Fill the partial interval after the last major tick.
+  var next = ordered.last + trailingInterval;
+  final trailingStep = trailingInterval / count;
+  for (
+    var guard = 0;
+    next - trailingInterval < upper && guard < 1000;
+    guard++
+  ) {
+    for (var j = 1; j < count; j++) {
+      final position = next - trailingInterval + trailingStep * j;
+      if (position > ordered.last && position <= upper) {
+        minor.add(position);
+      }
+    }
+    next += trailingInterval;
+  }
+
+  minor.sort();
+  final unique = <double>[];
+  for (final position in minor) {
+    if (unique.isEmpty || (position - unique.last).abs() > 1e-9) {
+      unique.add(position);
+    }
+  }
+  return unique;
 }
 
 String _formatDecimalTick(double value) {
