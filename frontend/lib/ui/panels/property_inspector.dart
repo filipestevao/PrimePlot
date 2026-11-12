@@ -668,9 +668,9 @@ class _GraphInspector extends StatelessWidget {
                             thumbColor: Colors.white,
                           ),
                           child: Slider(
-                            value: props.tickFontSize.clamp(6.0, 18.0),
+                            value: props.tickFontSize.clamp(6.0, 36.0),
                             min: 6.0,
-                            max: 18.0,
+                            max: 36.0,
                             onChanged: (val) {
                               ProjectState.instance.updateGraphProperties(
                                 nodeId,
@@ -687,7 +687,7 @@ class _GraphInspector extends StatelessWidget {
                           value: props.tickFontSize,
                           step: 0.5,
                           min: 6.0,
-                          max: 18.0,
+                          max: 36.0,
                           precision: 1,
                           onChanged: (val) {
                             if (val != null) {
@@ -1917,6 +1917,60 @@ class _TableInspector extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (props.markerVisible)
+                  PropertyRow(
+                    label: 'Marker Size',
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 2,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 5,
+                              ),
+                              overlayShape: const RoundSliderOverlayShape(
+                                overlayRadius: 10,
+                              ),
+                              activeTrackColor: PrimeTheme.primaryAccent,
+                              inactiveTrackColor: PrimeTheme.borderSide,
+                              thumbColor: Colors.white,
+                            ),
+                            child: Slider(
+                              value: props.markerSize.clamp(1.0, 16.0),
+                              min: 1.0,
+                              max: 16.0,
+                              onChanged: (val) {
+                                ProjectState.instance.updateTableProperties(
+                                  nodeId,
+                                  props.copyWith(markerSize: val),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          width: 58,
+                          child: PrimeNumberField(
+                            value: props.markerSize,
+                            step: 0.5,
+                            min: 1.0,
+                            max: 20.0,
+                            precision: 1,
+                            onChanged: (val) {
+                              if (val != null) {
+                                ProjectState.instance.updateTableProperties(
+                                  nodeId,
+                                  props.copyWith(markerSize: val),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ],

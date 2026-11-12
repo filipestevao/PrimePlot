@@ -284,6 +284,7 @@ class PlotCanvas extends StatelessWidget {
                             markerVisible: false,
                             lineColor: '#1F77B4',
                             markerColor: '#000000',
+                            markerSize: 4.0,
                             legendLatex: false,
                           ),
                         );
@@ -356,6 +357,7 @@ class PlotCanvas extends StatelessWidget {
                             markerVisible: false,
                             lineColor: fprops.lineColor,
                             markerColor: '#000000',
+                            markerSize: 4.0,
                             legendLatex: fprops.legendLatex,
                           ),
                         );
@@ -1068,30 +1070,43 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           : Colors.black;
       final linePaint = Paint()
         ..color = dimmed ? lineColor.withValues(alpha: 0.45) : lineColor
-        ..strokeWidth =
-            (props?.lineThickness ?? 2.5) + (isActive ? 0.75 : 0.0)
+        ..strokeWidth = props?.lineThickness ?? 2.5
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..isAntiAlias = true;
+      final glowPaint = isActive
+          ? (Paint()
+              ..color = lineColor.withValues(alpha: 0.3)
+              ..strokeWidth = (props?.lineThickness ?? 2.5) + 4.0
+              ..style = PaintingStyle.stroke
+              ..strokeCap = StrokeCap.round
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0)
+              ..isAntiAlias = true)
+          : null;
 
       final len = math.min(xs.length, ys.length);
       if (props?.lineVisible ?? true) {
+        final lineStyle = props?.lineStyle ?? 'Full';
+        void drawSegment(List<Offset> segment) {
+          // Glow first so the configured line keeps its exact color and
+          // thickness; the blur only spreads outside it.
+          if (glowPaint != null) {
+            _drawStyledPath(canvas, segment, glowPaint, 'Full');
+          }
+          _drawStyledPath(canvas, segment, linePaint, lineStyle);
+        }
+
         var segment = <Offset>[];
         for (var i = 0; i < len; i++) {
           final point = mapToScreen(xs[i], ys[i]);
           if (point == null) {
-            _drawStyledPath(
-              canvas,
-              segment,
-              linePaint,
-              props?.lineStyle ?? 'Full',
-            );
+            drawSegment(segment);
             segment = <Offset>[];
           } else {
             segment.add(point);
           }
         }
-        _drawStyledPath(canvas, segment, linePaint, props?.lineStyle ?? 'Full');
+        drawSegment(segment);
       }
 
       if (props?.markerVisible ?? false) {
@@ -1109,6 +1124,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
           ..isAntiAlias = true;
+        final markerRadius = (props?.markerSize ?? 4.0)
+            .clamp(1.0, 20.0)
+            .toDouble();
         for (var i = 0; i < len; i++) {
           final point = mapToScreen(xs[i], ys[i]);
           if (point != null) {
@@ -1118,6 +1136,7 @@ class _MultiSeriesPlotPainter extends CustomPainter {
               props?.markerType ?? 'Circle',
               markerPaint,
               markerStroke,
+              radius: markerRadius,
             );
           }
         }
@@ -1193,9 +1212,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     Offset point,
     String type,
     Paint fill,
-    Paint stroke,
-  ) {
-    const radius = 4.0;
+    Paint stroke, {
+    double radius = 4.0,
+  }) {
     final normalized = type.toLowerCase();
     if (normalized == 'none') return;
 

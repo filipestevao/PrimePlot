@@ -195,6 +195,9 @@ pub struct TableProperties {
     pub marker_visible: bool,
     pub line_color: String,
     pub marker_color: String,
+    /// Marker radius in logical pixels.
+    #[serde(default = "default_marker_size")]
+    pub marker_size: f64,
     /// Rich-text (LaTeX) rendering for the legend display name.
     #[serde(default)]
     pub legend_latex: bool,
@@ -211,6 +214,7 @@ impl Default for TableProperties {
             marker_visible: false,
             line_color: "#1F77B4".to_string(),
             marker_color: "#000000".to_string(),
+            marker_size: default_marker_size(),
             legend_latex: false,
         }
     }
@@ -268,6 +272,10 @@ fn default_line_thickness() -> f64 {
 
 fn default_line_style() -> String {
     "Solid".to_string()
+}
+
+fn default_marker_size() -> f64 {
+    4.0
 }
 
 impl Default for FunctionProperties {
@@ -575,6 +583,16 @@ mod tests {
         let function: FunctionProperties =
             serde_json::from_str(r#"{"equation":"x","legend_display_name":"f"}"#).unwrap();
         assert!(!function.legend_latex);
+    }
+
+    #[test]
+    fn legacy_table_props_migrate_with_default_marker_size() {
+        // Pre-Step-X bundles carry no marker_size field.
+        let legacy: TableProperties = serde_json::from_str(
+            r##"{"legend_display_name":"Series","line_style":"Full","line_thickness":2.5,"line_visible":true,"marker_type":"Circle","marker_visible":false,"line_color":"#1F77B4","marker_color":"#000000"}"##,
+        )
+        .unwrap();
+        assert_eq!(legacy.marker_size, 4.0);
     }
 
     #[test]

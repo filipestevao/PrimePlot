@@ -36,7 +36,7 @@ double axisTitleSize(GraphProperties? graphProps) =>
 
 /// Single source for tick-number sizing.
 double axisTickSize(GraphProperties? graphProps) =>
-    (graphProps?.tickFontSize ?? 10.0).clamp(6.0, 28.0);
+    (graphProps?.tickFontSize ?? 10.0).clamp(6.0, 40.0);
 
 /// Number of grid intervals on an axis; `None` keeps the historical 5.
 int axisIntervalCount(int? divisions) => (divisions ?? 5).clamp(1, 50);

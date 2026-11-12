@@ -2890,8 +2890,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TableProperties dco_decode_table_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return TableProperties(
       legendDisplayName: dco_decode_String(arr[0]),
       lineStyle: dco_decode_String(arr[1]),
@@ -2901,7 +2901,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       markerVisible: dco_decode_bool(arr[5]),
       lineColor: dco_decode_String(arr[6]),
       markerColor: dco_decode_String(arr[7]),
-      legendLatex: dco_decode_bool(arr[8]),
+      markerSize: dco_decode_f_64(arr[8]),
+      legendLatex: dco_decode_bool(arr[9]),
     );
   }
 
@@ -3420,6 +3421,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_markerVisible = sse_decode_bool(deserializer);
     var var_lineColor = sse_decode_String(deserializer);
     var var_markerColor = sse_decode_String(deserializer);
+    var var_markerSize = sse_decode_f_64(deserializer);
     var var_legendLatex = sse_decode_bool(deserializer);
     return TableProperties(
       legendDisplayName: var_legendDisplayName,
@@ -3430,6 +3432,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       markerVisible: var_markerVisible,
       lineColor: var_lineColor,
       markerColor: var_markerColor,
+      markerSize: var_markerSize,
       legendLatex: var_legendLatex,
     );
   }
@@ -3880,6 +3883,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.markerVisible, serializer);
     sse_encode_String(self.lineColor, serializer);
     sse_encode_String(self.markerColor, serializer);
+    sse_encode_f_64(self.markerSize, serializer);
     sse_encode_bool(self.legendLatex, serializer);
   }
 

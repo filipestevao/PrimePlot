@@ -674,6 +674,7 @@ mod tests {
             "table_p5".to_string(),
             crate::api::properties::TableProperties {
                 legend_latex: true,
+                marker_size: 8.0,
                 ..Default::default()
             },
         )]));
@@ -722,6 +723,7 @@ mod tests {
 
         let tables = crate::api::properties::snapshot_table_props();
         assert!(tables["table_p5"].legend_latex);
+        assert_eq!(tables["table_p5"].marker_size, 8.0);
         let functions = crate::api::properties::snapshot_function_props();
         assert!(functions["function_p5"].legend_latex);
         assert_eq!(functions["function_p5"].equation, "x^2");

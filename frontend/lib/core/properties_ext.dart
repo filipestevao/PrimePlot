@@ -105,6 +105,7 @@ extension TablePropertiesExt on TableProperties {
     bool? markerVisible,
     String? lineColor,
     String? markerColor,
+    double? markerSize,
     bool? legendLatex,
   }) {
     return TableProperties(
@@ -116,6 +117,7 @@ extension TablePropertiesExt on TableProperties {
       markerVisible: markerVisible ?? this.markerVisible,
       lineColor: lineColor ?? this.lineColor,
       markerColor: markerColor ?? this.markerColor,
+      markerSize: markerSize ?? this.markerSize,
       legendLatex: legendLatex ?? this.legendLatex,
     );
   }
