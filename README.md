@@ -1,4 +1,6 @@
-# PrimePlot
+<h1>
+  <img src="frontend/assets/branding/logo-on-light.svg" alt="PrimePlot logo" width="25%">
+</h1>
 
 ![Status](https://img.shields.io/badge/status-alpha-orange)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
