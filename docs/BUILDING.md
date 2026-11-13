@@ -1,6 +1,6 @@
-# Installation
+# Build from Source
 
-PrimePlot is still in early development, so there are no pre-built binaries yet. The only way to run it right now is by compiling it from source.
+PrimePlot is currently in alpha, so there are no pre-built binaries yet. Build it from source using the steps below.
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ PrimePlot is still in early development, so there are no pre-built binaries yet.
   ```
 - **[Flutter](https://docs.flutter.dev/get-started/install)** — follow the official installation guide for your platform and make sure `flutter doctor` reports no blocking issues.
 
-## Building from source
+## Build steps
 
 1. Clone the repository:
    ```bash
