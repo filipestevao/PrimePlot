@@ -105,6 +105,7 @@ class _MathToken {
 
 String substituteSymbols(String text) {
   if (text.isEmpty) return text;
+  text = _stripFontWrappers(text);
   final out = StringBuffer();
   var plainStart = 0;
   var i = 0;
@@ -129,6 +130,34 @@ String substituteSymbols(String text) {
     out.write(_replaceSymbols(text.substring(plainStart)));
   }
   return out.toString();
+}
+
+const _fontWrapperCommands = [r'\mathrm', r'\mathit', r'\text'];
+
+/// Removes `\mathrm{...}`, `\mathit{...}` and `\text{...}` wrappers so
+/// text-only contexts (canvas legend, plain labels) show their content.
+/// Nested wrappers are unwrapped one at a time.
+String _stripFontWrappers(String text) {
+  var result = text;
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final command in _fontWrapperCommands) {
+      final start = result.indexOf('$command{');
+      if (start == -1) continue;
+      final open = start + command.length;
+      final close = _matchingBrace(result, open);
+      if (close == -1) continue;
+      result = result.replaceRange(
+        start,
+        close + 1,
+        result.substring(open + 1, close),
+      );
+      changed = true;
+      break;
+    }
+  }
+  return result;
 }
 
 String _replaceSymbols(String text) {
@@ -202,7 +231,12 @@ List<InlineSpan> buildLatexSpans(
   final segments = _splitDollar(text);
   for (var i = 0; i < segments.length; i++) {
     if (i.isOdd) {
-      spans.add(WidgetSpan(child: _mathTex(segments[i], mathStyle)));
+      final segment = segments[i];
+      if (_containsUprightWrapper(segment)) {
+        spans.addAll(_parseMathSpans(segment, style, mathStyle, mathMode: true));
+      } else {
+        spans.add(WidgetSpan(child: _mathTex(segment, mathStyle)));
+      }
     } else {
       final segment = segments[i];
       if (forceLatex || hasLatex(segment)) {
@@ -220,19 +254,27 @@ List<InlineSpan> buildLatexSpans(
 /// Splits a plain segment into `TextSpan`s and `Math.tex` spans, keeping the
 /// math tokens (`_`, `^`, `{}`, commands) on the widget path for
 /// typography-grade rendering.
+///
+/// With [mathMode] set, plain stretches are rendered as math too. This is used
+/// for `$...$` segments that contain an upright font wrapper.
 List<InlineSpan> _parseMathSpans(
   String text,
   TextStyle? style,
-  TextStyle mathStyle,
-) {
+  TextStyle mathStyle, {
+  bool mathMode = false,
+}) {
   final spans = <InlineSpan>[];
   final plain = StringBuffer();
 
   void flushPlain() {
     if (plain.isEmpty) return;
-    final rendered = substituteSymbols(plain.toString());
-    if (rendered.isNotEmpty) {
-      spans.add(TextSpan(text: rendered, style: style));
+    if (mathMode) {
+      spans.add(WidgetSpan(child: _mathTex(plain.toString(), mathStyle)));
+    } else {
+      final rendered = substituteSymbols(plain.toString());
+      if (rendered.isNotEmpty) {
+        spans.add(TextSpan(text: rendered, style: style));
+      }
     }
     plain.clear();
   }
@@ -246,11 +288,48 @@ List<InlineSpan> _parseMathSpans(
       continue;
     }
     flushPlain();
+    final upright = _readUprightWrapper(token.tex);
+    if (upright != null) {
+      final rendered = substituteSymbols(
+        '${upright.content}${upright.trailing}',
+      );
+      if (rendered.isNotEmpty && !rendered.contains(r'\')) {
+        spans.add(TextSpan(text: rendered, style: style));
+        i = token.end;
+        continue;
+      }
+    }
     spans.add(WidgetSpan(child: _mathTex(token.tex, mathStyle)));
     i = token.end;
   }
   flushPlain();
   return spans;
+}
+
+bool _containsUprightWrapper(String text) =>
+    text.contains(r'\mathrm{') || text.contains(r'\text{');
+
+class _UprightWrapper {
+  final String content;
+  final String trailing;
+
+  const _UprightWrapper(this.content, this.trailing);
+}
+
+/// Returns the content of a top-level `\mathrm{...}` or `\text{...}` token,
+/// plus any trailing scripts/attachments consumed with it.
+_UprightWrapper? _readUprightWrapper(String tex) {
+  for (final command in const [r'\mathrm', r'\text']) {
+    if (!tex.startsWith('$command{')) continue;
+    final open = command.length;
+    final close = _matchingBrace(tex, open);
+    if (close == -1) return null;
+    return _UprightWrapper(
+      tex.substring(open + 1, close),
+      tex.substring(close + 1),
+    );
+  }
+  return null;
 }
 
 /// Renders TeX with the bundled KaTeX SansSerif family so inline math

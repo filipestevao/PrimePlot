@@ -21,7 +21,7 @@ PrimePlot is an open-source desktop application for scientific plotting. It is d
 - **Data management** — Import CSV, TSV, and TXT files by drag-and-drop or file picker. Paste data from the clipboard, edit tables in place, assign X/Y/error/text roles, reorder and resize columns, and browse large datasets smoothly.
 - **Transforms** — Apply quick operations such as ln, log10, exp, sqrt, square, reciprocal, and normalize. Add or multiply by a scalar, evaluate custom expressions with a live preview, fill columns with linspace, and inspect live statistics.
 - **Plotting** — Plot multiple datasets and functions on one graph. Use linear, logarithmic, or square-root axes with smart major ticks and minor grid lines. Zoom at the cursor, box zoom, pan, autoscale on double-click, and read coordinates from the crosshair.
-- **Styling** — Choose a theme and palette, then fine-tune line styles, thickness, markers, and marker sizes. Customize legend position and appearance, LaTeX labels with subscripts and superscripts, axis labels, divisions, number formats, typography, frame, grid, and chart background.
+- **Styling** — Choose a theme and palette, then fine-tune line styles, thickness, markers, and marker sizes. Customize legend position and appearance, LaTeX labels with Greek letters, subscripts, superscripts, and italic/upright control, axis labels, divisions, number formats, typography, frame, grid, and chart background.
 - **Workflow** — Organize projects in a tree of folders, graphs, tables, and functions. Undo and redo changes, search nodes and commands, use keyboard shortcuts, and save everything in `.primeplot` project files.
 - **Export** — Export publication-ready PNG figures with configurable DPI and an optional transparent background, or export table data as CSV or TSV.
 
@@ -29,10 +29,10 @@ PrimePlot is an open-source desktop application for scientific plotting. It is d
   <img src="docs/images/workflow.webp" alt="PrimePlot workflow: import, customize, export" width="100%">
 </p>
 
+## Documentation
 
-## Build from Source
-
-Prebuilt binaries are not yet available. See the [build guide](docs/BUILDING.md) for prerequisites and platform-specific instructions.
+- [LaTeX labels](docs/LATEX.md) — Greek letters, italic and upright styles, subscripts, and superscripts.
+- [Build from Source](docs/BUILDING.md) — prerequisites and platform-specific build steps.
 
 ## Contributing
 
