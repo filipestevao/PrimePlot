@@ -1,5 +1,5 @@
 <h1>
-  <img src="frontend/assets/branding/logo-on-light.svg" alt="PrimePlot logo" width="25%">
+  <img src="frontend/assets/branding/logo-on-light.svg" alt="PrimePlot logo" width="35%">
 </h1>
 
 ![Status](https://img.shields.io/badge/status-alpha-orange)
@@ -12,13 +12,9 @@ PrimePlot is an open-source desktop application for scientific plotting. It is d
 > [!IMPORTANT]
 > **Alpha status** - The core workflow is functional. Expect rough edges and format changes before the first stable release. Prebuilt binaries are not yet available.
 
-<!-- Hero GIF placeholder.
-Save the interface overview as docs/images/interface.gif, then uncomment the block below.
-
 <p align="center">
-  <img src="docs/images/interface.gif" alt="PrimePlot interface overview" width="100%">
+  <img src="docs/images/interface.webp" alt="PrimePlot interface overview" width="100%">
 </p>
--->
 
 ## Features
 
@@ -29,13 +25,10 @@ Save the interface overview as docs/images/interface.gif, then uncomment the blo
 - **Workflow** — Organize projects in a tree of folders, graphs, tables, and functions. Undo and redo changes, search nodes and commands, use keyboard shortcuts, and save everything in `.primeplot` project files.
 - **Export** — Export publication-ready PNG figures with configurable DPI and an optional transparent background, or export table data as CSV or TSV.
 
-<!-- Workflow GIF placeholder.
-Save the workflow clip as docs/images/workflow.gif, then uncomment the block below.
-
 <p align="center">
-  <img src="docs/images/workflow.gif" alt="PrimePlot workflow: import, customize, export" width="100%">
+  <img src="docs/images/workflow.webp" alt="PrimePlot workflow: import, customize, export" width="100%">
 </p>
--->
+
 
 ## Build from Source
 
