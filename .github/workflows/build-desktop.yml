@@ -81,9 +81,17 @@ jobs:
             https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
           curl -fsSL -o /tmp/linuxdeploy-plugin-gtk \
             https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/7a3fbc31a9e5075073ff8790f26effbac5f84453/linuxdeploy-plugin-gtk.sh
-          chmod +x /tmp/linuxdeploy /tmp/linuxdeploy-plugin-gtk
+          # Static type-2 runtime: no system libfuse2 dependency. FUSE itself is
+          # still required at runtime; systems without it can use
+          # APPIMAGE_EXTRACT_AND_RUN=1.
+          curl -fsSL -o /tmp/appimage-runtime \
+            https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+          echo "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  /tmp/appimage-runtime" \
+            | sha256sum -c -
+          chmod +x /tmp/linuxdeploy /tmp/linuxdeploy-plugin-gtk /tmp/appimage-runtime
           export PATH="/tmp:$PATH"
           export APPIMAGE_EXTRACT_AND_RUN=1
+          export LDAI_RUNTIME_FILE=/tmp/appimage-runtime
           # linuxdeploy's bundled strip cannot handle newer ELF sections
           # (e.g. .relr.dyn) and aborts before setting RUNPATHs.
           export NO_STRIP=1
@@ -95,6 +103,7 @@ jobs:
             --output appimage
 
           mv PrimePlot-x86_64.AppImage "$DIST/PrimePlot-linux-x86_64.AppImage"
+          file "$DIST/PrimePlot-linux-x86_64.AppImage" | grep -q 'static-pie linked'
           ls -lh "$DIST"
 
       - name: Upload artifact
@@ -304,11 +313,27 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+          # The Windows asset is itself a zip; do not unpack it into dist/.
+          skip-decompress: true
+
+      - name: Verify release assets
+        run: |
+          set -euo pipefail
+          for f in dist/*.AppImage dist/*.zip dist/*.dmg; do
+            if [ ! -f "$f" ]; then
+              echo "Missing release asset: $f"
+              exit 1
+            fi
+          done
+          ls -lh dist
 
       - name: Upload assets to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
         run: |
-          ls -lh dist
-          gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" \
+            dist/*.AppImage \
+            dist/*.zip \
+            dist/*.dmg \
+            --clobber --repo "$GITHUB_REPOSITORY"

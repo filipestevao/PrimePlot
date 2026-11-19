@@ -13,6 +13,9 @@ PrimePlot is an open-source desktop application for scientific plotting. It is d
 > [!IMPORTANT]
 > **Alpha status** - The core workflow is functional. Expect rough edges and format changes before the first stable release. Prebuilt binaries are available on the [Releases](https://github.com/filipestevao/PrimePlot/releases) page.
 
+> [!NOTE]
+> The Linux AppImage uses FUSE. If FUSE is unavailable, run it with `APPIMAGE_EXTRACT_AND_RUN=1 ./PrimePlot-linux-x86_64.AppImage`.
+
 <p align="center">
   <img src="docs/images/interface.webp" alt="PrimePlot interface overview" width="100%">
 </p>
