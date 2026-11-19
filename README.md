@@ -3,6 +3,7 @@
 </h1>
 
 ![Status](https://img.shields.io/badge/status-alpha-orange)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/filipestevao/PrimePlot/releases)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 ![Flutter](https://img.shields.io/badge/UI-Flutter-02569B?logo=flutter)
 ![Rust](https://img.shields.io/badge/core-Rust-000000?logo=rust)
@@ -10,7 +11,7 @@
 PrimePlot is an open-source desktop application for scientific plotting. It is designed to be fast, lightweight, and responsive, giving scientists, engineers, and technicians a focused tool to turn raw data into clear, publication-quality figures.
 
 > [!IMPORTANT]
-> **Alpha status** - The core workflow is functional. Expect rough edges and format changes before the first stable release. Prebuilt binaries are not yet available.
+> **Alpha status** - The core workflow is functional. Expect rough edges and format changes before the first stable release. Prebuilt binaries are available on the [Releases](https://github.com/filipestevao/PrimePlot/releases) page.
 
 <p align="center">
   <img src="docs/images/interface.webp" alt="PrimePlot interface overview" width="100%">

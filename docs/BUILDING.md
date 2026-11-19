@@ -1,6 +1,6 @@
 # Build from Source
 
-PrimePlot is currently in alpha, so there are no pre-built binaries yet. Build it from source using the steps below.
+Pre-built binaries are available on the [Releases](https://github.com/filipestevao/PrimePlot/releases) page. To build from source, use the steps below.
 
 ## Prerequisites
 

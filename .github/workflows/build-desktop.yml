@@ -280,6 +280,25 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Verify tag matches app version
+        env:
+          TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          APP_VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' frontend/pubspec.yaml)
+          if [ -z "$APP_VERSION" ]; then
+            echo "Could not read version from frontend/pubspec.yaml"
+            exit 1
+          fi
+          if [ "$TAG" != "v$APP_VERSION" ] && [ "$TAG" != "$APP_VERSION" ]; then
+            echo "Release tag '$TAG' does not match app version '$APP_VERSION' (expected v$APP_VERSION)"
+            exit 1
+          fi
+          echo "Release tag $TAG matches app version $APP_VERSION"
+
       - name: Download built binaries
         uses: actions/download-artifact@v8
         with:
