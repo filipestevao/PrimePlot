@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -98,10 +98,10 @@ jobs:
           ls -lh "$DIST"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: PrimePlot-linux
           path: dist/PrimePlot-linux-x86_64.AppImage
+          archive: false
           if-no-files-found: error
           retention-days: 14
 
@@ -112,7 +112,7 @@ jobs:
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -182,10 +182,10 @@ jobs:
           Get-ChildItem '..\dist' | Format-Table Name, Length
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: PrimePlot-windows
           path: dist/PrimePlot-windows-x64.zip
+          archive: false
           if-no-files-found: error
           retention-days: 14
 
@@ -204,7 +204,7 @@ jobs:
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -263,10 +263,10 @@ jobs:
           ls -lh ../dist
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: PrimePlot-macos-${{ matrix.arch }}
           path: dist/PrimePlot-macos-${{ matrix.arch }}.dmg
+          archive: false
           if-no-files-found: error
           retention-days: 14
 
@@ -281,7 +281,7 @@ jobs:
 
     steps:
       - name: Download built binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
