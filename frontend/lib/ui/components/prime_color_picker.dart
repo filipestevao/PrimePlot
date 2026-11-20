@@ -339,7 +339,20 @@ class _PrimeColorPickerState extends State<PrimeColorPicker> {
                     ColorPicker(
                       color: picked,
                       onColorChanged: (c) => setWheelState(() => picked = c),
-                      pickersEnabled: const {ColorPickerType.wheel: true},
+                      // Wheel only: explicitly disable every other picker so
+                      // flex_color_picker never renders the Primary/Accent
+                      // tabs or shade/tonal palettes.
+                      pickersEnabled: const {
+                        ColorPickerType.primary: false,
+                        ColorPickerType.accent: false,
+                        ColorPickerType.both: false,
+                        ColorPickerType.bw: false,
+                        ColorPickerType.custom: false,
+                        ColorPickerType.customSecondary: false,
+                        ColorPickerType.wheel: true,
+                      },
+                      enableShadesSelection: true,
+                      enableTonalPalette: false,
                       enableOpacity: false,
                     ),
                     const SizedBox(height: 10),
