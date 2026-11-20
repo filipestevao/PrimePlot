@@ -244,6 +244,10 @@ pub(crate) fn lock_table_store() -> MutexGuard<'static, HashMap<String, EngineDa
     lock_or_recover(get_table_store())
 }
 
+pub(crate) fn clear_all_project_stores() {
+    lock_table_store().clear();
+}
+
 pub(crate) fn dto_to_engine_table(dto: DTODataTable) -> EngineDataTable {
     let mut et = EngineDataTable::new(&dto.id, &dto.name);
     for col in dto.columns {

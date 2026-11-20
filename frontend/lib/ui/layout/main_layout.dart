@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import '../../core/file_actions.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
 import '../../src/rust/api/project.dart';
+import '../../src/rust/api/simple.dart';
 import '../components/panel_container.dart';
 import '../components/prime_icon.dart';
 import '../components/prime_search_bar.dart';
@@ -56,6 +58,9 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   /// Coalesces post-frame focus-restore checks triggered by property
   /// mutations (sliders can emit many updates per frame).
   bool _focusRestoreScheduled = false;
+
+  /// Prevents re-entrant close handling while teardown is in flight.
+  bool _isClosing = false;
 
   @override
   void initState() {
@@ -580,12 +585,41 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   /// Must call [WindowManager.destroy] (not `close`) to exit, since close
   /// is intercepted while prevent-close is set.
   @override
-  void onWindowClose() async {    var mayExit = true;
+  void onWindowClose() async {
+    if (_isClosing) return;
+    var mayExit = true;
     if (mounted) {
       mayExit = await FileActions.confirmUnsavedChanges(context, 'exiting');
     }
-    if (!mayExit && mounted) return;
-    await windowManager.destroy();
+    if (!mayExit || !mounted) return;
+    _isClosing = true;
+
+    // Graceful Rust shutdown: release in-memory stores and caches
+    try {
+      shutdown();
+    } catch (_) {}
+
+    // Instantly hide the window to eliminate visual freezing/stubbing on screen
+    try {
+      await windowManager.hide();
+    } catch (_) {}
+
+    // Disarm prevent-close so the window system treats subsequent destruction cleanly
+    try {
+      await windowManager.setPreventClose(false);
+    } catch (_) {}
+
+    // Hard backstop timer: if windowManager.destroy hangs, force-exit cleanly
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      exit(0);
+    });
+
+    try {
+      await windowManager.destroy();
+    } catch (_) {}
+
+    // Immediate clean exit
+    exit(0);
   }
 
   @override

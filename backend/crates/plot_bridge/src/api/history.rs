@@ -118,13 +118,17 @@ pub fn history_status() -> HistoryStatus {
     }
 }
 
+pub(crate) fn clear_all_history() {
+    lock_or_recover(undo_stack()).clear();
+    lock_or_recover(redo_stack()).clear();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn clear_stacks() {
-        lock_or_recover(undo_stack()).clear();
-        lock_or_recover(redo_stack()).clear();
+        clear_all_history();
     }
 
     #[test]

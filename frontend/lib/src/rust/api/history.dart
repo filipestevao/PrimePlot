@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'project.dart';
 
-// These functions are ignored because they are not marked as `pub`: `push_capped`, `redo_stack`, `restore_snapshot`, `snapshot_current`, `undo_stack`
+// These functions are ignored because they are not marked as `pub`: `clear_all_history`, `push_capped`, `redo_stack`, `restore_snapshot`, `snapshot_current`, `undo_stack`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `HistorySnapshot`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`
 
