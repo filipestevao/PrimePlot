@@ -10,6 +10,7 @@ import 'package:frontend/src/rust/frb_generated.dart';
 import 'core/desktop_integration.dart';
 import 'core/state.dart';
 import 'core/theme.dart';
+import 'core/window_state.dart';
 import 'ui/layout/main_layout.dart';
 
 Future<void> main() async {
@@ -56,32 +57,35 @@ Future<void> main() async {
   // onWindowResize clamps at runtime as a backstop).
   await windowManager.setMinimumSize(kMinWindowSize);
 
-  // Always start maximized: every compositor (Xorg, Wayland, Windows,
-  // macOS) honors this natively — no size negotiation, no centering races.
+  // Restore the geometry saved on the last close. First launch defaults to
+  // maximized, preserving PrimePlot's original startup behavior.
+  final windowState = WindowStateController.instance.load();
+
   WindowOptions windowOptions = const WindowOptions(
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
   );
 
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    // Maximize before showing so the first visible frame is already
-    // full-screen. Showing first can briefly render a restored-size window
-    // on Windows before maximize() takes effect.
-    await windowManager.maximize();
-    await windowManager.show();
-    await windowManager.focus();
-  });
+  // Apply the saved state while the window is still hidden, then show it.
+  await windowManager.waitUntilReadyToShow(windowOptions);
+  await WindowStateController.instance.applyInitial(windowState);
+  await windowManager.show();
+  await windowManager.focus();
 
   runApp(const PrimePlotApp());
 
-  // Windows can still race the initial maximize against the first layout.
-  // Re-check after the first frame and maximize again if needed.
+  // Track only user-driven changes; startup restore events must not rewrite
+  // the saved state.
+  WindowStateController.instance.startTracking();
+
+  // Windows' runner shows the window from its first-frame callback. Re-assert
+  // once that has run so the saved state wins over the native SW_SHOWNORMAL.
   if (Platform.isWindows) {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!await windowManager.isMaximized()) {
-        await windowManager.maximize();
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 100), () async {
+        await WindowStateController.instance.reassert();
+      });
     });
   }
 }

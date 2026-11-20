@@ -150,7 +150,16 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  // Flutter calls this from its first-frame callback. window_manager may have
+  // already shown the window (possibly maximized), so only perform the
+  // initial show when the window is still hidden. SW_SHOWNORMAL would
+  // otherwise restore a maximized window.
+  if (::IsWindowVisible(window_handle_)) {
+    return true;
+  }
+  return ShowWindow(window_handle_,
+                    ::IsZoomed(window_handle_) ? SW_SHOWMAXIMIZED
+                                               : SW_SHOWNORMAL);
 }
 
 // static

@@ -11,6 +11,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../core/file_actions.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
+import '../../core/window_state.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/simple.dart';
 import '../components/panel_container.dart';
@@ -593,6 +594,14 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     }
     if (!mayExit || !mounted) return;
     _isClosing = true;
+
+    // Persist the final window geometry before tearing down the engine.
+    // Never let a stuck platform channel block the close sequence.
+    try {
+      await WindowStateController.instance
+          .captureAndSave()
+          .timeout(const Duration(milliseconds: 500));
+    } catch (_) {}
 
     // Graceful Rust shutdown: release in-memory stores and caches
     try {
