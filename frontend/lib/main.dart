@@ -14,10 +14,10 @@ import 'ui/layout/main_layout.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Rust backend
   await RustLib.init();
-  
+
   // Initialize saved preferences (theme, etc.)
   ProjectState.instance.initTheme();
 
@@ -65,12 +65,25 @@ Future<void> main() async {
   );
 
   windowManager.waitUntilReadyToShow(windowOptions, () async {
+    // Maximize before showing so the first visible frame is already
+    // full-screen. Showing first can briefly render a restored-size window
+    // on Windows before maximize() takes effect.
+    await windowManager.maximize();
     await windowManager.show();
     await windowManager.focus();
-    await windowManager.maximize();
   });
 
   runApp(const PrimePlotApp());
+
+  // Windows can still race the initial maximize against the first layout.
+  // Re-check after the first frame and maximize again if needed.
+  if (Platform.isWindows) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!await windowManager.isMaximized()) {
+        await windowManager.maximize();
+      }
+    });
+  }
 }
 
 class PrimePlotApp extends StatelessWidget {
