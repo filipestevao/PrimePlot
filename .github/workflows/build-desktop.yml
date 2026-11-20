@@ -7,11 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Release tag to attach binaries to (leave empty to only produce artifacts)'
+        description: 'Draft release tag to attach binaries to (leave empty to only produce artifacts)'
         required: false
         type: string
-  release:
-    types: [published]
 
 permissions:
   contents: read
@@ -282,7 +280,7 @@ jobs:
   attach:
     name: Attach binaries to release
     needs: [linux, windows, macos]
-    if: github.event_name == 'release' || inputs.release_tag != ''
+    if: inputs.release_tag != ''
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     permissions:
@@ -294,7 +292,7 @@ jobs:
 
       - name: Verify tag matches app version
         env:
-          TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+          TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
           APP_VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' frontend/pubspec.yaml)
@@ -330,7 +328,7 @@ jobs:
       - name: Upload assets to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+          TAG: ${{ inputs.release_tag }}
         run: |
           gh release upload "$TAG" \
             dist/*.AppImage \
