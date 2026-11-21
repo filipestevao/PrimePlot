@@ -813,6 +813,21 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       return Offset(screenX, screenY);
     }
 
+    double? screenXForRaw(double raw) {
+      final t = transformValue(raw, xScale);
+      if (t == null || !t.isFinite) return null;
+      final screen = marginLeft + ((t - minX) / (maxX - minX)) * plotWidth;
+      return screen.isFinite ? screen : null;
+    }
+
+    double? screenYForRaw(double raw) {
+      final t = transformValue(raw, yScale);
+      if (t == null || !t.isFinite) return null;
+      final screen =
+          marginTop + plotHeight - (((t - minY) / (maxY - minY)) * plotHeight);
+      return screen.isFinite ? screen : null;
+    }
+
     void drawAxisAndGrid() {
       final labelColor = _chartLabelColor(graphProps);
       final textStyle = TextStyle(
@@ -893,12 +908,29 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
       final xSubdivisions = graphProps?.xSubdivisions;
       if (xSubdivisions != null && xSubdivisions > 1) {
-        final minor = computeMinorTicks(
-          xTicks.map((tick) => tick.screen).toList(),
-          xSubdivisions,
-          start: marginLeft,
-          end: right,
-        );
+        final minor = <double>[];
+        if (xScale == PlotAxisScale.log) {
+          for (final raw in computeMinorTicksLog(
+            xTicks.map((tick) => tick.raw).toList(),
+            xSubdivisions,
+            start: rawMinX,
+            end: rawMaxX,
+          )) {
+            final screen = screenXForRaw(raw);
+            if (screen != null && screen >= marginLeft && screen <= right) {
+              minor.add(screen);
+            }
+          }
+        } else {
+          minor.addAll(
+            computeMinorTicks(
+              xTicks.map((tick) => tick.screen).toList(),
+              xSubdivisions,
+              start: marginLeft,
+              end: right,
+            ),
+          );
+        }
         for (final screenX in minor) {
           if (showGrid && showMinorGrid) {
             canvas.drawLine(
@@ -953,12 +985,29 @@ class _MultiSeriesPlotPainter extends CustomPainter {
 
       final ySubdivisions = graphProps?.ySubdivisions;
       if (ySubdivisions != null && ySubdivisions > 1) {
-        final minor = computeMinorTicks(
-          yTicks.map((tick) => tick.screen).toList(),
-          ySubdivisions,
-          start: marginTop,
-          end: bottom,
-        );
+        final minor = <double>[];
+        if (yScale == PlotAxisScale.log) {
+          for (final raw in computeMinorTicksLog(
+            yTicks.map((tick) => tick.raw).toList(),
+            ySubdivisions,
+            start: rawMinY,
+            end: rawMaxY,
+          )) {
+            final screen = screenYForRaw(raw);
+            if (screen != null && screen >= marginTop && screen <= bottom) {
+              minor.add(screen);
+            }
+          }
+        } else {
+          minor.addAll(
+            computeMinorTicks(
+              yTicks.map((tick) => tick.screen).toList(),
+              ySubdivisions,
+              start: marginTop,
+              end: bottom,
+            ),
+          );
+        }
         for (final screenY in minor) {
           if (showGrid && showMinorGrid) {
             canvas.drawLine(

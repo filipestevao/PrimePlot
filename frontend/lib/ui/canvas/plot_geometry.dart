@@ -43,7 +43,16 @@ int axisIntervalCount(int? divisions) => (divisions ?? 5).clamp(1, 50);
 
 const List<double> _niceStepCandidates = [1.0, 1.5, 2.0, 2.5, 5.0, 10.0];
 
-double _niceStep(double min, double max, int targetIntervals) {
+/// Integer steps in sqrt space keep raw ticks at perfect squares whenever
+/// the visible range starts on one (0, 1, 4, 9, ...).
+const List<double> _sqrtStepCandidates = [1.0, 2.0, 3.0, 4.0, 5.0, 10.0];
+
+double _niceStep(
+  double min,
+  double max,
+  int targetIntervals, {
+  List<double> candidates = _niceStepCandidates,
+}) {
   final span = max - min;
   final target = targetIntervals.clamp(1, 50);
   final rough = span / target;
@@ -57,7 +66,7 @@ double _niceStep(double min, double max, int targetIntervals) {
   final desiredTicks = target + 1;
   var bestStep = magnitude;
   var bestScore = double.infinity;
-  for (final candidate in _niceStepCandidates) {
+  for (final candidate in candidates) {
     final step = candidate * magnitude;
     final first = (min / step).ceil() * step;
     final last = (max / step).floor() * step;
@@ -76,10 +85,10 @@ double _niceStep(double min, double max, int targetIntervals) {
 
 /// Nice major tick values within the raw data range [min, max].
 ///
-/// Ticks are chosen on the transformed axis (linear/log/sqrt) so log plots
-/// get evenly spaced transformed intervals rather than clustered raw values.
-/// The returned values are raw data coordinates, ready for [formatTickLabel]
-/// and [dataToScreen].
+/// Linear and square-root axes choose nice intervals in transformed space.
+/// Log axes use powers of ten, falling back to 1/2/5 sub-decade marks when
+/// the visible span is narrow. The returned values are raw data coordinates,
+/// ready for [formatTickLabel] and [dataToScreen].
 List<double> computeNiceTicks(
   double min,
   double max, {
@@ -91,6 +100,23 @@ List<double> computeNiceTicks(
   }
 
   final axisScale = plotAxisScale(scale);
+  if (axisScale == PlotAxisScale.log) {
+    return _computeNiceTicksLog(min, max, targetIntervals);
+  }
+  return _computeNiceTicksTransformed(
+    min,
+    max,
+    targetIntervals,
+    axisScale,
+  );
+}
+
+List<double> _computeNiceTicksTransformed(
+  double min,
+  double max,
+  int targetIntervals,
+  PlotAxisScale axisScale,
+) {
   final tMin = transformValue(min, axisScale);
   final tMax = transformValue(max, axisScale);
   if (tMin == null ||
@@ -101,7 +127,14 @@ List<double> computeNiceTicks(
     return <double>[min, max];
   }
 
-  final step = _niceStep(tMin, tMax, targetIntervals);
+  final step = _niceStep(
+    tMin,
+    tMax,
+    targetIntervals,
+    candidates: axisScale == PlotAxisScale.sqrt
+        ? _sqrtStepCandidates
+        : _niceStepCandidates,
+  );
   if (!step.isFinite || step <= 0) return <double>[min, max];
 
   final first = (tMin / step).ceil() * step;
@@ -114,10 +147,87 @@ List<double> computeNiceTicks(
     // At very large magnitudes a small step can round to no progress.
     if (t <= previous) break;
     previous = t;
-    final raw = inverseTransformValue(t, axisScale);
+    var raw = inverseTransformValue(t, axisScale);
+    if (axisScale == PlotAxisScale.sqrt) raw = _snapSqrtTick(raw);
     if (raw.isFinite) ticks.add(raw);
   }
   return ticks.isEmpty ? <double>[min, max] : ticks;
+}
+
+/// Snaps floating-point noise in `t²` back to the nearest integer while
+/// leaving genuinely fractional ticks (e.g. 2.25) untouched.
+double _snapSqrtTick(double value) {
+  if (!value.isFinite) return value;
+  final rounded = value.roundToDouble();
+  final tolerance = 1e-9 * math.max(1.0, value.abs());
+  return (value - rounded).abs() <= tolerance ? rounded : value;
+}
+
+List<double> _computeNiceTicksLog(
+  double min,
+  double max,
+  int targetIntervals,
+) {
+  if (min <= 0 || max <= min) return <double>[min, max];
+
+  final target = targetIntervals.clamp(1, 50);
+  final logMin = math.log(min) / math.ln10;
+  final logMax = math.log(max) / math.ln10;
+  final decMin = logMin.floor();
+  final decMax = logMax.ceil();
+  final decades = decMax - decMin;
+  final epsilon = 1e-9;
+
+  if (decades >= 4) {
+    // Wide ranges: powers of ten, thinned to the requested density.
+    final skip = math.max(1, (decades / target).round());
+    final ticks = <double>[];
+    for (var d = decMin; d <= decMax; d += skip) {
+      final value = math.pow(10.0, d.toDouble()).toDouble();
+      if (value >= min * (1 - epsilon) && value <= max * (1 + epsilon)) {
+        ticks.add(value);
+      }
+    }
+    // Preserve the top decade when the skip lands short of it.
+    final top = math.pow(10.0, decMax.toDouble()).toDouble();
+    if (top >= min * (1 - epsilon) &&
+        top <= max * (1 + epsilon) &&
+        (ticks.isEmpty || ticks.last < top * (1 - epsilon))) {
+      ticks.add(top);
+    }
+    return ticks.isEmpty ? <double>[min, max] : ticks;
+  }
+
+  // Narrow ranges: 1/2/5 marks inside each decade.
+  final candidates = <double>[];
+  for (var d = decMin; d <= decMax; d++) {
+    final base = math.pow(10.0, d.toDouble()).toDouble();
+    for (final multiplier in const [1.0, 2.0, 5.0]) {
+      final value = base * multiplier;
+      if (value >= min * (1 - epsilon) && value <= max * (1 + epsilon)) {
+        candidates.add(value);
+      }
+    }
+  }
+  if (candidates.isEmpty) return <double>[min, max];
+  return _thinTicks(candidates, target);
+}
+
+/// Thins a sorted tick list to roughly [targetIntervals] intervals while
+/// always keeping both endpoints. The small slack avoids dropping a single
+/// useful 1/2/5 mark when the candidate set is only marginally too dense.
+List<double> _thinTicks(List<double> ticks, int targetIntervals) {
+  if (ticks.length <= 2) return ticks;
+  final maxTicks = math.max(2, targetIntervals + 2);
+  if (ticks.length <= maxTicks) return ticks;
+
+  final result = <double>[];
+  for (var i = 0; i < maxTicks; i++) {
+    final index = ((ticks.length - 1) * i / (maxTicks - 1)).round();
+    final value = ticks[index];
+    if (result.isEmpty || value != result.last) result.add(value);
+  }
+  return result;
 }
 
 /// Minor tick positions between adjacent [majorTicks].
@@ -207,6 +317,83 @@ List<double> computeMinorTicks(
     }
   }
   return unique;
+}
+
+/// Minor tick values for a logarithmic axis.
+///
+/// Log minor ticks live at 2..9 within each decade, not at evenly spaced
+/// screen positions. [subdivisions] controls how many of those natural marks
+/// are kept: 9 keeps all eight, while coarser settings pick marks closest to
+/// evenly spaced positions in log space. [start] and [end] extend the marks
+/// into partially visible decades.
+List<double> computeMinorTicksLog(
+  List<double> majorTicks,
+  int subdivisions, {
+  double? start,
+  double? end,
+}) {
+  if (subdivisions <= 1 || majorTicks.length < 2) return const <double>[];
+
+  final lower = start ?? majorTicks.reduce(math.min);
+  final upper = end ?? majorTicks.reduce(math.max);
+  if (!lower.isFinite ||
+      !upper.isFinite ||
+      lower <= 0 ||
+      upper <= lower) {
+    return const <double>[];
+  }
+
+  final multipliers = _logMinorMultipliers(subdivisions);
+  final decMin = (math.log(lower) / math.ln10).floor();
+  final decMax = (math.log(upper) / math.ln10).floor();
+  final epsilon = 1e-9;
+  final minor = <double>[];
+  for (var d = decMin; d <= decMax; d++) {
+    final base = math.pow(10.0, d.toDouble()).toDouble();
+    for (final multiplier in multipliers) {
+      final value = base * multiplier;
+      if (value >= lower * (1 - epsilon) &&
+          value <= upper * (1 + epsilon)) {
+        minor.add(value);
+      }
+    }
+  }
+
+  minor.sort();
+  final unique = <double>[];
+  for (final value in minor) {
+    if (unique.isEmpty || (value - unique.last).abs() > 1e-9) {
+      unique.add(value);
+    }
+  }
+  return unique;
+}
+
+/// Picks the natural 2..9 log marks closest to evenly spaced positions
+/// between 1 and 10. `subdivisions = 9` returns all eight marks.
+List<int> _logMinorMultipliers(int subdivisions) {
+  const all = [2, 3, 4, 5, 6, 7, 8, 9];
+  final count = (subdivisions - 1).clamp(1, all.length);
+  if (count >= all.length) return all;
+
+  final result = <int>[];
+  for (var i = 1; i <= count; i++) {
+    final target = math.pow(10.0, i / (count + 1)).toDouble();
+    var best = all.first;
+    var bestDistance = double.infinity;
+    for (final multiplier in all) {
+      if (result.contains(multiplier)) continue;
+      final distance =
+          (math.log(multiplier) - math.log(target)).abs();
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = multiplier;
+      }
+    }
+    result.add(best);
+  }
+  result.sort();
+  return result;
 }
 
 String _formatDecimalTick(double value) {
