@@ -1067,6 +1067,21 @@ class _GraphInspector extends StatelessWidget {
                   ),
                 ),
                 PropertyRow(
+                  label: 'Bold Text',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.legendBold,
+                      onChanged: (val) {
+                        ProjectState.instance.updateGraphProperties(
+                          nodeId,
+                          props.copyWith(legendBold: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
                   label: 'Opacity',
                   child: Row(
                     children: [

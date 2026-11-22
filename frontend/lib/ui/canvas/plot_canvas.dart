@@ -84,12 +84,19 @@ class _LegendLayout {
   });
 }
 
-_LegendLayout _legendLayout(List<String> names, double fontSize) {
+_LegendLayout _legendLayout(
+  List<String> names,
+  double fontSize, {
+  bool bold = false,
+}) {
   final padding = fontSize * 0.75;
   final rowHeight = fontSize * 1.8;
   final swatchWidth = fontSize * 2.5;
   var maxTextWidth = 0.0;
-  final style = TextStyle(fontSize: fontSize);
+  final style = TextStyle(
+    fontSize: fontSize,
+    fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+  );
   for (final name in names) {
     final painter = TextPainter(
       text: TextSpan(text: name, style: style),
@@ -146,7 +153,11 @@ double _legendReservedRight(
     return 0;
   }
   if (names.isEmpty) return 0;
-  final layout = _legendLayout(names, fontSize);
+  final layout = _legendLayout(
+    names,
+    fontSize,
+    bold: gp?.legendBold ?? false,
+  );
   return layout.boxWidth + layout.padding * 2;
 }
 
@@ -1346,9 +1357,11 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     if (entries.isEmpty) return;
 
     final fontSize = _legendFontSize(graphProps);
+    final bold = graphProps?.legendBold ?? false;
     final layout = _legendLayout(
       [for (final e in entries) e.name],
       fontSize,
+      bold: bold,
     );
     final padding = layout.padding;
     final rowHeight = layout.rowHeight;
@@ -1419,7 +1432,11 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     } else {
       textColor = _chartLabelColor(graphProps);
     }
-    final textStyle = TextStyle(color: textColor, fontSize: fontSize);
+    final textStyle = TextStyle(
+      color: textColor,
+      fontSize: fontSize,
+      fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+    );
 
     for (var i = 0; i < entries.length; i++) {
       final entry = entries[i];

@@ -42,6 +42,7 @@ extension GraphPropertiesExt on GraphProperties {
     bool? legendShowBorder,
     String? Function()? legendBorderColor,
     String? Function()? legendBackgroundColor,
+    bool? legendBold,
   }) {
     return GraphProperties(
       xMin: xMin != null ? xMin() : this.xMin,
@@ -91,6 +92,7 @@ extension GraphPropertiesExt on GraphProperties {
       legendBackgroundColor: legendBackgroundColor != null
           ? legendBackgroundColor()
           : this.legendBackgroundColor,
+      legendBold: legendBold ?? this.legendBold,
     );
   }
 }

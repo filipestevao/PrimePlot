@@ -107,6 +107,9 @@ pub struct GraphProperties {
     /// alpha-zero value (e.g. `#00000000`) skips the fill entirely.
     #[serde(default)]
     pub legend_background_color: Option<String>,
+    /// Render legend text in bold.
+    #[serde(default)]
+    pub legend_bold: bool,
 }
 
 fn default_number_notation() -> String {
@@ -130,11 +133,11 @@ fn default_legend_show_border() -> bool {
 }
 
 fn default_title_font_size() -> f64 {
-    12.0
+    18.0
 }
 
 fn default_tick_font_size() -> f64 {
-    10.0
+    15.0
 }
 
 fn default_title_padding() -> f64 {
@@ -181,6 +184,7 @@ impl Default for GraphProperties {
             legend_show_border: default_legend_show_border(),
             legend_border_color: None,
             legend_background_color: None,
+            legend_bold: false,
         }
     }
 }
@@ -478,8 +482,8 @@ mod tests {
         .unwrap();
         assert_eq!(legacy.x_label, "T");
         assert!(!legacy.show_grid);
-        assert_eq!(legacy.title_font_size, 12.0);
-        assert_eq!(legacy.tick_font_size, 10.0);
+        assert_eq!(legacy.title_font_size, 18.0);
+        assert_eq!(legacy.tick_font_size, 15.0);
         assert_eq!(legacy.title_padding, 20.0);
         assert_eq!(legacy.title_padding_y, 20.0);
         assert!(!legacy.show_border);
@@ -496,6 +500,22 @@ mod tests {
         assert!(legacy.legend_show_border);
         assert_eq!(legacy.legend_border_color, None);
         assert_eq!(legacy.legend_background_color, None);
+        assert!(!legacy.legend_bold);
+    }
+
+    #[test]
+    fn test_legend_bold_migrates_to_false() {
+        // Pre-Step-D bundles carry no legend_bold field.
+        let legacy: GraphProperties = serde_json::from_str(
+            r#"{"x_min":null,"x_max":null,"y_min":null,"y_max":null,"x_visible":true,"y_visible":true,"x_scale":"Linear","y_scale":"Linear","x_label":"X","y_label":"Y","aspect_ratio":null,"show_grid":true,"show_legend":true,"legend_position":"Top Right"}"#,
+        )
+        .unwrap();
+        assert!(!legacy.legend_bold);
+
+        let fresh = GraphProperties::default();
+        assert!(!fresh.legend_bold);
+        assert_eq!(fresh.title_font_size, 18.0);
+        assert_eq!(fresh.tick_font_size, 15.0);
     }
 
     #[test]

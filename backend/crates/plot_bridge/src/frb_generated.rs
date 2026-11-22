@@ -2754,6 +2754,7 @@ impl SseDecode for crate::api::properties::GraphProperties {
         let mut var_legendShowBorder = <bool>::sse_decode(deserializer);
         let mut var_legendBorderColor = <Option<String>>::sse_decode(deserializer);
         let mut var_legendBackgroundColor = <Option<String>>::sse_decode(deserializer);
+        let mut var_legendBold = <bool>::sse_decode(deserializer);
         return crate::api::properties::GraphProperties {
             x_min: var_xMin,
             x_max: var_xMax,
@@ -2792,6 +2793,7 @@ impl SseDecode for crate::api::properties::GraphProperties {
             legend_show_border: var_legendShowBorder,
             legend_border_color: var_legendBorderColor,
             legend_background_color: var_legendBackgroundColor,
+            legend_bold: var_legendBold,
         };
     }
 }
@@ -3464,6 +3466,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::GraphProperties {
             self.legend_show_border.into_into_dart().into_dart(),
             self.legend_border_color.into_into_dart().into_dart(),
             self.legend_background_color.into_into_dart().into_dart(),
+            self.legend_bold.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3803,6 +3806,7 @@ impl SseEncode for crate::api::properties::GraphProperties {
         <bool>::sse_encode(self.legend_show_border, serializer);
         <Option<String>>::sse_encode(self.legend_border_color, serializer);
         <Option<String>>::sse_encode(self.legend_background_color, serializer);
+        <bool>::sse_encode(self.legend_bold, serializer);
     }
 }
 

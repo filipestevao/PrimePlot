@@ -2709,8 +2709,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   GraphProperties dco_decode_graph_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 37)
-      throw Exception('unexpected arr length: expect 37 but see ${arr.length}');
+    if (arr.length != 38)
+      throw Exception('unexpected arr length: expect 38 but see ${arr.length}');
     return GraphProperties(
       xMin: dco_decode_opt_box_autoadd_f_64(arr[0]),
       xMax: dco_decode_opt_box_autoadd_f_64(arr[1]),
@@ -2749,6 +2749,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       legendShowBorder: dco_decode_bool(arr[34]),
       legendBorderColor: dco_decode_opt_String(arr[35]),
       legendBackgroundColor: dco_decode_opt_String(arr[36]),
+      legendBold: dco_decode_bool(arr[37]),
     );
   }
 
@@ -3171,6 +3172,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_legendShowBorder = sse_decode_bool(deserializer);
     var var_legendBorderColor = sse_decode_opt_String(deserializer);
     var var_legendBackgroundColor = sse_decode_opt_String(deserializer);
+    var var_legendBold = sse_decode_bool(deserializer);
     return GraphProperties(
       xMin: var_xMin,
       xMax: var_xMax,
@@ -3209,6 +3211,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       legendShowBorder: var_legendShowBorder,
       legendBorderColor: var_legendBorderColor,
       legendBackgroundColor: var_legendBackgroundColor,
+      legendBold: var_legendBold,
     );
   }
 
@@ -3696,6 +3699,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.legendShowBorder, serializer);
     sse_encode_opt_String(self.legendBorderColor, serializer);
     sse_encode_opt_String(self.legendBackgroundColor, serializer);
+    sse_encode_bool(self.legendBold, serializer);
   }
 
   @protected

@@ -233,6 +233,9 @@ class GraphProperties {
   /// alpha-zero value (e.g. `#00000000`) skips the fill entirely.
   final String? legendBackgroundColor;
 
+  /// Render legend text in bold.
+  final bool legendBold;
+
   const GraphProperties({
     this.xMin,
     this.xMax,
@@ -271,6 +274,7 @@ class GraphProperties {
     required this.legendShowBorder,
     this.legendBorderColor,
     this.legendBackgroundColor,
+    required this.legendBold,
   });
 
   static Future<GraphProperties> default_() =>
@@ -314,7 +318,8 @@ class GraphProperties {
       legendOpacity.hashCode ^
       legendShowBorder.hashCode ^
       legendBorderColor.hashCode ^
-      legendBackgroundColor.hashCode;
+      legendBackgroundColor.hashCode ^
+      legendBold.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -357,7 +362,8 @@ class GraphProperties {
           legendOpacity == other.legendOpacity &&
           legendShowBorder == other.legendShowBorder &&
           legendBorderColor == other.legendBorderColor &&
-          legendBackgroundColor == other.legendBackgroundColor;
+          legendBackgroundColor == other.legendBackgroundColor &&
+          legendBold == other.legendBold;
 }
 
 class ShapeProperties {
