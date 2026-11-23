@@ -3061,6 +3061,8 @@ impl SseDecode for crate::api::properties::TableProperties {
         let mut var_markerColor = <String>::sse_decode(deserializer);
         let mut var_markerSize = <f64>::sse_decode(deserializer);
         let mut var_legendLatex = <bool>::sse_decode(deserializer);
+        let mut var_showErrorBars = <bool>::sse_decode(deserializer);
+        let mut var_errorBarColor = <Option<String>>::sse_decode(deserializer);
         return crate::api::properties::TableProperties {
             legend_display_name: var_legendDisplayName,
             line_style: var_lineStyle,
@@ -3072,6 +3074,8 @@ impl SseDecode for crate::api::properties::TableProperties {
             marker_color: var_markerColor,
             marker_size: var_markerSize,
             legend_latex: var_legendLatex,
+            show_error_bars: var_showErrorBars,
+            error_bar_color: var_errorBarColor,
         };
     }
 }
@@ -3642,6 +3646,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::properties::TableProperties {
             self.marker_color.into_into_dart().into_dart(),
             self.marker_size.into_into_dart().into_dart(),
             self.legend_latex.into_into_dart().into_dart(),
+            self.show_error_bars.into_into_dart().into_dart(),
+            self.error_bar_color.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -4024,6 +4030,8 @@ impl SseEncode for crate::api::properties::TableProperties {
         <String>::sse_encode(self.marker_color, serializer);
         <f64>::sse_encode(self.marker_size, serializer);
         <bool>::sse_encode(self.legend_latex, serializer);
+        <bool>::sse_encode(self.show_error_bars, serializer);
+        <Option<String>>::sse_encode(self.error_bar_color, serializer);
     }
 }
 

@@ -2915,8 +2915,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TableProperties dco_decode_table_properties(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return TableProperties(
       legendDisplayName: dco_decode_String(arr[0]),
       lineStyle: dco_decode_String(arr[1]),
@@ -2928,6 +2928,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       markerColor: dco_decode_String(arr[7]),
       markerSize: dco_decode_f_64(arr[8]),
       legendLatex: dco_decode_bool(arr[9]),
+      showErrorBars: dco_decode_bool(arr[10]),
+      errorBarColor: dco_decode_opt_String(arr[11]),
     );
   }
 
@@ -3450,6 +3452,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_markerColor = sse_decode_String(deserializer);
     var var_markerSize = sse_decode_f_64(deserializer);
     var var_legendLatex = sse_decode_bool(deserializer);
+    var var_showErrorBars = sse_decode_bool(deserializer);
+    var var_errorBarColor = sse_decode_opt_String(deserializer);
     return TableProperties(
       legendDisplayName: var_legendDisplayName,
       lineStyle: var_lineStyle,
@@ -3461,6 +3465,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       markerColor: var_markerColor,
       markerSize: var_markerSize,
       legendLatex: var_legendLatex,
+      showErrorBars: var_showErrorBars,
+      errorBarColor: var_errorBarColor,
     );
   }
 
@@ -3913,6 +3919,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.markerColor, serializer);
     sse_encode_f_64(self.markerSize, serializer);
     sse_encode_bool(self.legendLatex, serializer);
+    sse_encode_bool(self.showErrorBars, serializer);
+    sse_encode_opt_String(self.errorBarColor, serializer);
   }
 
   @protected

@@ -6,7 +6,7 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_function_xmax`, `default_function_xmin`, `default_legend_font_size`, `default_legend_name`, `default_legend_opacity`, `default_legend_show_border`, `default_line_style`, `default_line_thickness`, `default_marker_size`, `default_num_samples`, `default_number_notation`, `default_scientific_threshold`, `default_tick_font_size`, `default_title_font_size`, `default_title_padding`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_single_folder`, `restore_single_function`, `restore_single_graph`, `restore_single_shape`, `restore_single_table`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
+// These functions are ignored because they are not marked as `pub`: `clear_all_property_stores`, `default_function_color`, `default_function_xmax`, `default_function_xmin`, `default_legend_font_size`, `default_legend_name`, `default_legend_opacity`, `default_legend_show_border`, `default_line_style`, `default_line_thickness`, `default_marker_size`, `default_num_samples`, `default_number_notation`, `default_scientific_threshold`, `default_show_error_bars`, `default_tick_font_size`, `default_title_font_size`, `default_title_padding`, `get_folder_store`, `get_function_store`, `get_graph_store`, `get_shape_store`, `get_table_store`, `restore_folder_props`, `restore_function_props`, `restore_graph_props`, `restore_shape_props`, `restore_single_folder`, `restore_single_function`, `restore_single_graph`, `restore_single_shape`, `restore_single_table`, `restore_table_props`, `snapshot_folder_props`, `snapshot_function_props`, `snapshot_graph_props`, `snapshot_shape_props`, `snapshot_table_props`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 FolderProperties getFolderProperties({required String nodeId}) =>
@@ -401,6 +401,12 @@ class TableProperties {
   /// Rich-text (LaTeX) rendering for the legend display name.
   final bool legendLatex;
 
+  /// Whether to draw error bars when XError/YError columns exist.
+  final bool showErrorBars;
+
+  /// Error bar color override. `None` = uses the line color.
+  final String? errorBarColor;
+
   const TableProperties({
     required this.legendDisplayName,
     required this.lineStyle,
@@ -412,6 +418,8 @@ class TableProperties {
     required this.markerColor,
     required this.markerSize,
     required this.legendLatex,
+    required this.showErrorBars,
+    this.errorBarColor,
   });
 
   static Future<TableProperties> default_() =>
@@ -428,7 +436,9 @@ class TableProperties {
       lineColor.hashCode ^
       markerColor.hashCode ^
       markerSize.hashCode ^
-      legendLatex.hashCode;
+      legendLatex.hashCode ^
+      showErrorBars.hashCode ^
+      errorBarColor.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -444,5 +454,7 @@ class TableProperties {
           lineColor == other.lineColor &&
           markerColor == other.markerColor &&
           markerSize == other.markerSize &&
-          legendLatex == other.legendLatex;
+          legendLatex == other.legendLatex &&
+          showErrorBars == other.showErrorBars &&
+          errorBarColor == other.errorBarColor;
 }

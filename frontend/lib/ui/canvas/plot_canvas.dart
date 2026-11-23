@@ -252,6 +252,8 @@ class PlotCanvas extends StatelessWidget {
                   builder: (context, _, child) {
                     final seriesX = <List<double>>[];
                     final seriesY = <List<double>>[];
+                    final xErrorSeries = <List<double>>[];
+                    final yErrorSeries = <List<double>>[];
                     final tableProps = <TableProperties>[];
                     final tableNames = <String>[];
                     final toPlot = toPlotScoped;
@@ -259,9 +261,17 @@ class PlotCanvas extends StatelessWidget {
                     for (final tableData in toPlot) {
                       DTODataColumn? xCol;
                       DTODataColumn? yCol;
+                      DTODataColumn? xErrCol;
+                      DTODataColumn? yErrCol;
                       for (final col in tableData.columns) {
                         if (col.role == DTOColumnRole.x && xCol == null) xCol = col;
                         if (col.role == DTOColumnRole.y && yCol == null) yCol = col;
+                        if (col.role == DTOColumnRole.xError && xErrCol == null) {
+                          xErrCol = col;
+                        }
+                        if (col.role == DTOColumnRole.yError && yErrCol == null) {
+                          yErrCol = col;
+                        }
                       }
                       xCol ??= tableData.columns[0];
                       yCol ??= tableData.columns.length > 1
@@ -270,16 +280,44 @@ class PlotCanvas extends StatelessWidget {
 
                       final xClean = <double>[];
                       final yClean = <double>[];
+                      final xErrClean = <double>[];
+                      final yErrClean = <double>[];
+                      final xErrData = xErrCol?.data;
+                      final yErrData = yErrCol?.data;
+                      var hasXErr = false;
+                      var hasYErr = false;
                       final len = math.min(xCol.data.length, yCol.data.length);
                       for (var i = 0; i < len; i++) {
                         if (!xCol.data[i].isNaN && !yCol.data[i].isNaN) {
                           xClean.add(xCol.data[i]);
                           yClean.add(yCol.data[i]);
+                          final xErr = xErrData != null && i < xErrData.length
+                              ? xErrData[i]
+                              : 0.0;
+                          final yErr = yErrData != null && i < yErrData.length
+                              ? yErrData[i]
+                              : 0.0;
+                          final xErrValue = xErr.isFinite && xErr > 0
+                              ? xErr
+                              : 0.0;
+                          final yErrValue = yErr.isFinite && yErr > 0
+                              ? yErr
+                              : 0.0;
+                          xErrClean.add(xErrValue);
+                          yErrClean.add(yErrValue);
+                          if (xErrValue > 0) hasXErr = true;
+                          if (yErrValue > 0) hasYErr = true;
                         }
                       }
 
                       seriesX.add(xClean);
                       seriesY.add(yClean);
+                      xErrorSeries.add(
+                        hasXErr ? xErrClean : const <double>[],
+                      );
+                      yErrorSeries.add(
+                        hasYErr ? yErrClean : const <double>[],
+                      );
                       tableNames.add(tableData.name);
 
                       try {
@@ -297,6 +335,8 @@ class PlotCanvas extends StatelessWidget {
                             markerColor: '#000000',
                             markerSize: 4.0,
                             legendLatex: false,
+                            showErrorBars: true,
+                            errorBarColor: null,
                           ),
                         );
                       }
@@ -355,6 +395,8 @@ class PlotCanvas extends StatelessWidget {
                         if (pts.isEmpty) continue;
                         seriesX.add([for (final p in pts) p.x]);
                         seriesY.add([for (final p in pts) p.y]);
+                        xErrorSeries.add(const <double>[]);
+                        yErrorSeries.add(const <double>[]);
                         functionIds.add(fn.id);
                         tableProps.add(
                           TableProperties(
@@ -370,6 +412,7 @@ class PlotCanvas extends StatelessWidget {
                             markerColor: '#000000',
                             markerSize: 4.0,
                             legendLatex: fprops.legendLatex,
+                            showErrorBars: true,
                           ),
                         );
                         tableNames.add(fn.name);
@@ -437,6 +480,8 @@ class PlotCanvas extends StatelessWidget {
                                 painter: _MultiSeriesPlotPainter(
                                   xSeries: seriesX,
                                   ySeries: seriesY,
+                                  xErrorSeries: xErrorSeries,
+                                  yErrorSeries: yErrorSeries,
                                   graphProps: gp,
                                   tableProps: tableProps,
                                   tableNames: tableNames,
@@ -459,6 +504,8 @@ class PlotCanvas extends StatelessWidget {
                         painter: _MultiSeriesPlotPainter(
                           xSeries: seriesX,
                           ySeries: seriesY,
+                          xErrorSeries: xErrorSeries,
+                          yErrorSeries: yErrorSeries,
                           graphProps: graphProps,
                           tableProps: tableProps,
                           tableNames: tableNames,
@@ -714,6 +761,8 @@ class PlotCanvas extends StatelessWidget {
 class _MultiSeriesPlotPainter extends CustomPainter {
   final List<List<double>> xSeries;
   final List<List<double>> ySeries;
+  final List<List<double>> xErrorSeries;
+  final List<List<double>> yErrorSeries;
   final GraphProperties? graphProps;
   final List<TableProperties> tableProps;
   final List<String> tableNames;
@@ -739,6 +788,8 @@ class _MultiSeriesPlotPainter extends CustomPainter {
   _MultiSeriesPlotPainter({
     required this.xSeries,
     required this.ySeries,
+    required this.xErrorSeries,
+    required this.yErrorSeries,
     required this.graphProps,
     required this.tableProps,
     required this.tableNames,
@@ -1173,6 +1224,17 @@ class _MultiSeriesPlotPainter extends CustomPainter {
         drawSegment(segment);
       }
 
+      _drawErrorBars(
+        canvas,
+        xs,
+        ys,
+        s < xErrorSeries.length ? xErrorSeries[s] : const <double>[],
+        s < yErrorSeries.length ? yErrorSeries[s] : const <double>[],
+        props,
+        mapToScreen,
+        dimmed: dimmed,
+      );
+
       if (props?.markerVisible ?? false) {
         final markerPaint = Paint()
           ..color = dimmed
@@ -1210,6 +1272,76 @@ class _MultiSeriesPlotPainter extends CustomPainter {
     canvas.restore();
 
     _drawLegend(canvas, size, margins);
+  }
+
+  /// Capped X/Y error bars, drawn above the curve and below markers.
+  void _drawErrorBars(
+    Canvas canvas,
+    List<double> xData,
+    List<double> yData,
+    List<double> xErr,
+    List<double> yErr,
+    TableProperties? props,
+    Offset? Function(double x, double y) mapToScreen, {
+    bool dimmed = false,
+  }) {
+    if (!(props?.showErrorBars ?? true)) return;
+    if (xErr.isEmpty && yErr.isEmpty) return;
+
+    final lineColor = props != null
+        ? _parseColor(props.lineColor, const Color(0xFF1F77B4))
+        : const Color(0xFF1F77B4);
+    final override = props?.errorBarColor;
+    final color = override != null ? _parseColor(override, lineColor) : lineColor;
+    final paint = Paint()
+      ..color = dimmed ? color.withValues(alpha: 0.45) : color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+    const capHalf = 3.0;
+
+    final len = math.min(xData.length, yData.length);
+    for (var i = 0; i < len; i++) {
+      final center = mapToScreen(xData[i], yData[i]);
+      if (center == null) continue;
+
+      if (i < yErr.length && yErr[i].isFinite && yErr[i] > 0) {
+        final top = mapToScreen(xData[i], yData[i] + yErr[i]);
+        final bottom = mapToScreen(xData[i], yData[i] - yErr[i]);
+        if (top != null && bottom != null) {
+          canvas.drawLine(top, bottom, paint);
+          canvas.drawLine(
+            Offset(top.dx - capHalf, top.dy),
+            Offset(top.dx + capHalf, top.dy),
+            paint,
+          );
+          canvas.drawLine(
+            Offset(bottom.dx - capHalf, bottom.dy),
+            Offset(bottom.dx + capHalf, bottom.dy),
+            paint,
+          );
+        }
+      }
+
+      if (i < xErr.length && xErr[i].isFinite && xErr[i] > 0) {
+        final left = mapToScreen(xData[i] - xErr[i], yData[i]);
+        final right = mapToScreen(xData[i] + xErr[i], yData[i]);
+        if (left != null && right != null) {
+          canvas.drawLine(left, right, paint);
+          canvas.drawLine(
+            Offset(left.dx, left.dy - capHalf),
+            Offset(left.dx, left.dy + capHalf),
+            paint,
+          );
+          canvas.drawLine(
+            Offset(right.dx, right.dy - capHalf),
+            Offset(right.dx, right.dy + capHalf),
+            paint,
+          );
+        }
+      }
+    }
   }
 
   void _drawStyledPath(
@@ -1507,6 +1639,18 @@ class _MultiSeriesPlotPainter extends CustomPainter {
       final ys = ySeries[s];
       final oxs = oldDelegate.xSeries[s];
       final oys = oldDelegate.ySeries[s];
+      if (xs.length != oxs.length || ys.length != oys.length) return true;
+      for (var i = 0; i < xs.length; i++) {
+        if (xs[i] != oxs[i] || ys[i] != oys[i]) return true;
+      }
+    }
+    if (xErrorSeries.length != oldDelegate.xErrorSeries.length) return true;
+    if (yErrorSeries.length != oldDelegate.yErrorSeries.length) return true;
+    for (var s = 0; s < xErrorSeries.length; s++) {
+      final xs = xErrorSeries[s];
+      final ys = yErrorSeries[s];
+      final oxs = oldDelegate.xErrorSeries[s];
+      final oys = oldDelegate.yErrorSeries[s];
       if (xs.length != oxs.length || ys.length != oys.length) return true;
       for (var i = 0; i < xs.length; i++) {
         if (xs[i] != oxs[i] || ys[i] != oys[i]) return true;

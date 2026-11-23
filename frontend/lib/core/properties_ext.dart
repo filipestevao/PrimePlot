@@ -109,6 +109,8 @@ extension TablePropertiesExt on TableProperties {
     String? markerColor,
     double? markerSize,
     bool? legendLatex,
+    bool? showErrorBars,
+    String? Function()? errorBarColor,
   }) {
     return TableProperties(
       legendDisplayName: legendDisplayName ?? this.legendDisplayName,
@@ -121,6 +123,10 @@ extension TablePropertiesExt on TableProperties {
       markerColor: markerColor ?? this.markerColor,
       markerSize: markerSize ?? this.markerSize,
       legendLatex: legendLatex ?? this.legendLatex,
+      showErrorBars: showErrorBars ?? this.showErrorBars,
+      errorBarColor: errorBarColor != null
+          ? errorBarColor()
+          : this.errorBarColor,
     );
   }
 }

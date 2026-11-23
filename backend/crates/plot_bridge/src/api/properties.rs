@@ -205,6 +205,12 @@ pub struct TableProperties {
     /// Rich-text (LaTeX) rendering for the legend display name.
     #[serde(default)]
     pub legend_latex: bool,
+    /// Whether to draw error bars when XError/YError columns exist.
+    #[serde(default = "default_show_error_bars")]
+    pub show_error_bars: bool,
+    /// Error bar color override. `None` = uses the line color.
+    #[serde(default)]
+    pub error_bar_color: Option<String>,
 }
 
 impl Default for TableProperties {
@@ -220,6 +226,8 @@ impl Default for TableProperties {
             marker_color: "#000000".to_string(),
             marker_size: default_marker_size(),
             legend_latex: false,
+            show_error_bars: default_show_error_bars(),
+            error_bar_color: None,
         }
     }
 }
@@ -280,6 +288,10 @@ fn default_line_style() -> String {
 
 fn default_marker_size() -> f64 {
     4.0
+}
+
+fn default_show_error_bars() -> bool {
+    true
 }
 
 impl Default for FunctionProperties {
@@ -613,6 +625,21 @@ mod tests {
         )
         .unwrap();
         assert_eq!(legacy.marker_size, 4.0);
+    }
+
+    #[test]
+    fn legacy_table_props_migrate_with_error_bar_defaults() {
+        // Pre-Step-F bundles carry no error-bar fields.
+        let legacy: TableProperties = serde_json::from_str(
+            r##"{"legend_display_name":"Series","line_style":"Full","line_thickness":2.5,"line_visible":true,"marker_type":"Circle","marker_visible":false,"line_color":"#1F77B4","marker_color":"#000000"}"##,
+        )
+        .unwrap();
+        assert!(legacy.show_error_bars);
+        assert_eq!(legacy.error_bar_color, None);
+
+        let fresh = TableProperties::default();
+        assert!(fresh.show_error_bars);
+        assert_eq!(fresh.error_bar_color, None);
     }
 
     #[test]

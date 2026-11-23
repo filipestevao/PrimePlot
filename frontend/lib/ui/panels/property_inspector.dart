@@ -1988,6 +1988,44 @@ class _TableInspector extends StatelessWidget {
                   ),
               ],
             ),
+
+            // Section 4: Error Bars
+            PropertySection(
+              title: 'Error Bars',
+              icon: Icons.error_outline,
+              children: [
+                PropertyRow(
+                  label: 'Show Error Bars',
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PrimeSwitch(
+                      value: props.showErrorBars,
+                      onChanged: (val) {
+                        ProjectState.instance.updateTableProperties(
+                          nodeId,
+                          props.copyWith(showErrorBars: val),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                PropertyRow(
+                  label: 'Error Bar Color',
+                  child: _ThemeColorRow(
+                    value: props.errorBarColor,
+                    label: 'Error Bar Color',
+                    fallback: props.lineColor,
+                    resetTooltip: 'Match line color',
+                    onChanged: (val) {
+                      ProjectState.instance.updateTableProperties(
+                        nodeId,
+                        props.copyWith(errorBarColor: () => val),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ],
         );
       },
