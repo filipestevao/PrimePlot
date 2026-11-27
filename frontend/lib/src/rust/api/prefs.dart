@@ -28,10 +28,14 @@ class AppPreferences {
   /// Thousands grouping in display (`,` for dot-decimals, `.` for comma).
   final bool thousandsSeparator;
 
+  /// Check GitHub for new versions on startup.
+  final bool checkForUpdates;
+
   const AppPreferences({
     required this.theme,
     required this.decimalSeparator,
     required this.thousandsSeparator,
+    required this.checkForUpdates,
   });
 
   static Future<AppPreferences> default_() =>
@@ -39,7 +43,10 @@ class AppPreferences {
 
   @override
   int get hashCode =>
-      theme.hashCode ^ decimalSeparator.hashCode ^ thousandsSeparator.hashCode;
+      theme.hashCode ^
+      decimalSeparator.hashCode ^
+      thousandsSeparator.hashCode ^
+      checkForUpdates.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -48,5 +55,6 @@ class AppPreferences {
           runtimeType == other.runtimeType &&
           theme == other.theme &&
           decimalSeparator == other.decimalSeparator &&
-          thousandsSeparator == other.thousandsSeparator;
+          thousandsSeparator == other.thousandsSeparator &&
+          checkForUpdates == other.checkForUpdates;
 }

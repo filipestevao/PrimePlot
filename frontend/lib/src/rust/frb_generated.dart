@@ -2560,12 +2560,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AppPreferences dco_decode_app_preferences(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return AppPreferences(
       theme: dco_decode_String(arr[0]),
       decimalSeparator: dco_decode_String(arr[1]),
       thousandsSeparator: dco_decode_bool(arr[2]),
+      checkForUpdates: dco_decode_bool(arr[3]),
     );
   }
 
@@ -2977,10 +2978,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_theme = sse_decode_String(deserializer);
     var var_decimalSeparator = sse_decode_String(deserializer);
     var var_thousandsSeparator = sse_decode_bool(deserializer);
+    var var_checkForUpdates = sse_decode_bool(deserializer);
     return AppPreferences(
       theme: var_theme,
       decimalSeparator: var_decimalSeparator,
       thousandsSeparator: var_thousandsSeparator,
+      checkForUpdates: var_checkForUpdates,
     );
   }
 
@@ -3514,6 +3517,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.theme, serializer);
     sse_encode_String(self.decimalSeparator, serializer);
     sse_encode_bool(self.thousandsSeparator, serializer);
+    sse_encode_bool(self.checkForUpdates, serializer);
   }
 
   @protected

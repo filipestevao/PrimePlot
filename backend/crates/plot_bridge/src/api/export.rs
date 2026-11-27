@@ -387,6 +387,7 @@ mod locale_tests {
             theme: "dark".to_string(),
             decimal_separator: ",".to_string(),
             thousands_separator: false,
+            check_for_updates: false,
         });
         assert_eq!(locale_delimiter(), ';');
         assert_eq!(locale_decimal(), ',');

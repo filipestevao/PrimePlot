@@ -2593,10 +2593,12 @@ impl SseDecode for crate::api::prefs::AppPreferences {
         let mut var_theme = <String>::sse_decode(deserializer);
         let mut var_decimalSeparator = <String>::sse_decode(deserializer);
         let mut var_thousandsSeparator = <bool>::sse_decode(deserializer);
+        let mut var_checkForUpdates = <bool>::sse_decode(deserializer);
         return crate::api::prefs::AppPreferences {
             theme: var_theme,
             decimal_separator: var_decimalSeparator,
             thousands_separator: var_thousandsSeparator,
+            check_for_updates: var_checkForUpdates,
         };
     }
 }
@@ -3276,6 +3278,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::prefs::AppPreferences {
             self.theme.into_into_dart().into_dart(),
             self.decimal_separator.into_into_dart().into_dart(),
             self.thousands_separator.into_into_dart().into_dart(),
+            self.check_for_updates.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3684,6 +3687,7 @@ impl SseEncode for crate::api::prefs::AppPreferences {
         <String>::sse_encode(self.theme, serializer);
         <String>::sse_encode(self.decimal_separator, serializer);
         <bool>::sse_encode(self.thousands_separator, serializer);
+        <bool>::sse_encode(self.check_for_updates, serializer);
     }
 }
 

@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Filipe Estevão
 // This program is licensed under the GPLv3. See LICENSE for details.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../core/file_actions.dart';
 import '../../core/theme.dart';
 import '../../core/state.dart';
+import '../../core/update_checker.dart';
 import '../../core/window_state.dart';
 import '../../src/rust/api/project.dart';
 import '../../src/rust/api/simple.dart';
@@ -282,6 +284,17 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
         ),
       ],
     );
+
+    // Startup update check: fire-and-forget after the first frame so a slow
+    // network never delays the shell. The checker itself runs once per
+    // process and swallows network errors.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final st = ProjectState.instance;
+      if (st.checkForUpdates.value && st.appVersion.isNotEmpty) {
+        unawaited(checkForUpdates(context, st.appVersion));
+      }
+    });
   }
 
   List<Area> _buildRightAreas() {

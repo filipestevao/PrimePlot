@@ -15,6 +15,9 @@ pub struct AppPreferences {
     /// Thousands grouping in display (`,` for dot-decimals, `.` for comma).
     #[serde(default)]
     pub thousands_separator: bool,
+    /// Check GitHub for new versions on startup.
+    #[serde(default)]
+    pub check_for_updates: bool,
 }
 
 fn default_theme() -> String {
@@ -40,6 +43,7 @@ impl Default for AppPreferences {
             theme: default_theme(),
             decimal_separator: default_decimal_separator(),
             thousands_separator: false,
+            check_for_updates: false,
         }
     }
 }
@@ -99,6 +103,7 @@ mod tests {
     fn test_default_preferences() {
         let prefs = AppPreferences::default();
         assert_eq!(prefs.theme, "primeplot");
+        assert!(!prefs.check_for_updates);
     }
 
     #[test]
@@ -113,8 +118,10 @@ mod tests {
             theme: "dark".to_string(),
             decimal_separator: ".".to_string(),
             thousands_separator: false,
+            check_for_updates: true,
         });
         assert_eq!(get_preferences().theme, "dark");
+        assert!(get_preferences().check_for_updates);
         // Corrupt file falls back to defaults instead of crashing.
         let _ = fs::write(get_prefs_path(), "{not json");
         assert_eq!(get_preferences().theme, "primeplot");
@@ -133,6 +140,7 @@ mod tests {
             theme: "light".to_string(),
             decimal_separator: ".".to_string(),
             thousands_separator: false,
+            check_for_updates: false,
         };
         let json = serde_json::to_string(&prefs).unwrap();
         let loaded: AppPreferences = serde_json::from_str(&json).unwrap();
@@ -143,6 +151,18 @@ mod tests {
         assert_eq!(empty_loaded.theme, "primeplot");
         assert_eq!(empty_loaded.decimal_separator, ".");
         assert!(!empty_loaded.thousands_separator);
+        assert!(!empty_loaded.check_for_updates);
+    }
+
+    #[test]
+    fn test_check_for_updates_migrates_to_false() {
+        // Pre-Step-G prefs files carry no check_for_updates field.
+        let legacy: AppPreferences = serde_json::from_str(
+            r#"{"theme":"dark","decimal_separator":",","thousands_separator":true}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.theme, "dark");
+        assert!(!legacy.check_for_updates);
     }
 
     #[test]
@@ -153,6 +173,7 @@ mod tests {
             theme: "dark".to_string(),
             decimal_separator: ",".to_string(),
             thousands_separator: true,
+            check_for_updates: false,
         };
         assert_eq!(validated_decimal_separator(&comma), ',');
     }

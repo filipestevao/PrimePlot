@@ -114,6 +114,9 @@ class ProjectState {
   /// Export stays machine-readable (never grouped).
   final ValueNotifier<bool> useThousands = ValueNotifier(false);
 
+  /// Check GitHub for new versions on startup.
+  final ValueNotifier<bool> checkForUpdates = ValueNotifier(false);
+
   /// Loads saved user preferences from the Rust backend.
   void initTheme() {
     try {
@@ -122,6 +125,7 @@ class ProjectState {
       activeTheme.value = p.theme;
       decimalSeparator.value = (p.decimalSeparator == ',') ? ',' : '.';
       useThousands.value = p.thousandsSeparator;
+      checkForUpdates.value = p.checkForUpdates;
     } catch (e) {
       debugPrint("Error loading preferences: $e");
     }
@@ -138,6 +142,7 @@ class ProjectState {
           theme: p.theme,
           decimalSeparator: sep,
           thousandsSeparator: p.thousandsSeparator,
+          checkForUpdates: p.checkForUpdates,
         ),
       );
     } catch (e) {
@@ -157,6 +162,7 @@ class ProjectState {
           theme: p.theme,
           decimalSeparator: p.decimalSeparator,
           thousandsSeparator: enabled,
+          checkForUpdates: p.checkForUpdates,
         ),
       );
     } catch (e) {
@@ -164,6 +170,25 @@ class ProjectState {
     }
     useThousands.value = enabled;
     refreshCanvas.value++;
+  }
+
+  /// Sets the startup update-check preference and persists it.
+  void setCheckForUpdates(bool enabled) {
+    if (checkForUpdates.value == enabled) return;
+    try {
+      final p = prefs.getPreferences();
+      prefs.setPreferences(
+        prefs: prefs.AppPreferences(
+          theme: p.theme,
+          decimalSeparator: p.decimalSeparator,
+          thousandsSeparator: p.thousandsSeparator,
+          checkForUpdates: enabled,
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error saving preferences: $e");
+    }
+    checkForUpdates.value = enabled;
   }
 
   /// Sets the active theme and persists it via Rust backend (other prefs
@@ -180,6 +205,7 @@ class ProjectState {
           theme: themeId,
           decimalSeparator: current.decimalSeparator,
           thousandsSeparator: current.thousandsSeparator,
+          checkForUpdates: current.checkForUpdates,
         ),
       );
     } catch (e) {

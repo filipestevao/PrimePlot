@@ -132,25 +132,62 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ],
         );
       case _SettingsTab.advanced:
+        return _advancedTab();
+    }
+  }
+
+  Widget _advancedTab() {
+    final st = ProjectState.instance;
+    return ValueListenableBuilder<bool>(
+      valueListenable: st.checkForUpdates,
+      builder: (context, enabled, _) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionHeader(
               icon: Icons.tune_outlined,
               title: 'ADVANCED',
-              subtitle: 'Power settings land here in a future update.',
+              subtitle: 'Power settings for the application.',
             ),
             const SizedBox(height: 14),
-            Text(
-              'Nothing here yet.',
-              style: TextStyle(
-                fontSize: 12,
-                color: PrimeTheme.textSecondary,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Check for Updates',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: PrimeTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'When enabled, PrimePlot checks GitHub for new releases '
+                        'on startup and shows a notification when an update is '
+                        'available.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: PrimeTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                PrimeSwitch(
+                  value: enabled,
+                  onChanged: (v) => st.setCheckForUpdates(v),
+                ),
+              ],
             ),
           ],
         );
-    }
+      },
+    );
   }
 
   Widget _appearanceTab(String currentTheme) {
