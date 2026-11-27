@@ -178,9 +178,13 @@ class _HistoryButton extends StatelessWidget {
                     if (err != null && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(err,
-                              style:
-                                  const TextStyle(fontSize: 12)),
+                          content: Text(
+                            err,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
+                          ),
                           backgroundColor: const Color(0xFF7F1D1D),
                           behavior: SnackBarBehavior.floating,
                         ),

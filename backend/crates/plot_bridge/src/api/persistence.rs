@@ -402,7 +402,11 @@ pub(crate) fn load_project_from_zip(path: &str) -> Result<EngineProjectNode, Str
 
     let tree: EngineProjectNode = read_json_file(&mut archive, "project_tree.json")?;
     let folder_props = read_json_file_optional(&mut archive, "properties/folder_properties.json")?;
-    let graph_props = read_json_file_optional(&mut archive, "properties/graph_properties.json")?;
+    let mut graph_props: HashMap<String, crate::api::properties::GraphProperties> =
+        read_json_file_optional(&mut archive, "properties/graph_properties.json")?;
+    for props in graph_props.values_mut() {
+        props.migrate_legacy_color_defaults();
+    }
     let table_props = read_json_file_optional(&mut archive, "properties/table_properties.json")?;
     let function_props =
         read_json_file_optional(&mut archive, "properties/function_properties.json")?;

@@ -163,6 +163,17 @@ class PrimeTheme {
         elevation: 0,
       ),
       dividerColor: t.dividerColor,
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: t.titleBarBackground,
+        contentTextStyle: TextStyle(color: t.textPrimary, fontSize: 12),
+        actionTextColor: t.primaryAccent,
+        behavior: SnackBarBehavior.floating,
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: BorderSide(color: t.borderSide),
+        ),
+      ),
       fontFamily: 'Inter',
       textTheme: TextTheme(
         bodyMedium: TextStyle(color: t.textPrimary, fontSize: 13),

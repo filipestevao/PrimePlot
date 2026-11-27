@@ -933,8 +933,9 @@ class _GraphInspector extends StatelessWidget {
                   child: _ThemeColorRow(
                     value: props.backgroundColor,
                     label: 'Chart Background',
-                    fallback: '#FFFFFF',
-                    resetTooltip: 'Default white',
+                    fallback: _defaultChartBackground,
+                    defaultValue: _defaultChartBackground,
+                    resetTooltip: 'Reset to default',
                     presets: const [
                       '#FFFFFF',
                       '#F8FAFC',
@@ -954,6 +955,9 @@ class _GraphInspector extends StatelessWidget {
                   child: _ThemeColorRow(
                     value: props.gridColor,
                     label: 'Grid Color',
+                    fallback: _defaultGridColor,
+                    defaultValue: _defaultGridColor,
+                    resetTooltip: 'Reset to default',
                     onChanged: (val) {
                       ProjectState.instance.updateGraphProperties(
                         nodeId,
@@ -967,6 +971,9 @@ class _GraphInspector extends StatelessWidget {
                   child: _ThemeColorRow(
                     value: props.axisColor,
                     label: 'Axes Color',
+                    fallback: _defaultAxisColor,
+                    defaultValue: _defaultAxisColor,
+                    resetTooltip: 'Reset to default',
                     onChanged: (val) {
                       ProjectState.instance.updateGraphProperties(
                         nodeId,
@@ -1208,6 +1215,11 @@ class _GraphInspector extends StatelessWidget {
   }
 }
 
+/// Fixed graph color defaults (mirrored in Rust's `GraphProperties::default`).
+const String _defaultGridColor = '#CBD5E1';
+const String _defaultAxisColor = '#334155';
+const String _defaultChartBackground = '#FFFFFF';
+
 /// Color picker with a "follow theme" reset: a null value renders the
 /// theme token and shows no reset affordance.
 class _ThemeColorRow extends StatelessWidget {
@@ -1224,6 +1236,11 @@ class _ThemeColorRow extends StatelessWidget {
   /// Optional quick-pick swatches in the picker dialog.
   final List<String>? presets;
 
+  /// Fixed default color. When set, the reset button is hidden while the
+  /// current value matches it, and clicking reset restores this value.
+  /// `null` keeps the "follow theme" behavior.
+  final String? defaultValue;
+
   const _ThemeColorRow({
     required this.value,
     required this.label,
@@ -1231,7 +1248,14 @@ class _ThemeColorRow extends StatelessWidget {
     this.fallback = '#808080',
     this.resetTooltip = 'Follow theme',
     this.presets,
+    this.defaultValue,
   });
+
+  bool get _isDefault {
+    final def = defaultValue;
+    if (def == null) return value == null;
+    return value != null && value!.toUpperCase() == def.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1243,12 +1267,12 @@ class _ThemeColorRow extends StatelessWidget {
           presets: presets,
           onChanged: (c) => onChanged(c),
         ),
-        if (value != null) ...[
+        if (!_isDefault) ...[
           const SizedBox(width: 6),
           Tooltip(
             message: resetTooltip,
             child: InkWell(
-              onTap: () => onChanged(null),
+              onTap: () => onChanged(defaultValue),
               borderRadius: BorderRadius.circular(4),
               child: Padding(
                 padding: const EdgeInsets.all(4),
@@ -1302,7 +1326,10 @@ const _paletteFileType = XTypeGroup(
 void _paletteSnack(BuildContext context, String message, {bool error = false}) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(message, style: const TextStyle(fontSize: 12)),
+      content: Text(
+        message,
+        style: TextStyle(fontSize: 12, color: error ? Colors.white : null),
+      ),
       backgroundColor: error ? const Color(0xFF7F1D1D) : null,
       behavior: SnackBarBehavior.floating,
     ),

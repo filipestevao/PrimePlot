@@ -166,8 +166,10 @@ impl Default for GraphProperties {
             title_padding: default_title_padding(),
             title_padding_y: default_title_padding(),
             show_border: false,
-            grid_color: Some("#CACACA".to_string()),
-            axis_color: Some("#000000".to_string()),
+            // Publication defaults tuned for the white chart page (mirrored
+            // by the inspector's reset comparison).
+            grid_color: Some("#CBD5E1".to_string()),
+            axis_color: Some("#334155".to_string()),
             background_color: Some("#FFFFFF".to_string()),
             label_color: None,
             x_label_latex: false,
@@ -186,6 +188,26 @@ impl Default for GraphProperties {
             legend_background_color: None,
             legend_bold: false,
         }
+    }
+}
+
+impl GraphProperties {
+    /// Older bundles stored the previous fixed defaults explicitly (or none
+    /// at all). Normalize those to the current defaults so the inspector can
+    /// hide the reset affordance until a color is actually changed.
+    pub(crate) fn migrate_legacy_color_defaults(&mut self) {
+        fn set_default(value: &mut Option<String>, legacy: &[&str], default: &str) {
+            match value.as_deref() {
+                None => *value = Some(default.to_string()),
+                Some(current) if legacy.iter().any(|l| current.eq_ignore_ascii_case(l)) => {
+                    *value = Some(default.to_string());
+                }
+                _ => {}
+            }
+        }
+        set_default(&mut self.grid_color, &["#CACACA"], "#CBD5E1");
+        set_default(&mut self.axis_color, &["#000000"], "#334155");
+        set_default(&mut self.background_color, &[], "#FFFFFF");
     }
 }
 
@@ -589,10 +611,51 @@ mod tests {
         assert_eq!(legacy.background_color, None);
         assert_eq!(legacy.label_color, None);
 
-        // Fresh graphs default to an explicit white chart background.
+        // Fresh graphs use the fixed publication defaults for the white
+        // chart page, so the inspector shows no reset affordance.
         let fresh = GraphProperties::default();
-        assert_eq!(fresh.background_color, Some("#FFFFFF".to_string()));
+        assert_eq!(fresh.background_color.as_deref(), Some("#FFFFFF"));
+        assert_eq!(fresh.grid_color.as_deref(), Some("#CBD5E1"));
+        assert_eq!(fresh.axis_color.as_deref(), Some("#334155"));
         assert_eq!(fresh.label_color, None);
+    }
+
+    #[test]
+    fn legacy_explicit_default_colors_migrate_to_current_defaults() {
+        let mut graph = GraphProperties {
+            grid_color: Some("#CACACA".to_string()),
+            axis_color: Some("#000000".to_string()),
+            background_color: Some("#FFFFFF".to_string()),
+            ..Default::default()
+        };
+        graph.migrate_legacy_color_defaults();
+        assert_eq!(graph.grid_color.as_deref(), Some("#CBD5E1"));
+        assert_eq!(graph.axis_color.as_deref(), Some("#334155"));
+        assert_eq!(graph.background_color.as_deref(), Some("#FFFFFF"));
+
+        // Legacy bundles that predate the color fields follow the defaults.
+        let mut missing = GraphProperties {
+            grid_color: None,
+            axis_color: None,
+            background_color: None,
+            ..Default::default()
+        };
+        missing.migrate_legacy_color_defaults();
+        assert_eq!(missing.grid_color.as_deref(), Some("#CBD5E1"));
+        assert_eq!(missing.axis_color.as_deref(), Some("#334155"));
+        assert_eq!(missing.background_color.as_deref(), Some("#FFFFFF"));
+
+        // User-chosen colors must survive the migration.
+        let mut custom = GraphProperties {
+            grid_color: Some("#FF0000".to_string()),
+            axis_color: Some("#00FF00".to_string()),
+            background_color: Some("#123456".to_string()),
+            ..Default::default()
+        };
+        custom.migrate_legacy_color_defaults();
+        assert_eq!(custom.grid_color.as_deref(), Some("#FF0000"));
+        assert_eq!(custom.axis_color.as_deref(), Some("#00FF00"));
+        assert_eq!(custom.background_color.as_deref(), Some("#123456"));
     }
 
     #[test]

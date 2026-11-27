@@ -120,9 +120,11 @@ class _ColumnTransformFormState extends State<ColumnTransformForm> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontSize: 12)),
-        backgroundColor:
-            error ? const Color(0xFF7F1D1D) : const Color(0xFF1C2331),
+        content: Text(
+          message,
+          style: TextStyle(fontSize: 12, color: error ? Colors.white : null),
+        ),
+        backgroundColor: error ? const Color(0xFF7F1D1D) : null,
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: error ? 4 : 2),
       ),
