@@ -32,7 +32,9 @@ class _PrimeSwitchState extends State<PrimeSwitch> {
     const double padding = 2.0;
 
     final Color activeColor = PrimeTheme.primaryAccent;
-    final Color inactiveTrack = PrimeTheme.borderSide;
+    final Color inactiveTrack = PrimeTheme.tokens.brightness == Brightness.light
+        ? const Color(0xFFB0BEC5) // BlueGray 200 — visible on white
+        : PrimeTheme.borderSide;
     final Color hoveredBorder = PrimeTheme.primaryAccent.withValues(alpha: 0.5);
 
     final Widget switchWidget = MouseRegion(

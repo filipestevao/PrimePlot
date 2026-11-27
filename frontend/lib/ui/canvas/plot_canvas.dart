@@ -855,10 +855,9 @@ class _MultiSeriesPlotPainter extends CustomPainter {
           : axisBase
       ..strokeWidth = 1.5;
     final paintGrid = Paint()
-      ..color = (gridOverride != null
-              ? _parseColor(gridOverride, gridBase)
-              : gridBase)
-          .withValues(alpha: 0.3)
+      ..color = gridOverride != null
+          ? _parseColor(gridOverride, gridBase)
+          : gridBase
       ..strokeWidth = 1.0;
     final paintMinorGrid = Paint()
       ..color = paintGrid.color.withValues(alpha: paintGrid.color.a * 0.5)

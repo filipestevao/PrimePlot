@@ -94,10 +94,10 @@ const lightTokens = ThemeTokens(
   borderSide: Color(0xFFCBD5E1), // Slate 300
   textPrimary: Color(0xFF0F172A), // Slate 900
   textSecondary: Color(0xFF64748B), // Slate 500
-  tabBackground: Color(0xFFF8FAFC), // Slate 50
-  searchBarBackground: Color(0xFFF1F5F9), // Slate 100
+  tabBackground: Color(0xFFF1F5F9), // Slate 100
+  searchBarBackground: Color(0xFFE2E8F0), // Slate 200
   canvasBackground: Color(0xFFFFFFFF), // Pure white
-  canvasGrid: Color(0xFFE2E8F0), // Slate 200
+  canvasGrid: Color(0xFFCBD5E1), // Slate 300
   canvasAxis: Color(0xFF334155), // Slate 700
   dividerColor: Color(0xFFCBD5E1),
 );
