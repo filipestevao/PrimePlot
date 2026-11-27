@@ -4,7 +4,7 @@ All notable changes to PrimePlot will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-11-26
 
 ### Added
 - X and Y error bars from `XError`/`YError` columns, with an optional color override.
