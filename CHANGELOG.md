@@ -4,6 +4,13 @@ All notable changes to PrimePlot will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.2] - 2026-11-28
+
+### Fixed
+- Linux AppImage now uses the host's GTK and Wayland stack, restoring window state persistence and edge-resize cursors on KDE.
+- Window edge resizing and resize cursors on non-GNOME X11 window managers (such as Cinnamon, XFCE, and KDE X11).
+
+
 ## [0.2.1] - 2026-11-28
 
 ### Added

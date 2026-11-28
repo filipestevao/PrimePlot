@@ -3,7 +3,7 @@
 </h1>
 
 ![Status](https://img.shields.io/badge/status-alpha-orange)
-[![Version](https://img.shields.io/badge/version-0.2.1-blue)](https://github.com/filipestevao/PrimePlot/releases)
+[![Version](https://img.shields.io/badge/version-0.2.2-blue)](https://github.com/filipestevao/PrimePlot/releases)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 ![Flutter](https://img.shields.io/badge/UI-Flutter-02569B?logo=flutter)
 ![Rust](https://img.shields.io/badge/core-Rust-000000?logo=rust)
@@ -14,7 +14,8 @@ PrimePlot is an open-source desktop application for scientific plotting. It is d
 > **Alpha status** - The core workflow is functional. Expect rough edges and format changes before the first stable release. Prebuilt binaries are available on the [Releases](https://github.com/filipestevao/PrimePlot/releases) page.
 
 > [!NOTE]
-> The Linux AppImage uses FUSE. If FUSE is unavailable, run it with `APPIMAGE_EXTRACT_AND_RUN=1 ./PrimePlot-linux-x86_64.AppImage`.
+> - **Linux AppImage** — Uses FUSE. If FUSE is unavailable, run it with `APPIMAGE_EXTRACT_AND_RUN=1 ./PrimePlot-linux-x86_64.AppImage`.
+> - **Linux (Wayland & X11)** — Fully supported on both display servers. Window size and maximized state persist across launches on both, while on Wayland the compositor controls placement so the window always reopens centered rather than at its previous screen position.
 
 <p align="center">
   <img src="docs/images/interface.webp" alt="PrimePlot interface overview" width="100%">
