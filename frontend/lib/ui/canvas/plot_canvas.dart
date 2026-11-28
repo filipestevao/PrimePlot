@@ -604,8 +604,8 @@ class PlotCanvas extends StatelessWidget {
                               builder: (context, show, _) {
                                 return Tooltip(
                                   message: show
-                                      ? 'Hide series statistics (S)'
-                                      : 'Show series statistics (S)',
+                                      ? 'Hide series statistics (Ctrl+H)'
+                                      : 'Show series statistics (Ctrl+H)',
                                   child: InkWell(
                                     onTap: () => ProjectState.instance
                                         .showStatsHud

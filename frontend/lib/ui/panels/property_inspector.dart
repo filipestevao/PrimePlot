@@ -55,7 +55,11 @@ class _MinMaxPair extends StatelessWidget {
   }
 }
 
-class PropertyInspector extends StatefulWidget {  const PropertyInspector({super.key});
+class PropertyInspector extends StatefulWidget {
+  final SectionCommandNotifier sectionCommands;
+
+  const PropertyInspector({super.key, required this.sectionCommands});
+
   @override
   State<PropertyInspector> createState() => _PropertyInspectorState();
 }
@@ -83,13 +87,25 @@ class _PropertyInspectorState extends State<PropertyInspector> {
 
           switch (node.nodeType) {
             case NodeType.folder:
-              return _FolderInspector(nodeId: selectedId);
+              return _FolderInspector(
+                nodeId: selectedId,
+                sectionCommands: widget.sectionCommands,
+              );
             case NodeType.plot:
-              return _GraphInspector(nodeId: selectedId);
+              return _GraphInspector(
+                nodeId: selectedId,
+                sectionCommands: widget.sectionCommands,
+              );
             case NodeType.dataset:
-              return _TableInspector(nodeId: selectedId);
+              return _TableInspector(
+                nodeId: selectedId,
+                sectionCommands: widget.sectionCommands,
+              );
             case NodeType.function:
-              return _FunctionInspector(nodeId: selectedId);
+              return _FunctionInspector(
+                nodeId: selectedId,
+                sectionCommands: widget.sectionCommands,
+              );
             case NodeType.shape:
               return const SizedBox.shrink();
           }
@@ -104,7 +120,8 @@ class _PropertyInspectorState extends State<PropertyInspector> {
 // -----------------------------------------------------------------------------
 class _FolderInspector extends StatelessWidget {
   final String nodeId;
-  const _FolderInspector({required this.nodeId});
+  final SectionCommandNotifier sectionCommands;
+  const _FolderInspector({required this.nodeId, required this.sectionCommands});
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +135,7 @@ class _FolderInspector extends StatelessWidget {
             PropertySection(
               title: 'Folder Information',
               icon: Icons.folder,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Description',
@@ -147,7 +165,11 @@ class _FolderInspector extends StatelessWidget {
 // -----------------------------------------------------------------------------
 class _FunctionInspector extends StatelessWidget {
   final String nodeId;
-  const _FunctionInspector({required this.nodeId});
+  final SectionCommandNotifier sectionCommands;
+  const _FunctionInspector({
+    required this.nodeId,
+    required this.sectionCommands,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +192,7 @@ class _FunctionInspector extends StatelessWidget {
             PropertySection(
               title: 'Identification',
               icon: Icons.label,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Display Name',
@@ -190,6 +213,7 @@ class _FunctionInspector extends StatelessWidget {
             PropertySection(
               title: 'Function Definition',
               icon: Icons.functions,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Equation',
@@ -234,6 +258,7 @@ class _FunctionInspector extends StatelessWidget {
             PropertySection(
               title: 'Domain',
               icon: Icons.horizontal_rule,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'X Range',
@@ -289,6 +314,7 @@ class _FunctionInspector extends StatelessWidget {
             PropertySection(
               title: 'Line Style',
               icon: Icons.timeline,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Line Pattern',
@@ -409,7 +435,8 @@ class _FunctionInspector extends StatelessWidget {
 // -----------------------------------------------------------------------------
 class _GraphInspector extends StatelessWidget {
   final String nodeId;
-  const _GraphInspector({required this.nodeId});
+  final SectionCommandNotifier sectionCommands;
+  const _GraphInspector({required this.nodeId, required this.sectionCommands});
 
   @override
   Widget build(BuildContext context) {
@@ -425,6 +452,7 @@ class _GraphInspector extends StatelessWidget {
             PropertySection(
               title: 'Axes & Scales',
               icon: Icons.stacked_line_chart,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'X Range',
@@ -558,6 +586,7 @@ class _GraphInspector extends StatelessWidget {
             PropertySection(
               title: 'Labels & Titles',
               icon: Icons.subtitles,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'X-Axis Label',
@@ -782,6 +811,7 @@ class _GraphInspector extends StatelessWidget {
             PropertySection(
               title: 'Viewport & Grid',
               icon: Icons.grid_view,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Show Grid',
@@ -989,6 +1019,7 @@ class _GraphInspector extends StatelessWidget {
             PropertySection(
               title: 'Legend',
               icon: Icons.legend_toggle,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Show Legend',
@@ -1182,6 +1213,7 @@ class _GraphInspector extends StatelessWidget {
             PropertySection(
               title: 'Palette',
               icon: Icons.palette,
+              commandNotifier: sectionCommands,
               children: [
                 _PaletteSection(graphId: nodeId),
               ],
@@ -1765,7 +1797,8 @@ class _SavePaletteDialogState extends State<_SavePaletteDialog> {
 // -----------------------------------------------------------------------------
 class _TableInspector extends StatelessWidget {
   final String nodeId;
-  const _TableInspector({required this.nodeId});
+  final SectionCommandNotifier sectionCommands;
+  const _TableInspector({required this.nodeId, required this.sectionCommands});
 
   @override
   Widget build(BuildContext context) {
@@ -1781,6 +1814,7 @@ class _TableInspector extends StatelessWidget {
             PropertySection(
               title: 'Identification',
               icon: Icons.label,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Display Name',
@@ -1801,6 +1835,7 @@ class _TableInspector extends StatelessWidget {
             PropertySection(
               title: 'Line Style',
               icon: Icons.timeline,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Line Visible',
@@ -1907,6 +1942,7 @@ class _TableInspector extends StatelessWidget {
             PropertySection(
               title: 'Markers',
               icon: Icons.scatter_plot,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Marker Visible',
@@ -2020,6 +2056,7 @@ class _TableInspector extends StatelessWidget {
             PropertySection(
               title: 'Error Bars',
               icon: Icons.error_outline,
+              commandNotifier: sectionCommands,
               children: [
                 PropertyRow(
                   label: 'Show Error Bars',

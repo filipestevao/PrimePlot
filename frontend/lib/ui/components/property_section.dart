@@ -4,6 +4,38 @@
 import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 
+/// Commands broadcast by the Property Inspector's overflow menu.
+enum SectionCommand { expandAll, collapseAll }
+
+/// Broadcasts expand/collapse commands to every listening [PropertySection].
+///
+/// Commands stay available until [reset] so sections created lazily (for
+/// example after a collapse shrinks the list) still receive the latest one.
+/// Each section tracks [revision] to avoid replaying the same command on
+/// ordinary rebuilds.
+class SectionCommandNotifier extends ValueNotifier<SectionCommand?> {
+  SectionCommandNotifier() : super(null);
+
+  int _revision = 0;
+  int get revision => _revision;
+
+  void expandAll() {
+    _revision++;
+    value = SectionCommand.expandAll;
+  }
+
+  void collapseAll() {
+    _revision++;
+    value = SectionCommand.collapseAll;
+  }
+
+  /// Clears the pending command (called when the inspected node changes).
+  void reset() {
+    _revision++;
+    value = null;
+  }
+}
+
 /// A collapsible accordion section card for the Property Inspector.
 class PropertySection extends StatefulWidget {
   final String title;
@@ -12,6 +44,9 @@ class PropertySection extends StatefulWidget {
   final bool initiallyExpanded;
   final Widget? trailing;
 
+  /// Optional inspector-wide expand/collapse command source.
+  final SectionCommandNotifier? commandNotifier;
+
   const PropertySection({
     super.key,
     required this.title,
@@ -19,6 +54,7 @@ class PropertySection extends StatefulWidget {
     required this.children,
     this.initiallyExpanded = true,
     this.trailing,
+    this.commandNotifier,
   });
 
   @override
@@ -28,11 +64,51 @@ class PropertySection extends StatefulWidget {
 class _PropertySectionState extends State<PropertySection> {
   late bool _isExpanded;
   bool _isHeaderHovered = false;
+  int _appliedRevision = -1;
 
   @override
   void initState() {
     super.initState();
     _isExpanded = widget.initiallyExpanded;
+    final notifier = widget.commandNotifier;
+    _appliedRevision = notifier?.revision ?? -1;
+    final command = notifier?.value;
+    if (command != null) {
+      _isExpanded = command == SectionCommand.expandAll;
+    }
+    notifier?.addListener(_onCommand);
+  }
+
+  @override
+  void didUpdateWidget(covariant PropertySection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.commandNotifier != widget.commandNotifier) {
+      oldWidget.commandNotifier?.removeListener(_onCommand);
+      final notifier = widget.commandNotifier;
+      _appliedRevision = notifier?.revision ?? -1;
+      final command = notifier?.value;
+      if (command != null) {
+        _isExpanded = command == SectionCommand.expandAll;
+      }
+      notifier?.addListener(_onCommand);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.commandNotifier?.removeListener(_onCommand);
+    super.dispose();
+  }
+
+  void _onCommand() {
+    final notifier = widget.commandNotifier;
+    if (notifier == null || notifier.revision == _appliedRevision) return;
+    _appliedRevision = notifier.revision;
+    final command = notifier.value;
+    if (command == null) return;
+    setState(() {
+      _isExpanded = command == SectionCommand.expandAll;
+    });
   }
 
   @override

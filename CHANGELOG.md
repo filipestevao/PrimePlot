@@ -4,6 +4,21 @@ All notable changes to PrimePlot will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1] - 2026-11-28
+
+### Added
+- Collapse All Sections / Expand All Sections menu in the Property Inspector.
+
+### Changed
+- Improved Light theme contrast for section headers, the search bar, and inactive switches.
+- Grid lines now render at full opacity across all themes.
+- New graphs default to Slate 300 grid lines and Slate 700 axes.
+- Snackbars now use theme-aware backgrounds and text colors.
+
+### Fixed
+- Reset icons for grid, axes, and chart background colors only appear after the color is changed.
+- Legacy projects migrate their old default chart colors to the new defaults.
+
 ## [0.2.0] - 2026-11-26
 
 ### Added

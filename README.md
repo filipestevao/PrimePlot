@@ -3,7 +3,7 @@
 </h1>
 
 ![Status](https://img.shields.io/badge/status-alpha-orange)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue)](https://github.com/filipestevao/PrimePlot/releases)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue)](https://github.com/filipestevao/PrimePlot/releases)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 ![Flutter](https://img.shields.io/badge/UI-Flutter-02569B?logo=flutter)
 ![Rust](https://img.shields.io/badge/core-Rust-000000?logo=rust)

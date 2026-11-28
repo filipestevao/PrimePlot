@@ -19,6 +19,7 @@ import '../../src/rust/api/simple.dart';
 import '../components/panel_container.dart';
 import '../components/prime_icon.dart';
 import '../components/prime_search_bar.dart';
+import '../components/property_section.dart';
 import '../components/shortcut_map.dart';
 import '../dialogs/about_dialog.dart';
 import '../dialogs/export_dialog.dart';
@@ -51,6 +52,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   late MultiSplitViewController _rightController;
   bool _isDataPanelCollapsed = false;
   bool _dragging = false;
+
+  /// Inspector-wide expand/collapse commands shared by the panel menu and
+  /// every PropertySection.
+  final SectionCommandNotifier _sectionCommands = SectionCommandNotifier();
 
   /// Root keyboard-focus anchor. Global shortcuts (CallbackShortcuts below)
   /// only fire while something in this subtree holds focus, so when an
@@ -302,16 +307,61 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
       Area(
         flex: 2,
         min: 2,
-        builder: (context, area) => const PanelContainer(
+        builder: (context, area) => PanelContainer(
           title: 'Property Inspector',
           icon: Icons.tune,
+          actions: [
+            PopupMenuButton<String>(
+              tooltip: 'Inspector options',
+              icon: Icon(
+                Icons.more_horiz,
+                size: 16,
+                color: PrimeTheme.textSecondary,
+              ),
+              color: PrimeTheme.backgroundDark,
+              elevation: 8,
+              offset: const Offset(0, 30),
+              onSelected: (String choice) {
+                switch (choice) {
+                  case 'expand_all':
+                    _sectionCommands.expandAll();
+                    break;
+                  case 'collapse_all':
+                    _sectionCommands.collapseAll();
+                    break;
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'expand_all',
+                  child: Text(
+                    'Expand All Sections',
+                    style: TextStyle(
+                      color: PrimeTheme.textPrimary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'collapse_all',
+                  child: Text(
+                    'Collapse All Sections',
+                    style: TextStyle(
+                      color: PrimeTheme.textPrimary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           // Keep focus inside the shortcut subtree when a focused control is
           // rebuilt away. canRequestFocus must remain true: a FocusScopeNode
           // with false makes every descendant unfocusable.
           child: FocusScope(
             canRequestFocus: true,
             skipTraversal: true,
-            child: PropertyInspector(),
+            child: PropertyInspector(sectionCommands: _sectionCommands),
           ),
         ),
       ),
@@ -430,6 +480,8 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   }
 
   void _onSelectionChanged() {
+    // A new node starts from its own default section states.
+    _sectionCommands.reset();
     setState(() {
       _centerController.areas = _buildCenterAreas();
     });
@@ -582,6 +634,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   @override
   void dispose() {
     _hideShortcutHelp();
+    _sectionCommands.dispose();
     windowManager.removeListener(this);
     FocusManager.instance.removeListener(_onFocusChanged);
     _rootFocus.dispose();
