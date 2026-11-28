@@ -52,6 +52,7 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   late MultiSplitViewController _rightController;
   bool _isDataPanelCollapsed = false;
   bool _dragging = false;
+  bool _isMaximized = false;
 
   /// Inspector-wide expand/collapse commands shared by the panel menu and
   /// every PropertySection.
@@ -73,6 +74,10 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
   @override
   void initState() {
     super.initState();
+    _isMaximized = WindowStateController.instance.state.maximized;
+    if (WindowStateController.instance.usesClientResizeEdges) {
+      unawaited(_syncMaximizedState());
+    }
     windowManager.addListener(this);
     // Route every close request (X button, Alt+F4, taskbar) through
     // onWindowClose so dirty state always gets a save prompt.
@@ -614,6 +619,29 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
     });
   }
 
+  Future<void> _syncMaximizedState() async {
+    try {
+      final maximized = await windowManager.isMaximized();
+      if (mounted && maximized != _isMaximized) {
+        setState(() => _isMaximized = maximized);
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void onWindowMaximize() {
+    if (mounted && !_isMaximized) {
+      setState(() => _isMaximized = true);
+    }
+  }
+
+  @override
+  void onWindowUnmaximize() {
+    if (mounted && _isMaximized) {
+      setState(() => _isMaximized = false);
+    }
+  }
+
   /// Runtime backstop for the minimum window size: if a resize lands below
   /// the floor (hint ignored), snap back. Clamp-only, so no event loop.
   @override
@@ -799,255 +827,14 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
       },
       child: Stack(
         children: [
-          Scaffold(
-            backgroundColor: PrimeTheme.backgroundDark,
-            drawer: Drawer(
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.horizontal(
-                  right: Radius.circular(16),
-                ),
-              ),
-              backgroundColor: PrimeTheme.panelBackground,
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  SizedBox(
-                    height: 52, // Match title bar height
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Row(
-                        children: [
-                          const PrimeIcon(size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'PrimePlot',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: PrimeTheme.textPrimary,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: PrimeTheme.borderSide,
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: Icon(
-                      Icons.create_new_folder,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'New project',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      FileActions.doNew(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.folder_open,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'Open project',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      FileActions.doOpen(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.upload_file,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'Import Data…',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      FileActions.doImportData(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.save,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'Save',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      FileActions.doSave(context);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.save_as,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'Save as...',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      FileActions.doSaveAs(context);
-                    },
-                  ),
-                  Divider(
-                    height: 16,
-                    thickness: 1,
-                    color: PrimeTheme.borderSide,
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.image_outlined,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'Export Figure…',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      openExportDialog(context, 0);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.table_chart_outlined,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'Export Data…',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      openExportDialog(context, 1);
-                    },
-                  ),
-                  Divider(
-                    height: 16,
-                    thickness: 1,
-                    color: PrimeTheme.borderSide,
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.settings,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'Settings',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      showDialog(
-                        context: context,
-                        builder: (context) => const SettingsDialog(),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.info_outline,
-                      size: 18,
-                      color: PrimeTheme.textSecondary,
-                    ),
-                    title: Text(
-                      'About',
-                      style: TextStyle(
-                        color: PrimeTheme.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      showDialog(
-                        context: context,
-                        builder: (context) => const PrimeAboutDialog(),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            body: Column(
-              children: [
-                const CustomTitleBar(),
-                Expanded(
-                  child: MultiSplitViewTheme(
-                    data: MultiSplitViewThemeData(
-                      dividerPainter: DividerPainters.grooved1(
-                        color: PrimeTheme.borderSide,
-                        highlightedColor: PrimeTheme.primaryAccent,
-                        size: 2,
-                      ),
-                    ),
-                    child: Container(
-                      color:
-                          PrimeTheme.backgroundDark, // Reveal floating effect
-                      padding: const EdgeInsets.all(
-                        4.0,
-                      ), // Padding from window edge
-                      child: MultiSplitView(
-                        controller: _mainController,
-                        axis: Axis.horizontal,
-                      ),
-                    ),
-                  ),
-                ),
-                const StatusBar(),
-              ],
-            ),
-          ),
+          if (WindowStateController.instance.usesClientResizeEdges)
+            DragToResizeArea(
+              resizeEdgeSize: 6,
+              enableResizeEdges: _isMaximized ? const [] : null,
+              child: _buildMainScaffold(context),
+            )
+          else
+            _buildMainScaffold(context),
           if (_dragging)
             Positioned.fill(
               child: ClipRect(
@@ -1121,6 +908,255 @@ class _MainLayoutState extends State<MainLayout> with WindowListener {
       ),
         ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMainScaffold(BuildContext context) {
+    return Scaffold(
+      backgroundColor: PrimeTheme.backgroundDark,
+      drawer: Drawer(
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(
+            right: Radius.circular(16),
+          ),
+        ),
+        backgroundColor: PrimeTheme.panelBackground,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            SizedBox(
+              height: 52, // Match title bar height
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    const PrimeIcon(size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'PrimePlot',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: PrimeTheme.textPrimary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: PrimeTheme.borderSide,
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Icon(
+                Icons.create_new_folder,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'New project',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                FileActions.doNew(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.folder_open,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'Open project',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                FileActions.doOpen(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.upload_file,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'Import Data…',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                FileActions.doImportData(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.save,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'Save',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                FileActions.doSave(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.save_as,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'Save as...',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                FileActions.doSaveAs(context);
+              },
+            ),
+            Divider(
+              height: 16,
+              thickness: 1,
+              color: PrimeTheme.borderSide,
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.image_outlined,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'Export Figure…',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                openExportDialog(context, 0);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.table_chart_outlined,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'Export Data…',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                openExportDialog(context, 1);
+              },
+            ),
+            Divider(
+              height: 16,
+              thickness: 1,
+              color: PrimeTheme.borderSide,
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.settings,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'Settings',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => const SettingsDialog(),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.info_outline,
+                size: 18,
+                color: PrimeTheme.textSecondary,
+              ),
+              title: Text(
+                'About',
+                style: TextStyle(
+                  color: PrimeTheme.textPrimary,
+                  fontSize: 13,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => const PrimeAboutDialog(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          const CustomTitleBar(),
+          Expanded(
+            child: MultiSplitViewTheme(
+              data: MultiSplitViewThemeData(
+                dividerPainter: DividerPainters.grooved1(
+                  color: PrimeTheme.borderSide,
+                  highlightedColor: PrimeTheme.primaryAccent,
+                  size: 2,
+                ),
+              ),
+              child: Container(
+                color: PrimeTheme.backgroundDark, // Reveal floating effect
+                padding: const EdgeInsets.all(4.0), // Padding from window edge
+                child: MultiSplitView(
+                  controller: _mainController,
+                  axis: Axis.horizontal,
+                ),
+              ),
+            ),
+          ),
+          const StatusBar(),
+        ],
       ),
     );
   }

@@ -36,6 +36,7 @@ Future<void> main() async {
 
   // Initialize Window Manager for Frameless Desktop Window
   await windowManager.ensureInitialized();
+  await WindowStateController.instance.detectClientResizeEdges();
 
   // Portable Linux bundle: register the bundled launcher entry/icon so the
   // taskbar icon works on Wayland even when the folder is copied elsewhere.

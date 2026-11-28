@@ -4,9 +4,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Persisted geometry of the main window.
@@ -146,8 +146,30 @@ class WindowStateController with WindowListener {
   WindowState _state = WindowState.initial;
   Timer? _saveTimer;
   bool _tracking = false;
+  bool _usesClientResizeEdges = false;
 
   WindowState get state => _state;
+
+  /// Whether the app must draw its own edge-resize grips (true only on Linux
+  /// X11 window managers without a GtkHeaderBar, such as Cinnamon, XFCE, or
+  /// KDE X11; false on Wayland, GNOME Shell, Windows, and macOS).
+  bool get usesClientResizeEdges => _usesClientResizeEdges;
+
+  /// Queries the Linux runner for whether native CSD resize borders exist.
+  Future<void> detectClientResizeEdges() async {
+    if (!Platform.isLinux) {
+      _usesClientResizeEdges = false;
+      return;
+    }
+    try {
+      const channel = MethodChannel('com.primeplot/linux_window');
+      final result = await channel.invokeMethod<bool>('usesClientResizeEdges');
+      _usesClientResizeEdges = result ?? false;
+    } catch (e) {
+      debugPrint('Error querying Linux window capabilities: $e');
+      _usesClientResizeEdges = false;
+    }
+  }
 
   /// Reads the saved state before the window is shown.
   WindowState load() {
