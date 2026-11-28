@@ -77,8 +77,6 @@ jobs:
 
           curl -fsSL -o /tmp/linuxdeploy \
             https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
-          curl -fsSL -o /tmp/linuxdeploy-plugin-gtk \
-            https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/7a3fbc31a9e5075073ff8790f26effbac5f84453/linuxdeploy-plugin-gtk.sh
           # Static type-2 runtime: no system libfuse2 dependency. FUSE itself is
           # still required at runtime; systems without it can use
           # APPIMAGE_EXTRACT_AND_RUN=1.
@@ -86,7 +84,7 @@ jobs:
             https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
           echo "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  /tmp/appimage-runtime" \
             | sha256sum -c -
-          chmod +x /tmp/linuxdeploy /tmp/linuxdeploy-plugin-gtk /tmp/appimage-runtime
+          chmod +x /tmp/linuxdeploy /tmp/appimage-runtime
           export PATH="/tmp:$PATH"
           export APPIMAGE_EXTRACT_AND_RUN=1
           export LDAI_RUNTIME_FILE=/tmp/appimage-runtime
@@ -94,7 +92,7 @@ jobs:
           # (e.g. .relr.dyn) and aborts before setting RUNPATHs.
           export NO_STRIP=1
 
-          linuxdeploy --appdir "$APP_DIR" --plugin gtk \
+          linuxdeploy --appdir "$APP_DIR" \
             --executable "$APP_DIR/usr/bin/PrimePlot" \
             --desktop-file "$APP_DIR/usr/share/applications/com.primeplot.frontend.desktop" \
             --icon-file "$APP_DIR/usr/share/icons/hicolor/512x512/apps/com.primeplot.frontend.png" \
